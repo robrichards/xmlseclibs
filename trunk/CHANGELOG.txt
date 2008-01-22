@@ -1,0 +1,35 @@
+xmlseclibs.php
+|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+27 Nov 2007, 1.2.0
+Features:
+- New addReference/List option (overwrite). Boolean flag indicating if URI
+  value should be overwritten if already existing within document.
+  Default is TRUE to maintain BC.
+
+18 Nov 2007, 1.1.2
+Bug Fixes:
+- Remove closing PHP tag to fix extra whitespace characters from being output
+
+11 Nov 2007, 1.1.1
+Features:
+- Add getRefNodeID() and getRefIDs() methods missed in previous release.
+  Provide functionality to find URIs of existing reference nodes.
+  Required by simpleSAMLphp project
+
+Bug Fixes:
+- Remove erroneous whitespace causing issues under certain circumastances.
+
+18 Oct 2007, 1.1.0
+Features:
+- Enable creation of enveloping signature. This allows the creation of
+  managed information cards.
+- Add addObject method for enveloping signatures.
+- Add staticGet509XCerts method. Chained certificates within a PEM file can
+  now be added within the X509Data node.
+- Add xpath support within transformations
+- Add InclusiveNamespaces prefix list support within exclusive transformations.
+
+Bug Fixes:
+- Initialize random number generator for mcrypt_create_iv. (Joan Cornadó).
+- Fix an interoperability issue with .NET when encrypting data in CBC mode.
+  (Joan Cornadó).
