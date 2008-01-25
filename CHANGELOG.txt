@@ -1,5 +1,12 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+?? ??? 2008, 1.2.1
+Features:
+- Attempt to use mhash when hash extension is not present. (Alfredo Cubitos).
+
+Bug Fixes:
+- Fix canonicalization for Document node when using PHP < 5.2.
+
 27 Nov 2007, 1.2.0
 Features:
 - New addReference/List option (overwrite). Boolean flag indicating if URI
