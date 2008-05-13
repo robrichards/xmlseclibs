@@ -836,7 +836,7 @@ class XMLSecurityDSig {
             $prefix = empty($options['prefix'])?NULL:$options['prefix'];
             $prefix_ns = empty($options['prefix_ns'])?NULL:$options['prefix_ns'];
             $id_name = empty($options['id_name'])?'Id':$options['id_name'];
-            $overwrite_id = empty($options['overwrite'])?TRUE:(bool)$options['overwrite'];
+            $overwrite_id = !isset($options['overwrite'])?TRUE:(bool)$options['overwrite'];
         }
 
         $attname = $id_name;
