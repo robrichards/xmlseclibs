@@ -191,6 +191,12 @@ class XMLSecurityKey {
     public $encryptedCtx = NULL;
     public $guid = NULL;
 
+    /**
+     * This variable contains the certificate as a string if this key represents an X509-certificate.
+     * If this key doesn't represent a certificate, this will be NULL.
+     */
+    private $x509Certificate = NULL;
+
     public function __construct($type, $params=NULL) {
         srand();
         switch ($type) {
@@ -246,6 +252,7 @@ class XMLSecurityKey {
             case (XMLSecurityKey::RSA_SHA1):
                 $this->cryptParams['library'] = 'openssl';
                 $this->cryptParams['method'] = 'http://www.w3.org/2000/09/xmldsig#rsa-sha1';
+                $this->cryptParams['padding'] = OPENSSL_PKCS1_PADDING;
                 if (is_array($params) && ! empty($params['type'])) {
                     if ($params['type'] == 'public' || $params['type'] == 'private') {
                         $this->cryptParams['type'] = $params['type'];
@@ -295,7 +302,10 @@ class XMLSecurityKey {
         if ($isCert) {
             $this->key = openssl_x509_read($this->key);
             openssl_x509_export($this->key, $str_cert);
+            $this->x509Certificate = $str_cert;
             $this->key = $str_cert;
+        } else {
+            $this->x509Certificate = NULL;
         }
         if ($this->cryptParams['library'] == 'openssl') {
             if ($this->cryptParams['type'] == 'public') {
@@ -488,6 +498,21 @@ class XMLSecurityKey {
     public function serializeKey($parent) {
 
     }
+    
+
+
+    /**
+     * Retrieve the X509 certificate this key represents.
+     *
+     * Will return the X509 certificate in PEM-format if this key represents
+     * an X509 certificate.
+     *
+     * @return  The X509 certificate or NULL if this key doesn't represent an X509-certificate.
+     */
+    public function getX509Certificate() {
+        return $this->x509Certificate;
+    }
+    
 }
 
 class XMLSecurityDSig {
@@ -516,6 +541,9 @@ class XMLSecurityDSig {
     private $canonicalMethod = NULL;
     private $prefix = 'ds';
     private $searchpfx = 'secdsig';
+
+    /* This variable contains an associative array of validated nodes. */
+    private $validatedNodes = NULL;
 
     public function __construct() {
         $sigdoc = new DOMDocument();
@@ -665,9 +693,13 @@ class XMLSecurityDSig {
         }
         if (function_exists('hash')) {
             return base64_encode(hash($alg, $data, TRUE));
-        } else {
+        } elseif (function_exists('mhash')) {
             $alg = "MHASH_" . strtoupper($alg);
             return base64_encode(mhash(constant($alg), $data));
+        } elseif ($alg === 'sha1') {
+            return base64_encode(sha1($data, TRUE));
+        } else {
+            throw new Exception('xmlseclibs is unable to calculate a digest. Maybe you need the mhash library?');
         }
     }
 
@@ -776,7 +808,20 @@ class XMLSecurityDSig {
             $dataObject = $refNode->ownerDocument;
         }
         $data = $this->processTransforms($refNode, $dataObject);
-        return $this->validateDigest($refNode, $data);
+        if (!$this->validateDigest($refNode, $data)) {
+            return FALSE;
+        }
+
+        if ($dataObject instanceof DOMNode) {
+            /* Add this node to the list of validated nodes. */
+            if(! empty($identifier)) {
+                $this->validatedNodes[$identifier] = $dataObject;
+            } else {
+                $this->validatedNodes[] = $dataObject;
+            }
+        }
+
+        return TRUE;
     }
 
     public function getRefNodeID($refNode) {
@@ -818,8 +863,14 @@ class XMLSecurityDSig {
         if ($nodeset->length == 0) {
             throw new Exception("Reference nodes not found");
         }
+        
+        /* Initialize/reset the list of validated nodes. */
+        $this->validatedNodes = array();
+        
         foreach ($nodeset AS $refNode) {
             if (! $this->processRefNode($refNode)) {
+                /* Clear the list of validated nodes. */
+                $this->validatedNodes = NULL;
                 throw new Exception("Reference validation failed");
             }
         }
@@ -996,14 +1047,31 @@ class XMLSecurityDSig {
         $objKey->serializeKey($parent);
     }
 
-    public function appendSignature($parentNode, $insertBefore = FALSE) {
-        $baseDoc = ($parentNode instanceof DOMDocument)?$parentNode:$parentNode->ownerDocument;
-        $newSig = $baseDoc->importNode($this->sigNode, TRUE);
-        if ($insertBefore) {
-            $parentNode->insertBefore($newSig, $parentNode->firstChild);
+
+    /**
+     * This function inserts the signature element.
+     *
+     * The signature element will be appended to the element, unless $beforeNode is specified. If $beforeNode
+     * is specified, the signature element will be inserted as the last element before $beforeNode.
+     *
+     * @param $node  The node the signature element should be inserted into.
+     * @param $beforeNode  The node the signature element should be located before.
+     */
+    public function insertSignature($node, $beforeNode = NULL) {
+
+        $document = $node->ownerDocument;
+        $signatureElement = $document->importNode($this->sigNode, TRUE);
+
+        if($beforeNode == NULL) {
+            $node->insertBefore($signatureElement);
         } else {
-            $parentNode->appendChild($newSig);
+            $node->insertBefore($signatureElement, $beforeNode);
         }
+    }
+
+    public function appendSignature($parentNode, $insertBefore = FALSE) {
+        $beforeNode = $insertBefore ? $parentNode->firstChild : NULL;
+        $this->insertSignature($parentNode, $beforeNode);
     }
 
     static function get509XCert($cert, $isPEMFormat=TRUE) {
@@ -1092,6 +1160,18 @@ class XMLSecurityDSig {
          if ($xpath = $this->getXPathObj()) {
             self::staticAdd509Cert($this->sigNode, $cert, $isPEMFormat, $isURL, $xpath);
          }
+    }
+    
+    /* This function retrieves an associative array of the validated nodes.
+     *
+     * The array will contain the id of the referenced node as the key and the node itself
+     * as the value.
+     *
+     * Returns:
+     *  An associative array of validated nodes or NULL if no nodes have been validated.
+     */
+    public function getValidatedNodes() {
+        return $this->validatedNodes;
     }
 }
 
@@ -1371,7 +1451,7 @@ class XMLSecEnc {
                                     $x509cert = $x509certNodes->item(0)->textContent;
                                     $x509cert = str_replace(array("\r", "\n"), "", $x509cert);
                                     $x509cert = "-----BEGIN CERTIFICATE-----\n".chunk_split($x509cert, 64, "\n")."-----END CERTIFICATE-----\n";
-                                    $objBaseKey->loadKey($x509cert);
+                                    $objBaseKey->loadKey($x509cert, FALSE, TRUE);
                                 }
                             }
                             break;

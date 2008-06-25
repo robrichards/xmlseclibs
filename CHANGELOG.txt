@@ -3,9 +3,19 @@ xmlseclibs.php
 ?? ??? 2008, 1.2.1
 Features:
 - Attempt to use mhash when hash extension is not present. (Alfredo Cubitos).
+- Add fallback to built-in sha1 if both hash and mhash are not available and 
+  throw error for other for other missing hashes. (patch by Olav Morken).
+- Add getX509Certificate method to retrieve the x509 cert used for Key. 
+  (patch by Olav Morken).
+- Add getValidatedNodes method to retrieve the elements signed by the 
+  signature. (patch by Olav Morken).
+- Add insertSignature method for precision signature insertion. Merge 
+  functionality from appendSignature in the process. (Olav Morken, Rob).
 
 Bug Fixes:
 - Fix canonicalization for Document node when using PHP < 5.2.
+- Add padding for RSA_SHA1. (patch by Olav Morken).
+
 
 27 Nov 2007, 1.2.0
 Features:
