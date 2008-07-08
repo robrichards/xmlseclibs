@@ -29,6 +29,8 @@ $dom->save(dirname(__FILE__) . '/oaep_sha1.xml');
 $root = $dom->documentElement;
 echo $root->localName;
 
+unlink(dirname(__FILE__) . '/oaep_sha1.xml');
+
 ?>
 --EXPECTF--
 EncryptedData
