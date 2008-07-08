@@ -1,6 +1,6 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
-?? ??? 2008, 1.2.1
+08 Jul 2008, 1.2.1
 Features:
 - Attempt to use mhash when hash extension is not present. (Alfredo Cubitos).
 - Add fallback to built-in sha1 if both hash and mhash are not available and 
@@ -11,6 +11,7 @@ Features:
   signature. (patch by Olav Morken).
 - Add insertSignature method for precision signature insertion. Merge 
   functionality from appendSignature in the process. (Olav Morken, Rob).
+- Finally add some tests
 
 Bug Fixes:
 - Fix canonicalization for Document node when using PHP < 5.2.
