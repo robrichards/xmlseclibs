@@ -1,5 +1,7 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+?? ??? 2008, 1.2.2
+
 08 Jul 2008, 1.2.1
 Features:
 - Attempt to use mhash when hash extension is not present. (Alfredo Cubitos).
