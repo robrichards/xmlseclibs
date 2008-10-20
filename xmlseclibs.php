@@ -882,12 +882,14 @@ class XMLSecurityDSig {
         $prefix_ns = NULL;
         $id_name = 'Id';
         $overwrite_id  = TRUE;
+        $force_uri = FALSE;
 
         if (is_array($options)) {
             $prefix = empty($options['prefix'])?NULL:$options['prefix'];
             $prefix_ns = empty($options['prefix_ns'])?NULL:$options['prefix_ns'];
             $id_name = empty($options['id_name'])?'Id':$options['id_name'];
             $overwrite_id = !isset($options['overwrite'])?TRUE:(bool)$options['overwrite'];
+            $force_uri = !isset($options['force_uri'])?FALSE:(bool)$options['force_uri'];
         }
 
         $attname = $id_name;
@@ -908,6 +910,8 @@ class XMLSecurityDSig {
                 $node->setAttributeNS($prefix_ns, $attname, $uri);
             }
             $refNode->setAttribute("URI", '#'.$uri);
+        } elseif ($force_uri) {
+            $refNode->setAttribute("URI", '');
         }
 
         $transNodes = $this->createNewSignNode('Transforms');
