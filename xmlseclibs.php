@@ -917,7 +917,20 @@ class XMLSecurityDSig {
             foreach ($arTransforms AS $transform) {
                 $transNode = $this->createNewSignNode('Transform');
                 $transNodes->appendChild($transNode);
-                $transNode->setAttribute('Algorithm', $transform);
+                if (is_array($transform) && 
+                    (! empty($transform['http://www.w3.org/TR/1999/REC-xpath-19991116'])) && 
+                    (! empty($transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['query']))) {
+                    $transNode->setAttribute('Algorithm', 'http://www.w3.org/TR/1999/REC-xpath-19991116');
+                    $XPathNode = $this->createNewSignNode('XPath', $transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['query']);
+                    $transNode->appendChild($XPathNode);
+                    if (! empty($transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['namespaces'])) {
+                        foreach ($transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['namespaces'] AS $prefix => $namespace) {
+                            $XPathNode->setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:$prefix", $namespace);
+                        }
+                    }
+                } else {
+                    $transNode->setAttribute('Algorithm', $transform);
+                }
             }
         } elseif (! empty($this->canonicalMethod)) {
             $transNode = $this->createNewSignNode('Transform');
