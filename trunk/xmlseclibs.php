@@ -1316,10 +1316,11 @@ class XMLSecEnc {
                         } else {
                             $doc = $this->rawNode->ownerDocument;
                         }
-                        $newFrag = $doc->createDOMDocumentFragment();
+                        $newFrag = $doc->createDocumentFragment();
                         $newFrag->appendXML($decrypted);
-                        $this->rawNode->parentNode->replaceChild($newFrag, $this->rawNode);
-                        return $this->rawNode->parentNode;
+                        $parent = $this->rawNode->parentNode;
+                        $parent->replaceChild($newFrag, $this->rawNode);
+                        return $parent;
                         break;
                     default:
                         return $decrypted;
