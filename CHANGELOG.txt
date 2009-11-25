@@ -1,11 +1,17 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
-?? ??? 2008, 1.2.2
+?? ??? 2009, 1.2.2
 Features:
 - Add support XPath support when creating signature. Provides support for 
   working with EBXML documents.
 - Add reference option to force creation of URI attribute. For use
   when adding a DOM Document where by default no URI attribute is added.
+- Add support for RSA-SHA256
+
+Bug Fixes:
+- fix bug #5: createDOMDocumentFragment() in decryptNode when data is node 
+  content (patch by Francois Wang)
+
 
 08 Jul 2008, 1.2.1
 Features:

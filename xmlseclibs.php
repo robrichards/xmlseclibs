@@ -177,8 +177,9 @@ class XMLSecurityKey {
     const AES256_CBC = 'http://www.w3.org/2001/04/xmlenc#aes256-cbc';
     const RSA_1_5 = 'http://www.w3.org/2001/04/xmlenc#rsa-1_5';
     const RSA_OAEP_MGF1P = 'http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p';
-    const RSA_SHA1 = 'http://www.w3.org/2000/09/xmldsig#rsa-sha1';
     const DSA_SHA1 = 'http://www.w3.org/2000/09/xmldsig#dsa-sha1';
+    const RSA_SHA1 = 'http://www.w3.org/2000/09/xmldsig#rsa-sha1';
+    const RSA_SHA256 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256';
 
     private $cryptParams = array();
     public $type = 0;
@@ -253,6 +254,19 @@ class XMLSecurityKey {
                 $this->cryptParams['library'] = 'openssl';
                 $this->cryptParams['method'] = 'http://www.w3.org/2000/09/xmldsig#rsa-sha1';
                 $this->cryptParams['padding'] = OPENSSL_PKCS1_PADDING;
+                if (is_array($params) && ! empty($params['type'])) {
+                    if ($params['type'] == 'public' || $params['type'] == 'private') {
+                        $this->cryptParams['type'] = $params['type'];
+                        break;
+                    }
+                }
+                throw new Exception('Certificate "type" (private/public) must be passed via parameters');
+                break;
+            case (XMLSecurityKey::RSA_SHA256):
+                $this->cryptParams['library'] = 'openssl';
+                $this->cryptParams['method'] = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256';
+                $this->cryptParams['padding'] = OPENSSL_PKCS1_PADDING;
+                $this->cryptParams['digest'] = 'SHA256';
                 if (is_array($params) && ! empty($params['type'])) {
                     if ($params['type'] == 'public' || $params['type'] == 'private') {
                         $this->cryptParams['type'] = $params['type'];
@@ -396,15 +410,23 @@ class XMLSecurityKey {
     }
 
     private function signOpenSSL($data) {
-        if (! openssl_sign ($data, $signature, $this->key)) {
-            throw new Exception('Failure Signing Data');
+	    $algo = OPENSSL_ALGO_SHA1;
+	    if (! empty($this->cryptParams['digest'])) {
+	        $algo = $this->cryptParams['digest'];
+	    }
+        if (! openssl_sign ($data, $signature, $this->key, $algo)) {
+            throw new Exception('Failure Signing Data: ' . openssl_error_string() . ' - ' . $algo);
             return;
         }
         return $signature;
     }
 
     private function verifyOpenSSL($data, $signature) {
-        return openssl_verify ($data, $signature, $this->key);
+	    $algo = OPENSSL_ALGO_SHA1;
+	    if (! empty($this->cryptParams['digest'])) {
+	        $algo = $this->cryptParams['digest'];
+	    }
+        return openssl_verify ($data, $signature, $this->key, $algo);
     }
 
     public function encryptData($data) {
