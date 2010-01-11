@@ -1,6 +1,6 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
-?? ??? 2009, 1.2.2
+11 Jan 2010, 1.2.2
 Features:
 - Add support XPath support when creating signature. Provides support for 
   working with EBXML documents.
