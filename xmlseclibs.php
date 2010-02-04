@@ -1062,7 +1062,7 @@ class XMLSecurityDSig {
     }
 
     public function sign($objKey, $appendToNode = NULL) {
-	    // If we have a parent node append it now so C14N properly works
+        // If we have a parent node append it now so C14N properly works
         if ($appendToNode != NULL) {
             $this->resetXPathObj();
             $this->appendSignature($appendToNode);
