@@ -573,6 +573,10 @@ class XMLSecurityDSig {
         $this->sigNode = $sigdoc->documentElement;
     }
 
+    private function resetXPathObj() {
+        $this->xPathCtx = NULL;
+    }
+	
     private function getXPathObj() {
         if (empty($this->xPathCtx) && ! empty($this->sigNode)) {
             $xpath = new DOMXPath($this->sigNode->ownerDocument);
@@ -1057,7 +1061,13 @@ class XMLSecurityDSig {
         return $objKey->signData($data);
     }
 
-    public function sign($objKey) {
+    public function sign($objKey, $appendToNode = NULL) {
+	    // If we have a parent node append it now so C14N properly works
+        if ($appendToNode != NULL) {
+            $this->resetXPathObj();
+            $this->appendSignature($appendToNode);
+            $this->sigNode = $appendToNode->lastChild;
+        }
         if ($xpath = $this->getXPathObj()) {
             $query = "./secdsig:SignedInfo";
             $nodeset = $xpath->query($query, $this->sigNode);
