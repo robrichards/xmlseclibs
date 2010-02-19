@@ -198,6 +198,9 @@ class XMLSecurityKey {
      */
     private $x509Certificate = NULL;
 
+    /* This variable contains the certificate thunbprint if we have loaded an X509-certificate. */
+    private $X509Thumbprint = NULL;
+
     public function __construct($type, $params=NULL) {
         srand();
         switch ($type) {
@@ -307,6 +310,33 @@ class XMLSecurityKey {
         return $key;
     }
 
+    public static function getRawThumbprint($cert) {
+
+        $arCert = explode("\n", $cert);
+        $data = '';
+        $inData = FALSE;
+
+        foreach ($arCert AS $curData) {
+            if (! $inData) {
+                if (strncmp($curData, '-----BEGIN CERTIFICATE', 22) == 0) {
+                    $inData = TRUE;
+                }
+            } else {
+                if (strncmp($curData, '-----END CERTIFICATE', 20) == 0) {
+                    $inData = FALSE;
+                    break;
+                }
+                $data .= trim($curData);
+            }
+        }
+
+        if (! empty($data)) {
+            return strtolower(sha1(base64_decode($data)));
+        }
+
+        return NULL;
+    }
+
     public function loadKey($key, $isFile=FALSE, $isCert = FALSE) {
         if ($isFile) {
             $this->key = file_get_contents($key);
@@ -323,6 +353,10 @@ class XMLSecurityKey {
         }
         if ($this->cryptParams['library'] == 'openssl') {
             if ($this->cryptParams['type'] == 'public') {
+                if ($isCert) {
+                    /* Load the thumbprint if this is an X509 certificate. */
+                    $this->X509Thumbprint = self::getRawThumbprint($this->key);
+                }
                 $this->key = openssl_get_publickey($this->key);
             } else {
                 $this->key = openssl_get_privatekey($this->key, $this->passphrase);
@@ -534,7 +568,16 @@ class XMLSecurityKey {
     public function getX509Certificate() {
         return $this->x509Certificate;
     }
-    
+
+    /* Get the thumbprint of this X509 certificate.
+     *
+     * Returns:
+     *  The thumbprint as a lowercase 40-character hexadecimal number, or NULL
+     *  if this isn't a X509 certificate.
+     */
+    public function getX509Thumbprint() {
+        return $this->X509Thumbprint;
+    }
 }
 
 class XMLSecurityDSig {
