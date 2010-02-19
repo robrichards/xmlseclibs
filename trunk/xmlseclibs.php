@@ -802,7 +802,7 @@ class XMLSecurityDSig {
                         if ($node->localName == 'InclusiveNamespaces') {
                             if ($pfx = $node->getAttribute('PrefixList')) {
                                 $arpfx = array();
-                                $pfxlist = split(" ", $pfx);
+                                $pfxlist = explode(" ", $pfx);
                                 foreach ($pfxlist AS $pfx) {
                                     $val = trim($pfx);
                                     if (! empty($val)) {
