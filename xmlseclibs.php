@@ -37,7 +37,7 @@
  * @author     Robert Richards <rrichards@cdatazone.org>
  * @copyright  2007-2010 Robert Richards <rrichards@cdatazone.org>
  * @license    http://www.opensource.org/licenses/bsd-license.php  BSD License
- * @version    1.2.3-dev
+ * @version    1.3.0-dev
  */
 
 /*
@@ -1240,10 +1240,29 @@ class XMLSecEnc {
     private $rawNode = NULL;
     public $type = NULL;
     public $encKey = NULL;
+    private $references = array();
 
     public function __construct() {
+        $this->_resetTemplate();
+    }
+
+    private function _resetTemplate(){
         $this->encdoc = new DOMDocument();
         $this->encdoc->loadXML(XMLSecEnc::template);
+    }
+
+    public function addReference($name, $node, $type) {
+	    if (! $node instanceOf DOMNode) {
+	        throw new Exception('$node is not of type DOMNode');
+	    }
+        $curencdoc = $this->encdoc;
+        $this->_resetTemplate();
+        $encdoc = $this->encdoc;
+        $this->encdoc = $curencdoc;
+        $refuri = XMLSecurityDSig::generate_GUID();
+        $element = $encdoc->documentElement;
+        $element->setAttribute("Id", $refuri);
+	    $this->references[$name] = array("node" => $node, "type" => $type, "encnode" => $encdoc, "refuri" => $refuri);
     }
 
     public function setNode($node) {
@@ -1310,6 +1329,26 @@ class XMLSecEnc {
                     break;
             }
         }
+    }
+
+    public function encryptReferences($objKey) {
+        $curRawNode = $this->rawNode;
+        $curType = $this->type;
+        foreach ($this->references AS $name=>$reference) {
+            $this->encdoc = $reference["encnode"];
+            $this->rawNode = $reference["node"];
+            $this->type = $reference["type"];
+            try {
+                $encNode = $this->encryptNode($objKey);
+                $this->references[$name]["encnode"] = $encNode;
+            } catch (Exception $e) {
+                $this->rawNode = $curRawNode;
+                $this->type = $curType;
+                throw $e;
+            }
+        }
+        $this->rawNode = $curRawNode;
+        $this->type = $curType;
     }
 
     public function decryptNode($objKey, $replace=TRUE) {
@@ -1386,6 +1425,14 @@ class XMLSecEnc {
         }
         $cipherData = $encKey->appendChild($this->encdoc->createElementNS(XMLSecEnc::XMLENCNS, 'xenc:CipherData'));
         $cipherData->appendChild($this->encdoc->createElementNS(XMLSecEnc::XMLENCNS, 'xenc:CipherValue', $strEncKey));
+        if (is_array($this->references) && count($this->references) > 0) {
+           $refList =  $encKey->appendChild($this->encdoc->createElementNS(XMLSecEnc::XMLENCNS, 'xenc:ReferenceList'));
+            foreach ($this->references AS $name=>$reference) {
+                $refuri = $reference["refuri"];
+                $dataRef = $refList->appendChild($this->encdoc->createElementNS(XMLSecEnc::XMLENCNS, 'xenc:DataReference'));
+                $dataRef->setAttribute("URI", '#' . $refuri);
+            }
+        }
         return;
     }
 
