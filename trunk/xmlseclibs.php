@@ -1148,6 +1148,8 @@ class XMLSecurityDSig {
      *
      * @param $node  The node the signature element should be inserted into.
      * @param $beforeNode  The node the signature element should be located before.
+     * 
+     * @return DOMNode The signature element node
      */
     public function insertSignature($node, $beforeNode = NULL) {
 
@@ -1155,15 +1157,15 @@ class XMLSecurityDSig {
         $signatureElement = $document->importNode($this->sigNode, TRUE);
 
         if($beforeNode == NULL) {
-            $node->insertBefore($signatureElement);
+            return $node->insertBefore($signatureElement);
         } else {
-            $node->insertBefore($signatureElement, $beforeNode);
+            return $node->insertBefore($signatureElement, $beforeNode);
         }
     }
 
     public function appendSignature($parentNode, $insertBefore = FALSE) {
         $beforeNode = $insertBefore ? $parentNode->firstChild : NULL;
-        $this->insertSignature($parentNode, $beforeNode);
+        return $this->insertSignature($parentNode, $beforeNode);
     }
 
     static function get509XCert($cert, $isPEMFormat=TRUE) {
