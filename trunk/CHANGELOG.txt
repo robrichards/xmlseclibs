@@ -1,7 +1,19 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
-?? ??? 2010, 1.2.3
+?? ??? 2010, 1.3.0
+Features:
+- Add param to append sig to node when signing. Fixes a problem when using 
+  inclusive canonicalization to append a signature within a namespaced subtree.
+  ex. $objDSig->sign($objKey, $appendToNode); 
+- Add ability to encrypt by reference
+- Add support for refences within an encrypted key
+- Add thumbprint generation capability (XMLSecurityKey->getX509Thumbprint() and 
+  XMLSecurityKey::getRawThumbprint($cert))
+- Return signature element node from XMLSecurityDSig::insertSignature() and 
+  XMLSecurityDSig::appendSignature() methods
 
+Bug Fixes:
+- Change split() to explode() as split is now depreciated
 
 11 Jan 2010, 1.2.2
 Features:
