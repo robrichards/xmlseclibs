@@ -578,6 +578,27 @@ class XMLSecurityKey {
     public function getX509Thumbprint() {
         return $this->X509Thumbprint;
     }
+
+
+    /**
+     * Create key from an EncryptedKey-element.
+     *
+     * @param DOMElement $element  The EncryptedKey-element.
+     * @return XMLSecurityKey  The new key.
+     */
+    public static function fromEncryptedKeyElement(DOMElement $element) {
+
+        $objenc = new XMLSecEnc();
+        $objenc->setNode($element);
+        if (! $objKey = $objenc->locateKey()) {
+            throw new Exception("Unable to locate algorithm for this Encrypted Key");
+        }
+        $objKey->isEncrypted = TRUE;
+        $objKey->encryptedCtx = $objenc;
+        XMLSecEnc::staticLocateKeyInfo($objKey, $element);
+        return $objKey;
+    }
+
 }
 
 class XMLSecurityDSig {
@@ -1623,16 +1644,7 @@ class XMLSecEnc {
                     /* Not currently supported */
                     break;
                 case 'EncryptedKey':
-                    $objenc = new XMLSecEnc();
-                    $objenc->setNode($child);
-                    if (! $objKey = $objenc->locateKey()) {
-                        throw new Exception("Unable to locate algorithm for this Encrypted Key");
-                    }
-                    $objKey->isEncrypted = TRUE;
-                    $objKey->encryptedCtx = $objenc;
-                    XMLSecEnc::staticLocateKeyInfo($objKey, $child);
-                    return $objKey;
-                    break;
+                    return XMLSecurityKey::fromEncryptedKeyElement($child);
                 case 'X509Data':
                     if ($x509certNodes = $child->getElementsByTagName('X509Certificate')) {
                         if ($x509certNodes->length > 0) {
