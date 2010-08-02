@@ -1641,8 +1641,25 @@ class XMLSecEnc {
                     }
                     break;
                 case 'RetrievalMethod':
-                    /* Not currently supported */
-                    break;
+                    $type = $child->getAttribute('Type');
+                    if ($type !== 'http://www.w3.org/2001/04/xmlenc#EncryptedKey') {
+                        /* Unsupported key type. */
+                        break;
+                    }
+                    $uri = $child->getAttribute('URI');
+                    if ($uri[0] !== '#') {
+                        /* URI not a reference - unsupported. */
+                        break;
+                    }
+                    $id = substr($uri, 1);
+
+                    $query = "//xmlsecenc:EncryptedKey[@Id='$id']";
+                    $keyElement = $xpath->query($query)->item(0);
+                    if (!$keyElement) {
+                        throw new Exception("Unable to locate EncryptedKey with @Id='$id'.");
+                    }
+
+                    return XMLSecurityKey::fromEncryptedKeyElement($keyElement);
                 case 'EncryptedKey':
                     return XMLSecurityKey::fromEncryptedKeyElement($child);
                 case 'X509Data':
