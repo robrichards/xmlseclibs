@@ -16,6 +16,8 @@ Bug Fixes:
 - Change split() to explode() as split is now depreciated
 - ds:References using empty or simple URI Id reference should never include 
   comments in canonicalized data.
+- Make sure that the elements in EncryptedData are emitted in the correct 
+  sequence.
 
 11 Jan 2010, 1.2.2
 Features:
