@@ -1572,74 +1572,80 @@ class XMLSecEnc {
         if (empty($node) || (! $node instanceof DOMNode)) {
             return NULL;
         }
-        if ($doc = $node->ownerDocument) {
-            $xpath = new DOMXPath($doc);
-            $xpath->registerNamespace('xmlsecenc', XMLSecEnc::XMLENCNS);
-            $xpath->registerNamespace('xmlsecdsig', XMLSecurityDSig::XMLDSIGNS);
-            $query = "./xmlsecdsig:KeyInfo";
-            $nodeset = $xpath->query($query, $node);
-            if ($encmeth = $nodeset->item(0)) {
-                foreach ($encmeth->childNodes AS $child) {
-                    switch ($child->localName) {
-                        case 'KeyName':
-                            if (! empty($objBaseKey)) {
-                                $objBaseKey->name = $child->nodeValue;
-                            }
-                            break;
-                        case 'KeyValue':
-                            foreach ($child->childNodes AS $keyval) {
-                                switch ($keyval->localName) {
-                                    case 'DSAKeyValue':
-                                        throw new Exception("DSAKeyValue currently not supported");
-                                        break;
-                                    case 'RSAKeyValue':
-                                        $modulus = NULL;
-                                        $exponent = NULL;
-                                        if ($modulusNode = $keyval->getElementsByTagName('Modulus')->item(0)) {
-                                            $modulus = base64_decode($modulusNode->nodeValue);
-                                        }
-                                        if ($exponentNode = $keyval->getElementsByTagName('Exponent')->item(0)) {
-                                            $exponent = base64_decode($exponentNode->nodeValue);
-                                        }
-                                        if (empty($modulus) || empty($exponent)) {
-                                            throw new Exception("Missing Modulus or Exponent");
-                                        }
-                                        $publicKey = XMLSecurityKey::convertRSA($modulus, $exponent);
-                                        $objBaseKey->loadKey($publicKey);
-                                        break;
-                                }
-                            }
-                            break;
-                        case 'RetrievalMethod':
-                            /* Not currently supported */
-                            break;
-                        case 'EncryptedKey':
-                            $objenc = new XMLSecEnc();
-                            $objenc->setNode($child);
-                            if (! $objKey = $objenc->locateKey()) {
-                                throw new Exception("Unable to locate algorithm for this Encrypted Key");
-                            }
-                            $objKey->isEncrypted = TRUE;
-                            $objKey->encryptedCtx = $objenc;
-                            XMLSecEnc::staticLocateKeyInfo($objKey, $child);
-                            return $objKey;
-                            break;
-                        case 'X509Data':
-                            if ($x509certNodes = $child->getElementsByTagName('X509Certificate')) {
-                                if ($x509certNodes->length > 0) {
-                                    $x509cert = $x509certNodes->item(0)->textContent;
-                                    $x509cert = str_replace(array("\r", "\n"), "", $x509cert);
-                                    $x509cert = "-----BEGIN CERTIFICATE-----\n".chunk_split($x509cert, 64, "\n")."-----END CERTIFICATE-----\n";
-                                    $objBaseKey->loadKey($x509cert, FALSE, TRUE);
-                                }
-                            }
-                            break;
-                    }
-                }
-            }
+        $doc = $node->ownerDocument;
+        if (!$doc) {
+            return NULL;
+        }
+
+        $xpath = new DOMXPath($doc);
+        $xpath->registerNamespace('xmlsecenc', XMLSecEnc::XMLENCNS);
+        $xpath->registerNamespace('xmlsecdsig', XMLSecurityDSig::XMLDSIGNS);
+        $query = "./xmlsecdsig:KeyInfo";
+        $nodeset = $xpath->query($query, $node);
+        $encmeth = $nodeset->item(0);
+        if (!$encmeth) {
+            /* No KeyInfo in EncryptedData / EncryptedKey. */
             return $objBaseKey;
         }
-        return NULL;
+
+        foreach ($encmeth->childNodes AS $child) {
+            switch ($child->localName) {
+                case 'KeyName':
+                    if (! empty($objBaseKey)) {
+                        $objBaseKey->name = $child->nodeValue;
+                    }
+                    break;
+                case 'KeyValue':
+                    foreach ($child->childNodes AS $keyval) {
+                        switch ($keyval->localName) {
+                            case 'DSAKeyValue':
+                                throw new Exception("DSAKeyValue currently not supported");
+                                break;
+                            case 'RSAKeyValue':
+                                $modulus = NULL;
+                                $exponent = NULL;
+                                if ($modulusNode = $keyval->getElementsByTagName('Modulus')->item(0)) {
+                                    $modulus = base64_decode($modulusNode->nodeValue);
+                                }
+                                if ($exponentNode = $keyval->getElementsByTagName('Exponent')->item(0)) {
+                                    $exponent = base64_decode($exponentNode->nodeValue);
+                                }
+                                if (empty($modulus) || empty($exponent)) {
+                                    throw new Exception("Missing Modulus or Exponent");
+                                }
+                                $publicKey = XMLSecurityKey::convertRSA($modulus, $exponent);
+                                $objBaseKey->loadKey($publicKey);
+                                break;
+                        }
+                    }
+                    break;
+                case 'RetrievalMethod':
+                    /* Not currently supported */
+                    break;
+                case 'EncryptedKey':
+                    $objenc = new XMLSecEnc();
+                    $objenc->setNode($child);
+                    if (! $objKey = $objenc->locateKey()) {
+                        throw new Exception("Unable to locate algorithm for this Encrypted Key");
+                    }
+                    $objKey->isEncrypted = TRUE;
+                    $objKey->encryptedCtx = $objenc;
+                    XMLSecEnc::staticLocateKeyInfo($objKey, $child);
+                    return $objKey;
+                    break;
+                case 'X509Data':
+                    if ($x509certNodes = $child->getElementsByTagName('X509Certificate')) {
+                        if ($x509certNodes->length > 0) {
+                            $x509cert = $x509certNodes->item(0)->textContent;
+                            $x509cert = str_replace(array("\r", "\n"), "", $x509cert);
+                            $x509cert = "-----BEGIN CERTIFICATE-----\n".chunk_split($x509cert, 64, "\n")."-----END CERTIFICATE-----\n";
+                            $objBaseKey->loadKey($x509cert, FALSE, TRUE);
+                        }
+                    }
+                    break;
+            }
+        }
+        return $objBaseKey;
     }
 
     public function locateKeyInfo($objBaseKey=NULL, $node=NULL) {
