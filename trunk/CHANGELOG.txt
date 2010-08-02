@@ -11,6 +11,7 @@ Features:
   XMLSecurityKey::getRawThumbprint($cert))
 - Return signature element node from XMLSecurityDSig::insertSignature() and 
   XMLSecurityDSig::appendSignature() methods
+- Support for <ds:RetrievalMethod> with simple URI Id reference.
 
 Bug Fixes:
 - Change split() to explode() as split is now depreciated
