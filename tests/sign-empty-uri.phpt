@@ -39,5 +39,9 @@ if ($sign_output != $sign_output_def) {
 }
 echo "DONE";
 ?>
+--CLEAN--
+<?php
+unlink(dirname(__FILE__) . '/sign-empty-uri.xml');
+?>
 --EXPECTF--
 DONE
