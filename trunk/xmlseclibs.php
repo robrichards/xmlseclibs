@@ -209,24 +209,29 @@ class XMLSecurityKey {
                 $this->cryptParams['cipher'] = MCRYPT_TRIPLEDES;
                 $this->cryptParams['mode'] = MCRYPT_MODE_CBC;
                 $this->cryptParams['method'] = 'http://www.w3.org/2001/04/xmlenc#tripledes-cbc';
+                $this->cryptParams['method'] = 'http://www.w3.org/2001/04/xmlenc#tripledes-cbc';
+                $this->cryptParams['keysize'] = 24;
                 break;
             case (XMLSecurityKey::AES128_CBC):
                 $this->cryptParams['library'] = 'mcrypt';
                 $this->cryptParams['cipher'] = MCRYPT_RIJNDAEL_128;
                 $this->cryptParams['mode'] = MCRYPT_MODE_CBC;
                 $this->cryptParams['method'] = 'http://www.w3.org/2001/04/xmlenc#aes128-cbc';
+                $this->cryptParams['keysize'] = 16;
                 break;
             case (XMLSecurityKey::AES192_CBC):
                 $this->cryptParams['library'] = 'mcrypt';
                 $this->cryptParams['cipher'] = MCRYPT_RIJNDAEL_128;
                 $this->cryptParams['mode'] = MCRYPT_MODE_CBC;
                 $this->cryptParams['method'] = 'http://www.w3.org/2001/04/xmlenc#aes192-cbc';
+                $this->cryptParams['keysize'] = 24;
                 break;
             case (XMLSecurityKey::AES256_CBC):
                 $this->cryptParams['library'] = 'mcrypt';
                 $this->cryptParams['cipher'] = MCRYPT_RIJNDAEL_128;
                 $this->cryptParams['mode'] = MCRYPT_MODE_CBC;
                 $this->cryptParams['method'] = 'http://www.w3.org/2001/04/xmlenc#aes256-cbc';
+                $this->cryptParams['keysize'] = 32;
                 break;
             case (XMLSecurityKey::RSA_1_5):
                 $this->cryptParams['library'] = 'openssl';
@@ -285,6 +290,21 @@ class XMLSecurityKey {
         $this->type = $type;
     }
 
+    /**
+     * Retrieve the key size for the symmetric encryption algorithm..
+     *
+     * If the key size is unknown, or this isn't a symmetric encryption algorithm,
+     * NULL is returned.
+     *
+     * @return int|NULL  The number of bytes in the key.
+     */
+    public function getSymmetricKeySize() {
+        if (! isset($this->cryptParams['keysize'])) {
+            return NULL;
+        }
+        return $this->cryptParams['keysize'];
+    }
+      
     public function generateSessionKey() {
         $key = '';
         if (! empty($this->cryptParams['cipher']) && ! empty($this->cryptParams['mode'])) {
