@@ -305,27 +305,35 @@ class XMLSecurityKey {
     }
       
     public function generateSessionKey() {
-        $key = '';
-        if (! empty($this->cryptParams['cipher']) && ! empty($this->cryptParams['mode'])) {
-            $keysize = mcrypt_module_get_algo_key_size($this->cryptParams['cipher']);
+        if (!isset($this->cryptParams['keysize'])) {
+            throw new Exception('Unknown key size for type "' . $this->type . '".');
+        }
+        $keysize = $this->cryptParams['keysize'];
+        
+        if (function_exists('openssl_random_pseudo_bytes')) {
+            /* We have PHP >= 5.3 - use openssl to generate session key. */
+            $key = openssl_random_pseudo_bytes($keysize);
+        } else {
             /* Generating random key using iv generation routines */
-            if (($keysize > 0) && ($td = mcrypt_module_open(MCRYPT_RIJNDAEL_256, '',$this->cryptParams['mode'], ''))) {
-                if ($this->cryptParams['cipher'] == MCRYPT_RIJNDAEL_128) {
-                    $keysize = 16;
-                    if ($this->type == XMLSecurityKey::AES256_CBC) {
-                        $keysize = 32;
-                    } elseif ($this->type == XMLSecurityKey::AES192_CBC) {
-                        $keysize = 24;
-                    }
+            $key = mcrypt_create_iv($keysize, MCRYPT_RAND);
+        }
+        
+        if ($this->type === XMLSecurityKey::TRIPLEDES_CBC) {
+            /* Make sure that the generated key has the proper parity bits set.
+             * Mcrypt doesn't care about the parity bits, but others may care.
+            */
+            for ($i = 0; $i < strlen($key); $i++) {
+                $byte = ord($key[$i]) & 0xfe;
+                $parity = 1;
+                for ($j = 1; $j < 8; $j++) {
+                    $parity ^= ($byte >> $j) & 1;
                 }
-                while (strlen($key) < $keysize) {
-                    $key .= mcrypt_create_iv(mcrypt_enc_get_iv_size ($td),MCRYPT_RAND);
-                }
-                mcrypt_module_close($td);
-                $key = substr($key, 0, $keysize);
-                $this->key = $key;
+                $byte |= $parity;
+                $key[$i] = chr($byte);
             }
         }
+        
+        $this->key = $key;
         return $key;
     }
 
