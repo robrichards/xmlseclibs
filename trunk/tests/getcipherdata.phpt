@@ -5,7 +5,7 @@ Test the getCipherData() function.
 require(dirname(__FILE__) . '/../xmlseclibs.php');
 
 $doc = new DOMDocument();
-$doc->load('oaep_sha1-res.xml');
+$doc->load(dirname(__FILE__) . '/oaep_sha1-res.xml');
 
 
 $objenc = new XMLSecEnc();
