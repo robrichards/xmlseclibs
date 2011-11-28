@@ -1289,51 +1289,51 @@ class XMLSecurityDSig {
     }
 
     static function staticAdd509Cert($parentRef, $cert, $isPEMFormat=TRUE, $isURL=False, $xpath=NULL) {
-          if ($isURL) {
+        if ($isURL) {
             $cert = file_get_contents($cert);
-          }
-          if (! $parentRef instanceof DOMElement) {
+        }
+        if (! $parentRef instanceof DOMElement) {
             throw new Exception('Invalid parent Node parameter');
-          }
-          $baseDoc = $parentRef->ownerDocument;
+        }
+        $baseDoc = $parentRef->ownerDocument;
+        
+        if (empty($xpath)) {
+            $xpath = new DOMXPath($parentRef->ownerDocument);
+            $xpath->registerNamespace('secdsig', XMLSecurityDSig::XMLDSIGNS);
+        }
+        
+        $query = "./secdsig:KeyInfo";
+        $nodeset = $xpath->query($query, $parentRef);
+        $keyInfo = $nodeset->item(0);
+        if (! $keyInfo) {
+            $inserted = FALSE;
+            $keyInfo = $baseDoc->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:KeyInfo');
+        
+            $query = "./secdsig:Object";
+            $nodeset = $xpath->query($query, $parentRef);
+            if ($sObject = $nodeset->item(0)) {
+                $sObject->parentNode->insertBefore($keyInfo, $sObject);
+                $inserted = TRUE;
+            }
+        
+            if (! $inserted) {
+                $parentRef->appendChild($keyInfo);
+            }
+        }
+        
+        // Add all certs if there are more than one
+        $certs = XMLSecurityDSig::staticGet509XCerts($cert, $isPEMFormat);
 
-          if (empty($xpath)) {
-              $xpath = new DOMXPath($parentRef->ownerDocument);
-              $xpath->registerNamespace('secdsig', XMLSecurityDSig::XMLDSIGNS);
-          }
+        // Atach X509 data node
+        $x509DataNode = $baseDoc->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:X509Data');
+        $keyInfo->appendChild($x509DataNode);
 
-         $query = "./secdsig:KeyInfo";
-         $nodeset = $xpath->query($query, $parentRef);
-         $keyInfo = $nodeset->item(0);
-         if (! $keyInfo) {
-              $inserted = FALSE;
-              $keyInfo = $baseDoc->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:KeyInfo');
-
-               $query = "./secdsig:Object";
-               $nodeset = $xpath->query($query, $parentRef);
-               if ($sObject = $nodeset->item(0)) {
-                    $sObject->parentNode->insertBefore($keyInfo, $sObject);
-                    $inserted = TRUE;
-               }
-
-              if (! $inserted) {
-                   $parentRef->appendChild($keyInfo);
-              }
-         }
-
-         // Add all certs if there are more than one
-         $certs = XMLSecurityDSig::staticGet509XCerts($cert, $isPEMFormat);
-
-         // Atach X509 data node
-         $x509DataNode = $baseDoc->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:X509Data');
-         $keyInfo->appendChild($x509DataNode);
-
-         // Atach all certificate nodes
-         foreach ($certs as $X509Cert){
+        // Atach all certificate nodes
+        foreach ($certs as $X509Cert){
             $x509CertNode = $baseDoc->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:X509Certificate', $X509Cert);
-         $x509DataNode->appendChild($x509CertNode);
-         }
-     }
+            $x509DataNode->appendChild($x509CertNode);
+        }
+    }
 
     public function add509Cert($cert, $isPEMFormat=TRUE, $isURL=False) {
          if ($xpath = $this->getXPathObj()) {
