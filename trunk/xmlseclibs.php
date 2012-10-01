@@ -1399,6 +1399,13 @@ class XMLSecEnc {
         $this->rawNode = $node;
     }
 
+    /**
+     * Encrypt the selected node with the given key.
+     *
+     * @param XMLSecurityKey $objKey  The encryption key and algorithm.
+     * @param bool $replace  Whether the encrypted node should be replaced in the original tree. Default is TRUE.
+     * @return DOMElement  The <xenc:EncryptedData>-element.
+     */
     public function encryptNode($objKey, $replace=TRUE) {
         $data = '';
         if (empty($this->rawNode)) {
@@ -1458,6 +1465,8 @@ class XMLSecEnc {
                     return $importEnc;
                     break;
             }
+        } else {
+            return $this->encdoc->documentElement;
         }
     }
 
