@@ -1316,7 +1316,7 @@ class XMLSecurityDSig {
         }
     }
 
-    static function staticAdd509Cert($parentRef, $cert, $isPEMFormat=TRUE, $isURL=False, $xpath=NULL) {
+    static function staticAdd509Cert($parentRef, $cert, $isPEMFormat=TRUE, $isURL=False, $xpath=NULL, $options=NULL) {
         if ($isURL) {
             $cert = file_get_contents($cert);
         }
@@ -1352,20 +1352,52 @@ class XMLSecurityDSig {
         // Add all certs if there are more than one
         $certs = XMLSecurityDSig::staticGet509XCerts($cert, $isPEMFormat);
 
-        // Atach X509 data node
+        // Attach X509 data node
         $x509DataNode = $baseDoc->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:X509Data');
         $keyInfo->appendChild($x509DataNode);
 
-        // Atach all certificate nodes
+        $issuerSerial = FALSE;
+        $subjectName = FALSE;
+        if (is_array($options)) {
+            if (! empty($options['issuerSerial'])) {
+                $issuerSerial = TRUE;
+            }
+        }
+        
+        // Attach all certificate nodes and any additional data
         foreach ($certs as $X509Cert){
+            if ($issuerSerial) {
+                if ($certData = openssl_x509_parse("-----BEGIN CERTIFICATE-----\n".chunk_split($X509Cert, 64, "\n")."-----END CERTIFICATE-----\n")) {
+                    if ($issuerSerial && ! empty($certData['issuer']) && ! empty($certData['serialNumber'])) {
+                        if (is_array($certData['issuer'])) {
+                            $parts = array();
+                            foreach ($certData['issuer'] AS $key => $value) {
+                                array_unshift($parts, "$key=$value" . $issuer);
+                            }
+                            $issuerName = implode(',', $parts);
+                        } else {
+                            $issuerName = $certData['issuer'];
+                        }
+                        
+                        $x509IssuerNode = $baseDoc->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:X509IssuerSerial');
+                        $x509DataNode->appendChild($x509IssuerNode);
+                        
+                        $x509Node = $baseDoc->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:X509IssuerName', $issuerName);
+                        $x509IssuerNode->appendChild($x509Node);
+                        $x509Node = $baseDoc->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:X509SerialNumber', $certData['serialNumber']);
+                        $x509IssuerNode->appendChild($x509Node);
+                    }
+                }
+                
+            }
             $x509CertNode = $baseDoc->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:X509Certificate', $X509Cert);
             $x509DataNode->appendChild($x509CertNode);
         }
     }
 
-    public function add509Cert($cert, $isPEMFormat=TRUE, $isURL=False) {
+    public function add509Cert($cert, $isPEMFormat=TRUE, $isURL=False, $options=NULL) {
          if ($xpath = $this->getXPathObj()) {
-            self::staticAdd509Cert($this->sigNode, $cert, $isPEMFormat, $isURL, $xpath);
+            self::staticAdd509Cert($this->sigNode, $cert, $isPEMFormat, $isURL, $xpath, $options);
          }
     }
     
