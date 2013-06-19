@@ -1,5 +1,20 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+19, Jun 2013, 1.3.1
+Features:
+- return encrypted node from XMLSecEnc::encryptNode() when replace is set to 
+  false. (Olav)
+- Add support for RSA SHA384 and RSA_SHA512 and SHA384 digest. (Jaime Prez)
+- Add options parameter to the add cert methods.
+- Add optional issuerSerial creation with cert
+
+Bug Fixes:
+- Fix persisted Id when namespaced. (Koen Thomeer)
+
+Improvements:
+- Add LICENSE file
+- Convert CHANGELOG.txt to UTF-8
+
 26, Sep 2011, 1.3.0
 Features:
 - Add param to append sig to node when signing. Fixes a problem when using 
