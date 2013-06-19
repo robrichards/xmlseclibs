@@ -84,6 +84,6 @@ Features:
 - Add InclusiveNamespaces prefix list support within exclusive transformations.
 
 Bug Fixes:
-- Initialize random number generator for mcrypt_create_iv. (Joan Cornadó).
+- Initialize random number generator for mcrypt_create_iv. (Joan CornadÃ³).
 - Fix an interoperability issue with .NET when encrypting data in CBC mode.
-  (Joan Cornadó).
+  (Joan CornadÃ³).
