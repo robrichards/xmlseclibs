@@ -1161,7 +1161,7 @@ class XMLSecurityDSig {
       $objNode = $this->createNewSignNode('Object');
       $this->sigNode->appendChild($objNode);
       if (! empty($mimetype)) {
-         $objNode->setAtribute('MimeType', $mimetype);
+         $objNode->setAttribute('MimeType', $mimetype);
       }
       if (! empty($encoding)) {
          $objNode->setAttribute('Encoding', $encoding);
