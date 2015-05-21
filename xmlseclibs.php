@@ -1050,8 +1050,8 @@ class XMLSecurityDSig {
     }
 
     public function validateReference() {
-        $doc = $this->sigNode->ownerDocument;
-        if (! $doc->isSameNode($this->sigNode)) {
+        $docElem = $this->sigNode->ownerDocument->documentElement;
+        if (! $docElem->isSameNode($this->sigNode)) {
             $this->sigNode->parentNode->removeChild($this->sigNode);
         }
         $xpath = $this->getXPathObj();
