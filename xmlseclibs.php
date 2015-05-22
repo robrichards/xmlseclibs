@@ -1377,12 +1377,28 @@ class XMLSecurityDSig {
             if (! empty($options['issuerSerial'])) {
                 $issuerSerial = TRUE;
             }
+            if (! empty($options['subjectName'])) {
+                $subjectName = TRUE;
+            }
         }
         
         // Attach all certificate nodes and any additional data
         foreach ($certs as $X509Cert){
-            if ($issuerSerial) {
+            if ($issuerSerial || $subjectName) {
                 if ($certData = openssl_x509_parse("-----BEGIN CERTIFICATE-----\n".chunk_split($X509Cert, 64, "\n")."-----END CERTIFICATE-----\n")) {
+                    if ($subjectName && ! empty($certData['subject'])) {
+                        if (is_array($certData['subject'])) {
+                            $parts = array();
+                            foreach ($certData['subject'] AS $key => $value) {
+                                array_unshift($parts, "$key=$value");
+                            }
+                            $subjectNameValue = implode(',', $parts);
+                        } else {
+                            $subjectNameValue = $certData['issuer'];
+                        }
+                        $x509SubjectNode = $baseDoc->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:X509SubjectName', $subjectNameValue);
+                        $x509DataNode->appendChild($x509SubjectNode);
+                    }
                     if ($issuerSerial && ! empty($certData['issuer']) && ! empty($certData['serialNumber'])) {
                         if (is_array($certData['issuer'])) {
                             $parts = array();
