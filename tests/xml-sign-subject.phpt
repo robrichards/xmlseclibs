@@ -4,8 +4,8 @@ Basic Signature With Subject
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');
 
-if (file_exists(dirname(__FILE__) . '/sign-basic-test.xml')) {
-    unlink(dirname(__FILE__) . '/sign-basic-test.xml');
+if (file_exists(dirname(__FILE__) . '/sign-subject.xml')) {
+    unlink(dirname(__FILE__) . '/sign-subject.xml');
 }
 
 $doc = new DOMDocument();
