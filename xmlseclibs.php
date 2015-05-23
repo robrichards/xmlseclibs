@@ -182,6 +182,7 @@ class XMLSecurityKey {
     const RSA_SHA256 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256';
     const RSA_SHA384 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha384';
     const RSA_SHA512 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha512';
+	const HMAC_SHA1 = 'http://www.w3.org/2000/09/xmldsig#hmac-sha1';
 
     private $cryptParams = array();
     public $type = 0;
@@ -306,6 +307,10 @@ class XMLSecurityKey {
                         break;
                     }
                 }
+            case (XMLSecurityKey::HMAC_SHA1):
+			    $this->cryptParams['library'] = $type;
+                $this->cryptParams['method'] = 'http://www.w3.org/2000/09/xmldsig#hmac-sha1';
+                break;
             default:
                 throw new Exception('Invalid Key Type');
                 return;
@@ -541,6 +546,9 @@ class XMLSecurityKey {
             case 'openssl':
                 return $this->signOpenSSL($data);
                 break;
+            case (XMLSecurityKey::HMAC_SHA1):
+                return hash_hmac("sha1", $data, $this->key, true);
+                break;
         }
     }
 
@@ -548,6 +556,10 @@ class XMLSecurityKey {
         switch ($this->cryptParams['library']) {
             case 'openssl':
                 return $this->verifyOpenSSL($data, $signature);
+                break;
+            case (XMLSecurityKey::HMAC_SHA1):
+                $expectedSignature = hash_hmac("sha1", $data, $this->key, true);
+                return strcmp($signature, $expectedSignature) == 0;
                 break;
         }
     }
@@ -1430,6 +1442,49 @@ class XMLSecurityDSig {
          if ($xpath = $this->getXPathObj()) {
             self::staticAdd509Cert($this->sigNode, $cert, $isPEMFormat, $isURL, $xpath, $options);
          }
+    }
+    
+    /**
+     * This function appends a node to the KeyInfo.
+     *
+     * The KeyInfo element will be created if one does not exist in the document.
+     *
+     * @param $node  The node to append to the KeyInfo.
+     * 
+     * @return DOMNode The KeyInfo element node
+     */
+    public function appendToKeyInfo($node) {
+        $parentRef = $this->sigNode;
+        $baseDoc = $parentRef->ownerDocument;
+        
+        $xpath = $this->getXPathObj();
+        if (empty($xpath)) {
+            $xpath = new DOMXPath($parentRef->ownerDocument);
+            $xpath->registerNamespace('secdsig', XMLSecurityDSig::XMLDSIGNS);
+        }
+        
+        $query = "./secdsig:KeyInfo";
+        $nodeset = $xpath->query($query, $parentRef);
+        $keyInfo = $nodeset->item(0);
+        if (! $keyInfo) {
+            $inserted = FALSE;
+            $keyInfo = $baseDoc->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:KeyInfo');
+        
+            $query = "./secdsig:Object";
+            $nodeset = $xpath->query($query, $parentRef);
+            if ($sObject = $nodeset->item(0)) {
+                $sObject->parentNode->insertBefore($keyInfo, $sObject);
+                $inserted = TRUE;
+            }
+        
+            if (! $inserted) {
+                $parentRef->appendChild($keyInfo);
+            }
+        }
+        
+        $keyInfo->appendChild($node);
+		
+		return $keyInfo;
     }
     
     /* This function retrieves an associative array of the validated nodes.
