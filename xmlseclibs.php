@@ -246,7 +246,6 @@ class XMLSecurityKey {
                     }
                 }
                 throw new Exception('Certificate "type" (private/public) must be passed via parameters');
-                return;
             case (XMLSecurityKey::RSA_OAEP_MGF1P):
                 $this->cryptParams['library'] = 'openssl';
                 $this->cryptParams['padding'] = OPENSSL_PKCS1_OAEP_PADDING;
@@ -259,7 +258,6 @@ class XMLSecurityKey {
                     }
                 }
                 throw new Exception('Certificate "type" (private/public) must be passed via parameters');
-                return;
             case (XMLSecurityKey::RSA_SHA1):
                 $this->cryptParams['library'] = 'openssl';
                 $this->cryptParams['method'] = 'http://www.w3.org/2000/09/xmldsig#rsa-sha1';
@@ -271,7 +269,6 @@ class XMLSecurityKey {
                     }
                 }
                 throw new Exception('Certificate "type" (private/public) must be passed via parameters');
-                break;
             case (XMLSecurityKey::RSA_SHA256):
                 $this->cryptParams['library'] = 'openssl';
                 $this->cryptParams['method'] = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256';
@@ -284,7 +281,6 @@ class XMLSecurityKey {
                     }
                 }
                 throw new Exception('Certificate "type" (private/public) must be passed via parameters');
-                break;
             case (XMLSecurityKey::RSA_SHA384):
                 $this->cryptParams['library'] = 'openssl';
                 $this->cryptParams['method'] = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha384';
@@ -313,7 +309,6 @@ class XMLSecurityKey {
                 break;
             default:
                 throw new Exception('Invalid Key Type');
-                return;
         }
         $this->type = $type;
     }
@@ -473,12 +468,10 @@ class XMLSecurityKey {
         if ($this->cryptParams['type'] == 'public') {
             if (! openssl_public_encrypt($data, $encrypted_data, $this->key, $this->cryptParams['padding'])) {
                 throw new Exception('Failure encrypting Data');
-                return;
             }
         } else {
             if (! openssl_private_encrypt($data, $encrypted_data, $this->key, $this->cryptParams['padding'])) {
                 throw new Exception('Failure encrypting Data');
-                return;
             }
         }
         return $encrypted_data;
@@ -488,12 +481,10 @@ class XMLSecurityKey {
         if ($this->cryptParams['type'] == 'public') {
             if (! openssl_public_decrypt($data, $decrypted, $this->key, $this->cryptParams['padding'])) {
                 throw new Exception('Failure decrypting Data');
-                return;
             }
         } else {
             if (! openssl_private_decrypt($data, $decrypted, $this->key, $this->cryptParams['padding'])) {
                 throw new Exception('Failure decrypting Data');
-                return;
             }
         }
         return $decrypted;
@@ -506,7 +497,6 @@ class XMLSecurityKey {
 	    }
         if (! openssl_sign ($data, $signature, $this->key, $algo)) {
             throw new Exception('Failure Signing Data: ' . openssl_error_string() . ' - ' . $algo);
-            return;
         }
         return $signature;
     }
@@ -523,10 +513,8 @@ class XMLSecurityKey {
         switch ($this->cryptParams['library']) {
             case 'mcrypt':
                 return $this->encryptMcrypt($data);
-                break;
             case 'openssl':
                 return $this->encryptOpenSSL($data);
-                break;
         }
     }
 
@@ -534,10 +522,8 @@ class XMLSecurityKey {
         switch ($this->cryptParams['library']) {
             case 'mcrypt':
                 return $this->decryptMcrypt($data);
-                break;
             case 'openssl':
                 return $this->decryptOpenSSL($data);
-                break;
         }
     }
 
@@ -545,10 +531,8 @@ class XMLSecurityKey {
         switch ($this->cryptParams['library']) {
             case 'openssl':
                 return $this->signOpenSSL($data);
-                break;
             case (XMLSecurityKey::HMAC_SHA1):
                 return hash_hmac("sha1", $data, $this->key, true);
-                break;
         }
     }
 
@@ -556,11 +540,9 @@ class XMLSecurityKey {
         switch ($this->cryptParams['library']) {
             case 'openssl':
                 return $this->verifyOpenSSL($data, $signature);
-                break;
             case (XMLSecurityKey::HMAC_SHA1):
                 $expectedSignature = hash_hmac("sha1", $data, $this->key, true);
                 return strcmp($signature, $expectedSignature) == 0;
-                break;
         }
     }
 
@@ -1581,7 +1563,6 @@ class XMLSecEnc {
                 break;
             default:
                 throw new Exception('Type is currently not supported');
-                return;
         }
 
         $encMethod = $this->encdoc->documentElement->appendChild($this->encdoc->createElementNS(XMLSecEnc::XMLENCNS, 'xenc:EncryptionMethod'));
@@ -1601,7 +1582,6 @@ class XMLSecEnc {
                     $importEnc = $this->rawNode->ownerDocument->importNode($this->encdoc->documentElement, TRUE);
                     $this->rawNode->parentNode->replaceChild($importEnc, $this->rawNode);
                     return $importEnc;
-                    break;
                 case (XMLSecEnc::Content):
                     $importEnc = $this->rawNode->ownerDocument->importNode($this->encdoc->documentElement, TRUE);
                     while($this->rawNode->firstChild) {
@@ -1609,7 +1589,6 @@ class XMLSecEnc {
                     }
                     $this->rawNode->appendChild($importEnc);
                     return $importEnc;
-                    break;
             }
         } else {
             return $this->encdoc->documentElement;
@@ -1692,7 +1671,6 @@ class XMLSecEnc {
                         $importEnc = $this->rawNode->ownerDocument->importNode($newdoc->documentElement, TRUE);
                         $this->rawNode->parentNode->replaceChild($importEnc, $this->rawNode);
                         return $importEnc;
-                        break;
                     case (XMLSecEnc::Content):
                         if ($this->rawNode->nodeType == XML_DOCUMENT_NODE) {
                             $doc = $this->rawNode;
@@ -1704,7 +1682,6 @@ class XMLSecEnc {
                         $parent = $this->rawNode->parentNode;
                         $parent->replaceChild($newFrag, $this->rawNode);
                         return $parent;
-                        break;
                     default:
                         return $decrypted;
                 }
@@ -1830,7 +1807,6 @@ class XMLSecEnc {
                         switch ($keyval->localName) {
                             case 'DSAKeyValue':
                                 throw new Exception("DSAKeyValue currently not supported");
-                                break;
                             case 'RSAKeyValue':
                                 $modulus = NULL;
                                 $exponent = NULL;
