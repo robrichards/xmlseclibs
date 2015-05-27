@@ -184,7 +184,7 @@ class XMLSecurityKey {
     const RSA_SHA512 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha512';
 	const HMAC_SHA1 = 'http://www.w3.org/2000/09/xmldsig#hmac-sha1';
 
-    private $cryptParams = array();
+    protected $cryptParams = array();
     public $type = 0;
     public $key = NULL;
     public $passphrase = "";
@@ -199,10 +199,10 @@ class XMLSecurityKey {
      * This variable contains the certificate as a string if this key represents an X509-certificate.
      * If this key doesn't represent a certificate, this will be NULL.
      */
-    private $x509Certificate = NULL;
+    protected $x509Certificate = NULL;
 
     /* This variable contains the certificate thunbprint if we have loaded an X509-certificate. */
-    private $X509Thumbprint = NULL;
+    protected $X509Thumbprint = NULL;
 
     public function __construct($type, $params=NULL) {
         srand();
@@ -434,7 +434,7 @@ class XMLSecurityKey {
         }
     }
 
-    private function encryptMcrypt($data) {
+    protected function encryptMcrypt($data) {
         $td = mcrypt_module_open($this->cryptParams['cipher'], '', $this->cryptParams['mode'], '');
         $this->iv = mcrypt_create_iv (mcrypt_enc_get_iv_size($td), MCRYPT_RAND);
         mcrypt_generic_init($td, $this->key, $this->iv);
@@ -450,7 +450,7 @@ class XMLSecurityKey {
         return $encrypted_data;
     }
 
-    private function decryptMcrypt($data) {
+    protected function decryptMcrypt($data) {
         $td = mcrypt_module_open($this->cryptParams['cipher'], '', $this->cryptParams['mode'], '');
         $iv_length = mcrypt_enc_get_iv_size($td);
 
@@ -469,7 +469,7 @@ class XMLSecurityKey {
         return $decrypted_data;
     }
 
-    private function encryptOpenSSL($data) {
+    protected function encryptOpenSSL($data) {
         if ($this->cryptParams['type'] == 'public') {
             if (! openssl_public_encrypt($data, $encrypted_data, $this->key, $this->cryptParams['padding'])) {
                 throw new Exception('Failure encrypting Data');
@@ -484,7 +484,7 @@ class XMLSecurityKey {
         return $encrypted_data;
     }
 
-    private function decryptOpenSSL($data) {
+    protected function decryptOpenSSL($data) {
         if ($this->cryptParams['type'] == 'public') {
             if (! openssl_public_decrypt($data, $decrypted, $this->key, $this->cryptParams['padding'])) {
                 throw new Exception('Failure decrypting Data');
@@ -499,7 +499,7 @@ class XMLSecurityKey {
         return $decrypted;
     }
 
-    private function signOpenSSL($data) {
+    protected function signOpenSSL($data) {
 	    $algo = OPENSSL_ALGO_SHA1;
 	    if (! empty($this->cryptParams['digest'])) {
 	        $algo = $this->cryptParams['digest'];
@@ -511,7 +511,7 @@ class XMLSecurityKey {
         return $signature;
     }
 
-    private function verifyOpenSSL($data, $signature) {
+    protected function verifyOpenSSL($data, $signature) {
 	    $algo = OPENSSL_ALGO_SHA1;
 	    if (! empty($this->cryptParams['digest'])) {
 	        $algo = $this->cryptParams['digest'];
@@ -686,14 +686,14 @@ class XMLSecurityDSig {
     public $sigNode = NULL;
     public $idKeys = array();
     public $idNS = array();
-    private $signedInfo = NULL;
-    private $xPathCtx = NULL;
-    private $canonicalMethod = NULL;
-    private $prefix = 'ds';
-    private $searchpfx = 'secdsig';
+    protected $signedInfo = NULL;
+    protected $xPathCtx = NULL;
+    protected $canonicalMethod = NULL;
+    protected $prefix = 'ds';
+    protected $searchpfx = 'secdsig';
 
     /* This variable contains an associative array of validated nodes. */
-    private $validatedNodes = NULL;
+    protected $validatedNodes = NULL;
 
     public function __construct() {
         $sigdoc = new DOMDocument();
@@ -701,11 +701,11 @@ class XMLSecurityDSig {
         $this->sigNode = $sigdoc->documentElement;
     }
 
-    private function resetXPathObj() {
+    protected function resetXPathObj() {
         $this->xPathCtx = NULL;
     }
-	
-    private function getXPathObj() {
+
+    protected function getXPathObj() {
         if (empty($this->xPathCtx) && ! empty($this->sigNode)) {
             $xpath = new DOMXPath($this->sigNode->ownerDocument);
             $xpath->registerNamespace('secdsig', XMLSecurityDSig::XMLDSIGNS);
@@ -777,7 +777,7 @@ class XMLSecurityDSig {
         }
     }
 
-    private function canonicalizeData($node, $canonicalmethod, $arXPath=NULL, $prefixList=NULL) {
+    protected function canonicalizeData($node, $canonicalmethod, $arXPath=NULL, $prefixList=NULL) {
         $exclusive = FALSE;
         $withComments = FALSE;
         switch ($canonicalmethod) {
@@ -1086,7 +1086,7 @@ class XMLSecurityDSig {
         return TRUE;
     }
 
-    private function addRefInternal($sinfoNode, $node, $algorithm, $arTransforms=NULL, $options=NULL) {
+    protected function addRefInternal($sinfoNode, $node, $algorithm, $arTransforms=NULL, $options=NULL) {
         $prefix = NULL;
         $prefix_ns = NULL;
         $id_name = 'Id';
@@ -1512,17 +1512,17 @@ class XMLSecEnc {
     const URI = 3;
     const XMLENCNS = 'http://www.w3.org/2001/04/xmlenc#';
 
-    private $encdoc = NULL;
-    private $rawNode = NULL;
+    protected $encdoc = NULL;
+    protected $rawNode = NULL;
     public $type = NULL;
     public $encKey = NULL;
-    private $references = array();
+    protected $references = array();
 
     public function __construct() {
         $this->_resetTemplate();
     }
 
-    private function _resetTemplate(){
+    protected function _resetTemplate(){
         $this->encdoc = new DOMDocument();
         $this->encdoc->loadXML(XMLSecEnc::template);
     }
