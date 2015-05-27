@@ -292,6 +292,7 @@ class XMLSecurityKey {
                         break;
                     }
                 }
+                throw new Exception('Certificate "type" (private/public) must be passed via parameters');
             case (XMLSecurityKey::RSA_SHA512):
                 $this->cryptParams['library'] = 'openssl';
                 $this->cryptParams['method'] = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha512';
@@ -303,6 +304,7 @@ class XMLSecurityKey {
                         break;
                     }
                 }
+                throw new Exception('Certificate "type" (private/public) must be passed via parameters');
             case (XMLSecurityKey::HMAC_SHA1):
 			    $this->cryptParams['library'] = $type;
                 $this->cryptParams['method'] = 'http://www.w3.org/2000/09/xmldsig#hmac-sha1';
