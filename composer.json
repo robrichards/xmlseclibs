@@ -10,7 +10,14 @@
   ],
   "homepage": "https://github.com/robrichards/xmlseclibs",
   "autoload": {
-    "files": ["xmlseclibs.php"]
+    "psr-0": {
+      "": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-0": {
+      "": "tests/"
+    }
   },
   "suggest": {
     "ext/openssl": "OpenSSL extension",
