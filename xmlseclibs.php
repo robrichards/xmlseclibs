@@ -374,7 +374,6 @@ class XMLSecurityKey {
                 }
             } else {
                 if (strncmp($curData, '-----END CERTIFICATE', 20) == 0) {
-                    $inData = FALSE;
                     break;
                 }
                 $data .= trim($curData);
@@ -1029,7 +1028,6 @@ class XMLSecurityDSig {
 
     public function getRefIDs() {
         $refids = array();
-        $doc = $this->sigNode->ownerDocument;
 
         $xpath = $this->getXPathObj();
         $query = "./secdsig:SignedInfo/secdsig:Reference";
