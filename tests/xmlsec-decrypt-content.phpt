@@ -90,4 +90,3 @@ foreach ($arTests AS $testName=>$testFile) {
 --EXPECTF--
 AOESP_SHA1: Passed
 AOESP_SHA1_CONTENT: Passed
-
