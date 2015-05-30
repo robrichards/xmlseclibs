@@ -39,7 +39,11 @@ $objDSig = new XMLSecurityDSig();
 // Use the c14n exclusive canonicalization
 $objDSig->setCanonicalMethod(XMLSecurityDSig::EXC_C14N);
 // Sign using SHA-256
-$objDSig->addReference($doc, XMLSecurityDSig::SHA256, array('http://www.w3.org/2000/09/xmldsig#enveloped-signature'));
+$objDSig->addReference(
+    $doc, 
+    XMLSecurityDSig::SHA256, 
+    array('http://www.w3.org/2000/09/xmldsig#enveloped-signature')
+);
 
 // Create a new (private) Security key
 $objKey = new XMLSecurityKey(XMLSecurityKey::RSA_SHA256, array('type'=>'private'));
