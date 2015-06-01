@@ -39,9 +39,9 @@ $doc->save(dirname(__FILE__) . '/sign-c14-comments.xml');
 $sign_output = file_get_contents(dirname(__FILE__) . '/sign-c14-comments.xml');
 $sign_output_def = file_get_contents(dirname(__FILE__) . '/sign-c14-comments.res');
 if ($sign_output != $sign_output_def) {
-    echo "NOT THE SAME";
+    echo "NOT THE SAME\n";
 }
-echo "DONE";
+echo "DONE\n";
 ?>
 --EXPECTF--
 DONE

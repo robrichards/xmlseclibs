@@ -27,7 +27,7 @@ $encNode = $enc->encryptNode($objKey);
 $dom->save(dirname(__FILE__) . '/oaep_sha1.xml');
 
 $root = $dom->documentElement;
-echo $root->localName;
+echo $root->localName."\n";
 
 unlink(dirname(__FILE__) . '/oaep_sha1.xml');
 
