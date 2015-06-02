@@ -1,6 +1,6 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
-xx, xxxx xxxx, 2.0.0
+xx, xxxx xxxx, 1.4.0
 Features:
 - Support for X509SubjectName. (Milos Tomic)
 - Add HMAC-SHA1 support.
