@@ -1,5 +1,16 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+xx, xxxx xxxx, 2.0.0
+Features:
+- Support for X509SubjectName. (Milos Tomic)
+- Add HMAC-SHA1 support.
+
+Improvements:
+- Add how to install to README. (Bernardo Vieira da Silva)
+- Code cleanup. (Jaime Pérez)
+- Normalilze tests. (Hidde Wieringa)
+- Add basic usage to README. (Hidde Wieringa)
+
 21, May 2015, 1.3.2
 Bug Fixes:
 - Fix Undefined variable notice. (dpieper85)
