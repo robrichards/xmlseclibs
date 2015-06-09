@@ -6,7 +6,7 @@ The author of xmlseclibs is Rob Richards.
 
 # Requirements
 
-xmlseclibs requires PHP version 5 or greater.
+xmlseclibs requires PHP version 5.2 or greater.
 
 
 ## How to Install
