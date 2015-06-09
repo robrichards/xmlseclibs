@@ -14,6 +14,9 @@
       "": "src/"
     }
   },
+  "require": {
+      "php": ">= 5.2"
+   },
   "suggest": {
     "ext/openssl": "OpenSSL extension",
     "ext/mcrypt": "MCrypt extension"
