@@ -231,16 +231,7 @@ class XMLSecurityDSig {
             default:
                 throw new Exception("Cannot validate digest: Unsupported Algorith <$digestAlgorithm>");
         }
-        if (function_exists('hash')) {
-            return base64_encode(hash($alg, $data, TRUE));
-        } elseif (function_exists('mhash')) {
-            $alg = "MHASH_" . strtoupper($alg);
-            return base64_encode(mhash(constant($alg), $data));
-        } elseif ($alg === 'sha1') {
-            return base64_encode(sha1($data, TRUE));
-        } else {
-            throw new Exception('xmlseclibs is unable to calculate a digest. Maybe you need the mhash library?');
-        }
+        return base64_encode(hash($alg, $data, TRUE));
     }
 
     public function validateDigest($refNode, $data) {
