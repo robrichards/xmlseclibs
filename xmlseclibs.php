@@ -75,7 +75,6 @@ class XMLSecurityKey {
     private $X509Thumbprint = NULL;
 
     public function __construct($type, $params=NULL) {
-        srand();
         switch ($type) {
             case (XMLSecurityKey::TRIPLEDES_CBC):
                 $this->cryptParams['library'] = 'mcrypt';
@@ -307,7 +306,7 @@ class XMLSecurityKey {
         if ($this->cryptParams['mode'] == MCRYPT_MODE_CBC) {
             $bs = mcrypt_enc_get_block_size($td);
             for ($datalen0=$datalen=strlen($data); (($datalen%$bs)!=($bs-1)); $datalen++)
-                $data.=chr(rand(1, 127));
+                $data.=chr(mt_rand(1, 127));
             $data.=chr($datalen-$datalen0+1);
         }
         $encrypted_data = $this->iv.mcrypt_generic($td, $data);
@@ -568,7 +567,7 @@ class XMLSecurityDSig {
     }
 
     static function generate_GUID($prefix='pfx') {
-        $uuid = md5(uniqid(rand(), true));
+        $uuid = md5(uniqid(mt_rand(), true));
         $guid =  $prefix.substr($uuid,0,8)."-".
                 substr($uuid,8,4)."-".
                 substr($uuid,12,4)."-".
