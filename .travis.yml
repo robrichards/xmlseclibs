@@ -13,6 +13,8 @@ php:
 
 matrix:
   fast_finish: true
+  allow_failures:
+    - php: 5.2
 
 script:
   - phpunit tests
