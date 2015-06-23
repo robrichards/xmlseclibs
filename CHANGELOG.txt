@@ -1,6 +1,6 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
-xx, xxxx xxxx, 1.4.0
+23, Jun 2015, 1.4.0
 Features:
 - Support for PSR-0 standard.
 - Support for X509SubjectName. (Milos Tomic)
