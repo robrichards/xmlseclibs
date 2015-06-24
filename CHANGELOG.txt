@@ -1,5 +1,10 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+??, ??? ????, 1.4.1
+Features:
+- Support for locating specific signature when multiple exist in 
+  document. (griga3k)
+
 23, Jun 2015, 1.4.0
 Features:
 - Support for PSR-0 standard.

@@ -100,7 +100,7 @@ class XMLSecurityDSig {
         return $guid;
     }
 
-    public function locateSignature($objDoc) {
+    public function locateSignature($objDoc, $pos=0) {
         if ($objDoc instanceof DOMDocument) {
             $doc = $objDoc;
         } else {
@@ -111,7 +111,7 @@ class XMLSecurityDSig {
             $xpath->registerNamespace('secdsig', XMLSecurityDSig::XMLDSIGNS);
             $query = ".//secdsig:Signature";
             $nodeset = $xpath->query($query, $objDoc);
-            $this->sigNode = $nodeset->item(0);
+            $this->sigNode = $nodeset->item($pos);
             return $this->sigNode;
         }
         return NULL;
@@ -229,7 +229,7 @@ class XMLSecurityDSig {
                 $alg = 'ripemd160';
                 break;
             default:
-                throw new Exception("Cannot validate digest: Unsupported Algorith <$digestAlgorithm>");
+                throw new Exception("Cannot validate digest: Unsupported Algorithm <$digestAlgorithm>");
         }
         return base64_encode(hash($alg, $data, TRUE));
     }
