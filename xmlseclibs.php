@@ -37,7 +37,7 @@
  * @author     Robert Richards <rrichards@cdatazone.org>
  * @copyright  2007-2015 Robert Richards <rrichards@cdatazone.org>
  * @license    http://www.opensource.org/licenses/bsd-license.php  BSD License
- * @version    1.3.3
+ * @version    1.3.4
  */
 
 /*
@@ -707,7 +707,7 @@ class XMLSecurityDSig {
         return $guid;
     }
 
-    public function locateSignature($objDoc) {
+    public function locateSignature($objDoc, $pos=0) {
         if ($objDoc instanceof DOMDocument) {
             $doc = $objDoc;
         } else {
@@ -718,7 +718,7 @@ class XMLSecurityDSig {
             $xpath->registerNamespace('secdsig', XMLSecurityDSig::XMLDSIGNS);
             $query = ".//secdsig:Signature";
             $nodeset = $xpath->query($query, $objDoc);
-            $this->sigNode = $nodeset->item(0);
+            $this->sigNode = $nodeset->item($pos);
             return $this->sigNode;
         }
         return NULL;
