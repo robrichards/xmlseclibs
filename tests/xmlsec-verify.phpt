@@ -3,6 +3,8 @@ Basic Verify
 --FILE--
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');
+use \XMLSecLibs\XMLSecurityDSig;
+use \XMLSecLibs\XMLSecEnc;
 
 $doc = new DOMDocument();
 $arTests = array('SIGN_TEST'=>'sign-basic-test.xml');

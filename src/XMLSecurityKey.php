@@ -1,4 +1,8 @@
 <?php
+namespace XMLSecLibs;
+use \DomElement;
+
+
 /**
  * xmlseclibs.php
  *
@@ -37,7 +41,7 @@
  * @author     Robert Richards <rrichards@cdatazone.org>
  * @copyright  2007-2015 Robert Richards <rrichards@cdatazone.org>
  * @license    http://www.opensource.org/licenses/bsd-license.php  BSD License
- * @version    1.4.0
+ * @version    2.0.0
  */
 
 class XMLSecurityKey {

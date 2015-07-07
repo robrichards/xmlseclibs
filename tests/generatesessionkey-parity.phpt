@@ -3,6 +3,7 @@ Check that generated triple-des keys have the correct parity.
 --FILE--
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');
+use \XMLSecLibs\XMLSecurityKey;
 
 /* Run the test several times, to increase the chance of detecting an error. */
 for ($t = 0; $t < 16; $t++) {

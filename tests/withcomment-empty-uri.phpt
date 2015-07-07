@@ -5,6 +5,7 @@ Checks that comments are removed when using an empty URI in a Reference.
 --FILE--
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');
+use \XMLSecLibs\XMLSecurityDSig;
 
 $doc = new DOMDocument();
 $doc->load(dirname(__FILE__) . '/withcomment-empty-uri.xml');
