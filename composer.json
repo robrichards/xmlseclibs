@@ -11,7 +11,7 @@
   "homepage": "https://github.com/robrichards/xmlseclibs",
   "autoload": {
     "psr-4": {
-      "XMLSecLibs\\": "src"
+      "RobRichards\\XMLSecLibs\\": "src"
     }
   },
   "require": {
