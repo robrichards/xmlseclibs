@@ -39,22 +39,19 @@ foreach ($arTests AS $testName=>$testFile) {
 		} else {
 			print "Failure!!!!!!!!";
 		}
-		print "\n";
-		print "--EXPECTF--";
-		print "\n";
-		print "SIGN_TEST: Signature validated!";
-		print "\n";
 	}
 	if ($testName == 'ERROR_TEST') {
 		print $testName.": ";
-		print "\n";
-		print "--EXPECTF--";
-		print "\n";
-		print "Exception: Unable to extract public key";
-		print "\n";
-		print "ERROR_TEST RESULT: ";
-		print "\n";
-		$objKey->loadKey(dirname(__FILE__) . '/mycert.win.pem', TRUE);
+		try {
+			$objKey->loadKey(dirname(__FILE__) . '/mycert.win.pem', TRUE);
+			print "PASS";
+		} catch (Exception $e) {
+			print $e->getMessage();
+		}
 	}
+	print "\n";
 }
 ?>
+--EXPECTF--
+SIGN_TEST: Signature validated!
+ERROR_TEST: Unable to extract public key

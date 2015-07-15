@@ -3,6 +3,7 @@ namespace XMLSecLibs;
 use \DomDocument;
 use \DomNode;
 use \DomXPath;
+use \Exception;
 
 /**
  * xmlseclibs.php
@@ -214,7 +215,7 @@ class XMLSecEnc {
      * @params XMLSecurityKey $objKey  The decryption key that should be used when decrypting the node.
      * @params boolean $replace  Whether we should replace the encrypted node in the XML document with the decrypted data. The default is TRUE.
      * @return string|DOMElement  The decrypted data.
-     */     
+     */
     public function decryptNode($objKey, $replace=TRUE) {
         if (! $objKey instanceof XMLSecurityKey) {
             throw new Exception('Invalid Key');

@@ -1,7 +1,7 @@
 <?php
 namespace XMLSecLibs;
 use \DomElement;
-
+use \Exception;
 
 /**
  * xmlseclibs.php
