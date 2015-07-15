@@ -5,8 +5,8 @@ Test signing with C14N with comments.
 --FILE--
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');
-use \RobRichards\XMLSecLibs\XMLSecurityDSig;
-use \RobRichards\XMLSecLibs\XMLSecurityKey;
+use RobRichards\XMLSecLibs\XMLSecurityDSig;
+use RobRichards\XMLSecLibs\XMLSecurityKey;
 
 if (file_exists(dirname(__FILE__) . '/sign-c14-comments.xml')) {
     unlink(dirname(__FILE__) . '/sign-c14-comments.xml');

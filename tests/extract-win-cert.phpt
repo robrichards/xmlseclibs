@@ -4,7 +4,7 @@ Extract Public Key
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');
 
-use \RobRichards\XMLSecLibs\XMLSecurityDSig;
+use RobRichards\XMLSecLibs\XMLSecurityDSig;
 
 $doc = new DOMDocument();
 $arTests = array(

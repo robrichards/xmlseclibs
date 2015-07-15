@@ -3,8 +3,8 @@ Signature Forcing Empty URI
 --FILE--
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');
-use \RobRichards\XMLSecLibs\XMLSecurityDSig;
-use \RobRichards\XMLSecLibs\XMLSecurityKey;
+use RobRichards\XMLSecLibs\XMLSecurityDSig;
+use RobRichards\XMLSecLibs\XMLSecurityKey;
 
 if (file_exists(dirname(__FILE__) . '/sign-empty-uri.xml')) {
     unlink(dirname(__FILE__) . '/sign-empty-uri.xml');

@@ -3,7 +3,7 @@ Certificate thumbprint check
 --FILE--
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');
-use \RobRichards\XMLSecLibs\XMLSecurityKey;
+use RobRichards\XMLSecLibs\XMLSecurityKey;
 
 $siteKey = new XMLSecurityKey(XMLSecurityKey::RSA_OAEP_MGF1P, array('type'=>'public'));
 $siteKey->loadKey(dirname(__FILE__) . '/mycert.pem', TRUE, TRUE);
