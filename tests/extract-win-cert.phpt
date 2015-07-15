@@ -4,6 +4,8 @@ Extract Public Key
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');
 
+use \XMLSecLibs\XMLSecurityDSig;
+
 $doc = new DOMDocument();
 $arTests = array(
 	'SIGN_TEST'=>'sign-basic-test.xml',
@@ -13,7 +15,7 @@ $arTests = array(
 foreach ($arTests AS $testName=>$testFile) {
 	$doc->load(dirname(__FILE__) . "/$testFile");
 	$objXMLSecDSig = new XMLSecurityDSig();
-	
+
 	$objDSig = $objXMLSecDSig->locateSignature($doc);
 	if (! $objDSig) {
 		throw new Exception("Cannot locate Signature Node");
@@ -21,13 +23,13 @@ foreach ($arTests AS $testName=>$testFile) {
 	$objXMLSecDSig->canonicalizeSignedInfo();
 	$objXMLSecDSig->idKeys = array('wsu:Id');
 	$objXMLSecDSig->idNS = array('wsu'=>'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd');
-	
+
 	$retVal = $objXMLSecDSig->validateReference();
 
 	if (! $retVal) {
 		throw new Exception("Reference Validation Failed");
 	}
-	
+
 	$objKey = $objXMLSecDSig->locateKey();
 	if ($testName == 'SIGN_TEST') {
 		$objKey->loadKey(dirname(__FILE__) . '/mycert.pem', TRUE);
