@@ -6,8 +6,8 @@ the correct order.
 --FILE--
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');
-use \XMLSecLibs\XMLSecurityKey;
-use \XMLSecLibs\XMLSecEnc;
+use \RobRichards\XMLSecLibs\XMLSecurityKey;
+use \RobRichards\XMLSecLibs\XMLSecEnc;
 
 $dom = new DOMDocument();
 $dom->load(dirname(__FILE__) . '/basic-doc.xml');

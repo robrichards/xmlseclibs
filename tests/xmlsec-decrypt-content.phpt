@@ -3,7 +3,7 @@ Basic Decryption: Content
 --FILE--
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');
-use \XMLSecLibs\XMLSecEnc;
+use \RobRichards\XMLSecLibs\XMLSecEnc;
 
 /* When we need to locate our own key based on something like a key name */
 function locateLocalKey($objKey) {

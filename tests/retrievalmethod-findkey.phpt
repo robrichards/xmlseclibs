@@ -3,7 +3,7 @@ Test for ds:RetrievalMethod.
 --FILE--
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');
-use \XMLSecLibs\XMLSecEnc;
+use \RobRichards\XMLSecLibs\XMLSecEnc;
 
 $doc = new DOMDocument();
 $doc->load(dirname(__FILE__) . "/retrievalmethod-findkey.xml");

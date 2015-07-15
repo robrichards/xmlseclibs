@@ -1,5 +1,5 @@
 <?php
-namespace XMLSecLibs;
+namespace RobRichards\XMLSecLibs;
 use \DomElement;
 use \Exception;
 

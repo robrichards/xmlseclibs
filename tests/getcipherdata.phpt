@@ -3,7 +3,7 @@ Test the getCipherData() function.
 --FILE--
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');
-use \XMLSecLibs\XMLSecEnc;
+use \RobRichards\XMLSecLibs\XMLSecEnc;
 
 $doc = new DOMDocument();
 $doc->load(dirname(__FILE__) . '/oaep_sha1-res.xml');

@@ -1,5 +1,5 @@
 <?php
-namespace XMLSecLibs;
+namespace RobRichards\XMLSecLibs;
 use \DomDocument;
 use \DomXPath;
 use \DomNode;

@@ -3,8 +3,8 @@ Basic Encryption: Content
 --FILE--
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');
-use \XMLSecLibs\XMLSecurityKey;
-use \XMLSecLibs\XMLSecEnc;
+use \RobRichards\XMLSecLibs\XMLSecurityKey;
+use \RobRichards\XMLSecLibs\XMLSecEnc;
 
 if (file_exists(dirname(__FILE__) . '/oaep_sha1.xml')) {
     unlink(dirname(__FILE__) . '/oaep_sha1.xml');

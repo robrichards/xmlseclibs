@@ -3,8 +3,8 @@ Basic Signature With Subject
 --FILE--
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');
-use \XMLSecLibs\XMLSecurityDSig;
-use \XMLSecLibs\XMLSecurityKey;
+use \RobRichards\XMLSecLibs\XMLSecurityDSig;
+use \RobRichards\XMLSecLibs\XMLSecurityKey;
 
 if (file_exists(dirname(__FILE__) . '/sign-subject.xml')) {
     unlink(dirname(__FILE__) . '/sign-subject.xml');

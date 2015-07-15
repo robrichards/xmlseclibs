@@ -3,7 +3,7 @@ Basic tests for generateSessionKey().
 --FILE--
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');
-use \XMLSecLibs\XMLSecurityKey;
+use \RobRichards\XMLSecLibs\XMLSecurityKey;
 
 $key = new XMLSecurityKey(XMLSecurityKey::TRIPLEDES_CBC);
 $k = $key->generateSessionKey();
