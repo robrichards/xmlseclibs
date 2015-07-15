@@ -283,6 +283,9 @@ class XMLSecurityKey {
                     $this->X509Thumbprint = self::getRawThumbprint($this->key);
                 }
                 $this->key = openssl_get_publickey($this->key);
+                if (! $this->key) {
+                    throw new Exception('Unable to extract public key');
+                }
             } else {
                 $this->key = openssl_get_privatekey($this->key, $this->passphrase);
             }
