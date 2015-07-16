@@ -1,10 +1,10 @@
 <?php
-namespace XMLSecLibs;
-use \DomDocument;
-use \DomXPath;
-use \DomNode;
-use \DomElement;
-use \Exception;
+namespace RobRichards\XMLSecLibs;
+use DomDocument;
+use DomXPath;
+use DomNode;
+use DomElement;
+use Exception;
 
 /**
  * xmlseclibs.php
