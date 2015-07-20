@@ -181,7 +181,7 @@ class XMLSecurityKey
                 }
                 throw new Exception('Certificate "type" (private/public) must be passed via parameters');
             case (self::HMAC_SHA1):
-			    $this->cryptParams['library'] = $type;
+                $this->cryptParams['library'] = $type;
                 $this->cryptParams['method'] = 'http://www.w3.org/2000/09/xmldsig#hmac-sha1';
                 break;
             default:
@@ -383,7 +383,7 @@ class XMLSecurityKey
         if (! empty($this->cryptParams['digest'])) {
             $algo = $this->cryptParams['digest'];
         }
-        if (! openssl_sign ($data, $signature, $this->key, $algo)) {
+        if (! openssl_sign($data, $signature, $this->key, $algo)) {
             throw new Exception('Failure Signing Data: ' . openssl_error_string() . ' - ' . $algo);
         }
         return $signature;
@@ -444,9 +444,9 @@ class XMLSecurityKey
         return $this->cryptParams['method'];
     }
 
-    static function makeAsnSegment($type, $string)
+    public static function makeAsnSegment($type, $string)
     {
-        switch ($type){
+        switch ($type) {
             case 0x02:
                 if (ord($string) > 0x7f)
                     $string = chr(0).$string;
@@ -463,31 +463,31 @@ class XMLSecurityKey
         } else if ($length < 0x0100) {
             $output = sprintf("%c%c%c%s", $type, 0x81, $length, $string);
         } else if ($length < 0x010000) {
-            $output = sprintf("%c%c%c%c%s", $type, 0x82, $length/0x0100, $length%0x0100, $string);
+            $output = sprintf("%c%c%c%c%s", $type, 0x82, $length / 0x0100, $length % 0x0100, $string);
         } else {
             $output = null;
         }
-        return($output);
+        return $output;
     }
 
     /* Modulus and Exponent must already be base64 decoded */
-    static function convertRSA($modulus, $exponent)
+    public static function convertRSA($modulus, $exponent)
     {
         /* make an ASN publicKeyInfo */
         $exponentEncoding = self::makeAsnSegment(0x02, $exponent);
         $modulusEncoding = self::makeAsnSegment(0x02, $modulus);
-        $sequenceEncoding = self:: makeAsnSegment(0x30, $modulusEncoding.$exponentEncoding);
+        $sequenceEncoding = self::makeAsnSegment(0x30, $modulusEncoding.$exponentEncoding);
         $bitstringEncoding = self::makeAsnSegment(0x03, $sequenceEncoding);
         $rsaAlgorithmIdentifier = pack("H*", "300D06092A864886F70D0101010500");
-        $publicKeyInfo = self::makeAsnSegment (0x30, $rsaAlgorithmIdentifier.$bitstringEncoding);
+        $publicKeyInfo = self::makeAsnSegment(0x30, $rsaAlgorithmIdentifier.$bitstringEncoding);
 
         /* encode the publicKeyInfo in base64 and add PEM brackets */
         $publicKeyInfoBase64 = base64_encode($publicKeyInfo);
         $encoding = "-----BEGIN PUBLIC KEY-----\n";
         $offset = 0;
-        while ($segment=substr($publicKeyInfoBase64, $offset, 64)){
-           $encoding = $encoding.$segment."\n";
-           $offset += 64;
+        while ($segment = substr($publicKeyInfoBase64, $offset, 64)) {
+            $encoding = $encoding.$segment."\n";
+            $offset += 64;
         }
         return $encoding."-----END PUBLIC KEY-----\n";
     }
@@ -505,18 +505,21 @@ class XMLSecurityKey
      * Will return the X509 certificate in PEM-format if this key represents
      * an X509 certificate.
      *
-     * @return  The X509 certificate or null if this key doesn't represent an X509-certificate.
+     * @return string The X509 certificate or null if this key doesn't represent an X509-certificate.
      */
     public function getX509Certificate()
     {
         return $this->x509Certificate;
     }
 
-    /* Get the thumbprint of this X509 certificate.
+    /**
+     * Get the thumbprint of this X509 certificate.
      *
      * Returns:
      *  The thumbprint as a lowercase 40-character hexadecimal number, or null
      *  if this isn't a X509 certificate.
+     *
+     *  @return string Lowercase 40-character hexadecimal number of thumbprint
      */
     public function getX509Thumbprint()
     {
@@ -527,8 +530,8 @@ class XMLSecurityKey
     /**
      * Create key from an EncryptedKey-element.
      *
-     * @param DOMElement $element  The EncryptedKey-element.
-     * @return XMLSecurityKey  The new key.
+     * @param  DOMElement $element The EncryptedKey-element.
+     * @return XMLSecurityKey The new key.
      */
     public static function fromEncryptedKeyElement(DOMElement $element)
     {
