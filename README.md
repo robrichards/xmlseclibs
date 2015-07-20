@@ -6,8 +6,8 @@ The author of xmlseclibs is Rob Richards.
 
 # Branches
 Both the master and the 1.4 branches are actively maintained. The 1.3 branch is only updated for security related issues.
-master - Contains namespace support requiring 5.3+.
-1.4    - Contains auto-loader support while also maintaining backwards compatiblity with the 1.3 version using the xmlseclibs.php file. Supports PHP 5.2+
+* master: Contains namespace support requiring 5.3+.
+* 1.4: Contains auto-loader support while also maintaining backwards compatiblity with the 1.3 version using the xmlseclibs.php file. Supports PHP 5.2+
 
 # Requirements
 
