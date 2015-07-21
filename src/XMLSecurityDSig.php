@@ -58,6 +58,12 @@ class XMLSecurityDSig {
     <ds:SignatureMethod />
   </ds:SignedInfo>
 </ds:Signature>';
+    
+    const BASE_TEMPLATE = '<Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+  <SignedInfo>
+    <SignatureMethod />
+  </SignedInfo>
+</Signature>';
 
     public $sigNode = NULL;
     public $idKeys = array();
@@ -71,9 +77,17 @@ class XMLSecurityDSig {
     /* This variable contains an associative array of validated nodes. */
     private $validatedNodes = NULL;
 
-    public function __construct() {
+    public function __construct($prefix='ds')
+    {
+    	$template = self::BASE_TEMPLATE;
+    	if (! empty($prefix)) {
+    		$this->prefix = $prefix.':';
+    		$search = array("<S", "</S", "xmlns=");
+    		$replace = array("<$prefix:S", "</$prefix:S", "xmlns:$prefix=");
+    		$template = str_replace($search, $replace, $template);
+    	}
         $sigdoc = new DOMDocument();
-        $sigdoc->loadXML(XMLSecurityDSig::template);
+        $sigdoc->loadXML($template);
         $this->sigNode = $sigdoc->documentElement;
     }
 
@@ -120,9 +134,9 @@ class XMLSecurityDSig {
     public function createNewSignNode($name, $value=NULL) {
         $doc = $this->sigNode->ownerDocument;
         if (! is_null($value)) {
-            $node = $doc->createElementNS(XMLSecurityDSig::XMLDSIGNS, $this->prefix.':'.$name, $value);
+            $node = $doc->createElementNS(self::XMLDSIGNS, $this->prefix.$name, $value);
         } else {
-            $node = $doc->createElementNS(XMLSecurityDSig::XMLDSIGNS, $this->prefix.':'.$name);
+            $node = $doc->createElementNS(self::XMLDSIGNS, $this->prefix.$name);
         }
         return $node;
     }
@@ -488,8 +502,8 @@ class XMLSecurityDSig {
             foreach ($arTransforms AS $transform) {
                 $transNode = $this->createNewSignNode('Transform');
                 $transNodes->appendChild($transNode);
-                if (is_array($transform) && 
-                    (! empty($transform['http://www.w3.org/TR/1999/REC-xpath-19991116'])) && 
+                if (is_array($transform) &&
+                    (! empty($transform['http://www.w3.org/TR/1999/REC-xpath-19991116'])) &&
                     (! empty($transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['query']))) {
                     $transNode->setAttribute('Algorithm', 'http://www.w3.org/TR/1999/REC-xpath-19991116');
                     $XPathNode = $this->createNewSignNode('XPath', $transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['query']);
@@ -646,7 +660,7 @@ class XMLSecurityDSig {
      *
      * @param $node  The node the signature element should be inserted into.
      * @param $beforeNode  The node the signature element should be located before.
-     * 
+     *
      * @return DOMNode The signature element node
      */
     public function insertSignature($node, $beforeNode = NULL) {
@@ -808,7 +822,7 @@ class XMLSecurityDSig {
      * The KeyInfo element will be created if one does not exist in the document.
      *
      * @param $node  The node to append to the KeyInfo.
-     * 
+     *
      * @return DOMNode The KeyInfo element node
      */
     public function appendToKeyInfo($node) {
