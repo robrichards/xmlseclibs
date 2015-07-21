@@ -71,7 +71,7 @@ class XMLSecurityDSig {
     private $signedInfo = NULL;
     private $xPathCtx = NULL;
     private $canonicalMethod = NULL;
-    private $prefix = 'ds';
+    private $prefix = '';
     private $searchpfx = 'secdsig';
 
     /* This variable contains an associative array of validated nodes. */
@@ -732,9 +732,14 @@ class XMLSecurityDSig {
         $query = "./secdsig:KeyInfo";
         $nodeset = $xpath->query($query, $parentRef);
         $keyInfo = $nodeset->item(0);
+        $dsig_pfx = '';
         if (! $keyInfo) {
+        	$pfx = $parentRef->lookupPrefix(XMLSecurityDSig::XMLDSIGNS);
+        	if (! empty($pfx)) {
+        		$dsig_pfx = $pfx.":";
+        	}
             $inserted = FALSE;
-            $keyInfo = $baseDoc->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:KeyInfo');
+            $keyInfo = $baseDoc->createElementNS(XMLSecurityDSig::XMLDSIGNS, $dsig_pfx.'KeyInfo');
         
             $query = "./secdsig:Object";
             $nodeset = $xpath->query($query, $parentRef);
@@ -746,13 +751,18 @@ class XMLSecurityDSig {
             if (! $inserted) {
                 $parentRef->appendChild($keyInfo);
             }
+        } else {
+            $pfx = $keyInfo->lookupPrefix(XMLSecurityDSig::XMLDSIGNS);
+            if (! empty($pfx)) {
+                $dsig_pfx = $pfx.":";
+            }
         }
         
         // Add all certs if there are more than one
         $certs = XMLSecurityDSig::staticGet509XCerts($cert, $isPEMFormat);
 
         // Attach X509 data node
-        $x509DataNode = $baseDoc->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:X509Data');
+        $x509DataNode = $baseDoc->createElementNS(XMLSecurityDSig::XMLDSIGNS, $dsig_pfx.'X509Data');
         $keyInfo->appendChild($x509DataNode);
 
         $issuerSerial = FALSE;
@@ -780,7 +790,7 @@ class XMLSecurityDSig {
                         } else {
                             $subjectNameValue = $certData['issuer'];
                         }
-                        $x509SubjectNode = $baseDoc->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:X509SubjectName', $subjectNameValue);
+                        $x509SubjectNode = $baseDoc->createElementNS(XMLSecurityDSig::XMLDSIGNS, $dsig_pfx.'X509SubjectName', $subjectNameValue);
                         $x509DataNode->appendChild($x509SubjectNode);
                     }
                     if ($issuerSerial && ! empty($certData['issuer']) && ! empty($certData['serialNumber'])) {
@@ -794,18 +804,18 @@ class XMLSecurityDSig {
                             $issuerName = $certData['issuer'];
                         }
                         
-                        $x509IssuerNode = $baseDoc->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:X509IssuerSerial');
+                        $x509IssuerNode = $baseDoc->createElementNS(XMLSecurityDSig::XMLDSIGNS, $dsig_pfx.'X509IssuerSerial');
                         $x509DataNode->appendChild($x509IssuerNode);
                         
-                        $x509Node = $baseDoc->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:X509IssuerName', $issuerName);
+                        $x509Node = $baseDoc->createElementNS(XMLSecurityDSig::XMLDSIGNS, $dsig_pfx.'X509IssuerName', $issuerName);
                         $x509IssuerNode->appendChild($x509Node);
-                        $x509Node = $baseDoc->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:X509SerialNumber', $certData['serialNumber']);
+                        $x509Node = $baseDoc->createElementNS(XMLSecurityDSig::XMLDSIGNS, $dsig_pfx.'X509SerialNumber', $certData['serialNumber']);
                         $x509IssuerNode->appendChild($x509Node);
                     }
                 }
                 
             }
-            $x509CertNode = $baseDoc->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:X509Certificate', $X509Cert);
+            $x509CertNode = $baseDoc->createElementNS(XMLSecurityDSig::XMLDSIGNS, $dsig_pfx.'X509Certificate', $X509Cert);
             $x509DataNode->appendChild($x509CertNode);
         }
     }
@@ -839,8 +849,13 @@ class XMLSecurityDSig {
         $nodeset = $xpath->query($query, $parentRef);
         $keyInfo = $nodeset->item(0);
         if (! $keyInfo) {
+        	$dsig_pfx = '';
+            $pfx = $parentRef->lookupPrefix(XMLSecurityDSig::XMLDSIGNS);
+            if (! empty($pfx)) {
+                $dsig_pfx = $pfx.":";
+            }
             $inserted = FALSE;
-            $keyInfo = $baseDoc->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'ds:KeyInfo');
+            $keyInfo = $baseDoc->createElementNS(XMLSecurityDSig::XMLDSIGNS, $dsig_pfx.'KeyInfo');
         
             $query = "./secdsig:Object";
             $nodeset = $xpath->query($query, $parentRef);
