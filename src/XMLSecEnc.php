@@ -231,12 +231,39 @@ class XMLSecEnc
             if ($replace) {
                 switch ($this->type) {
                     case (self::Element):
+                        $namespaced = false;
+                        // check for namespaces in use in hierarchy when node is not a document
+                        if ($this->rawNode->nodeType != XML_DOCUMENT_NODE) {
+                            $base_node = $this->rawNode->parentNode;
+                            $xPath = new DOMXPath($this->rawNode->ownerDocument);
+                            $arNamespaces = $xPath->query('namespace::*', $base_node);
+                            if (! empty($arNamespaces)) {
+                                $namespaced = true;
+                                // wrap the new document inside namespaced shell
+                                $wrapper = '<xmlseclibs_wrapper';
+                                foreach ($arNamespaces AS $nsNode) {
+                                    if ($nsNode->prefix == 'xml') {
+                                        continue;
+                                    }
+                                    $wrapper .= ' xmlns';
+                                    if (! empty($nsNode->prefix)) {
+                                        $wrapper .= ':' . $nsNode->prefix;
+                                    }
+                                    $wrapper .= '="' . $nsNode->namespaceURI . '"';
+                                }
+                                $decrypted = $wrapper . ">$decrypted</xmlseclibs_wrapper>";
+                            }
+                        }
                         $newdoc = new DOMDocument();
                         $newdoc->loadXML($decrypted);
                         if ($this->rawNode->nodeType == XML_DOCUMENT_NODE) {
                             return $newdoc;
                         }
-                        $importEnc = $this->rawNode->ownerDocument->importNode($newdoc->documentElement, true);
+                        $importNode = $newdoc->documentElement;
+                        if ($namespaced == true) {
+                            $importNode = $newdoc->documentElement->firstChild;
+                        }
+                        $importEnc = $this->rawNode->ownerDocument->importNode($importNode, true);
                         $this->rawNode->parentNode->replaceChild($importEnc, $this->rawNode);
                         return $importEnc;
                     case (self::Content):
