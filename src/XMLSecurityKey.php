@@ -1,5 +1,6 @@
 <?php
 namespace RobRichards\XMLSecLibs;
+
 use DomElement;
 use Exception;
 
@@ -41,7 +42,6 @@ use Exception;
  * @author    Robert Richards <rrichards@cdatazone.org>
  * @copyright 2007-2015 Robert Richards <rrichards@cdatazone.org>
  * @license   http://www.opensource.org/licenses/bsd-license.php  BSD License
- * @version   2.0.0
  */
 
 class XMLSecurityKey
@@ -530,7 +530,8 @@ class XMLSecurityKey
     /**
      * Create key from an EncryptedKey-element.
      *
-     * @param  DOMElement $element The EncryptedKey-element.
+     * @param DOMElement $element The EncryptedKey-element.
+     *
      * @return XMLSecurityKey The new key.
      */
     public static function fromEncryptedKeyElement(DOMElement $element)

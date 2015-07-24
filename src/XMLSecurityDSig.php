@@ -1,5 +1,6 @@
 <?php
 namespace RobRichards\XMLSecLibs;
+
 use DomDocument;
 use DomXPath;
 use DomNode;
@@ -44,7 +45,6 @@ use Exception;
  * @author    Robert Richards <rrichards@cdatazone.org>
  * @copyright 2007-2015 Robert Richards <rrichards@cdatazone.org>
  * @license   http://www.opensource.org/licenses/bsd-license.php  BSD License
- * @version   2.0.0
  */
 
 class XMLSecurityDSig
@@ -87,13 +87,13 @@ class XMLSecurityDSig
 
     public function __construct($prefix='ds')
     {
-    	$template = self::BASE_TEMPLATE;
-    	if (! empty($prefix)) {
-    		$this->prefix = $prefix.':';
-    		$search = array("<S", "</S", "xmlns=");
-    		$replace = array("<$prefix:S", "</$prefix:S", "xmlns:$prefix=");
-    		$template = str_replace($search, $replace, $template);
-    	}
+        $template = self::BASE_TEMPLATE;
+        if (! empty($prefix)) {
+            $this->prefix = $prefix.':';
+            $search = array("<S", "</S", "xmlns=");
+            $replace = array("<$prefix:S", "</$prefix:S", "xmlns:$prefix=");
+            $template = str_replace($search, $replace, $template);
+        }
         $sigdoc = new DOMDocument();
         $sigdoc->loadXML($template);
         $this->sigNode = $sigdoc->documentElement;
@@ -793,7 +793,7 @@ class XMLSecurityDSig
         $keyInfo = $nodeset->item(0);
         $dsig_pfx = '';
         if (! $keyInfo) {
-            $pfx = $parentRef->lookupPrefix(XMLSecurityDSig::XMLDSIGNS);
+            $pfx = $parentRef->lookupPrefix(self::XMLDSIGNS);
             if (! empty($pfx)) {
                 $dsig_pfx = $pfx.":";
             }
@@ -811,7 +811,7 @@ class XMLSecurityDSig
                 $parentRef->appendChild($keyInfo);
             }
         } else {
-            $pfx = $keyInfo->lookupPrefix(XMLSecurityDSig::XMLDSIGNS);
+            $pfx = $keyInfo->lookupPrefix(self::XMLDSIGNS);
             if (! empty($pfx)) {
                 $dsig_pfx = $pfx.":";
             }
@@ -911,7 +911,7 @@ class XMLSecurityDSig
         $keyInfo = $nodeset->item(0);
         if (! $keyInfo) {
             $dsig_pfx = '';
-            $pfx = $parentRef->lookupPrefix(XMLSecurityDSig::XMLDSIGNS);
+            $pfx = $parentRef->lookupPrefix(self::XMLDSIGNS);
             if (! empty($pfx)) {
                 $dsig_pfx = $pfx.":";
             }

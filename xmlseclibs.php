@@ -34,13 +34,13 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- * @author     Robert Richards <rrichards@cdatazone.org>
- * @copyright  2007-2015 Robert Richards <rrichards@cdatazone.org>
- * @license    http://www.opensource.org/licenses/bsd-license.php  BSD License
- * @version    2.0.0-dev
+ * @author    Robert Richards <rrichards@cdatazone.org>
+ * @copyright 2007-2015 Robert Richards <rrichards@cdatazone.org>
+ * @license   http://www.opensource.org/licenses/bsd-license.php  BSD License
+ * @version   2.0.0-dev
  */
 
 $xmlseclibs_srcdir = dirname(__FILE__) . '/src/';
-require($xmlseclibs_srcdir . '/XMLSecurityKey.php');
-require($xmlseclibs_srcdir . '/XMLSecurityDSig.php');
-require($xmlseclibs_srcdir . '/XMLSecEnc.php');
+require $xmlseclibs_srcdir . '/XMLSecurityKey.php';
+require $xmlseclibs_srcdir . '/XMLSecurityDSig.php';
+require $xmlseclibs_srcdir . '/XMLSecEnc.php';
