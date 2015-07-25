@@ -139,7 +139,7 @@ class XMLSecurityDSig
      *
      * @return string The generated guid
      *
-     * @deprecated Method deprecated in Release 2.0.0
+     * @deprecated Method deprecated in Release 1.4.1
      */
     public static function generate_GUID($prefix='pfx')
     {
