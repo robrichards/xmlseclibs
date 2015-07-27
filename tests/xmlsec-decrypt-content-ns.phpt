@@ -1,5 +1,5 @@
 --TEST--
-Basic Decryption
+Basic Decryption of Content for namespaced document
 --FILE--
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');

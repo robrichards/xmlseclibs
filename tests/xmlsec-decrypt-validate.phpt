@@ -1,5 +1,5 @@
 --TEST--
-Basic Decryption of Element for namespaced document
+Decrypt and Verify namespaced document
 --FILE--
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');
@@ -15,7 +15,8 @@ function locateLocalKey($objKey) {
 	}
 }
 
-$arTests = array('AOESP_SHA1'=>'oaep_sha1-element-withns-res.xml');
+$arTests = array('SIGN_ENC_ELEMENT'=>'sign-encrypted-element.xml',
+    'SIGN_ENC_CONTENT'=>'sign-encrypted-content.xml');
 
 $doc = new DOMDocument();
 
@@ -55,36 +56,64 @@ foreach ($arTests AS $testName=>$testFile) {
 		
 		$token = NULL;
 
+		$doc = null;
 		if ($decrypt = $objenc->decryptNode($objKey, TRUE)) {
 			$output = NULL;
 			if ($decrypt instanceof DOMNode) {
 				if ($decrypt instanceof DOMDocument) {	
-					$output = $decrypt->saveXML();
+					$doc = $decrypt;
 				} else {
-					$output = $decrypt->ownerDocument->saveXML();
+					$doc = $decrypt->ownerDocument;
 				}
 			} else {
 				$output = $decrypt;
 			}
 		}
 	} catch (Exception $e) {
-
+		
 	}
-
-	$outfile = dirname(__FILE__) . "/basic-doc-withns.xml";
-	$res = NULL;
-	if (file_exists($outfile)) {
-	    $resDoc = new DOMDocument();
-	    $resDoc->load($outfile);
-		$res = $resDoc->saveXML();
-		if ($output == $res) {
-			print "Passed\n";
-			continue;
-		}
-	}
-	print "Failed\n";
 	
+	if ($doc == null) {
+		echo "FAILED\n";
+		continue;
+	}
+	
+	$objXMLSecDSig = new XMLSecurityDSig();
+	
+	$objDSig = $objXMLSecDSig->locateSignature($doc);
+	if (! $objDSig) {
+		throw new Exception("Cannot locate Signature Node");
+	}
+	$objXMLSecDSig->canonicalizeSignedInfo();
+	$objXMLSecDSig->idKeys = array('wsu:Id');
+	$objXMLSecDSig->idNS = array('wsu'=>'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd');
+	
+	$retVal = $objXMLSecDSig->validateReference();
+
+	if (! $retVal) {
+		throw new Exception("Reference Validation Failed");
+	}
+	
+	$objKey = $objXMLSecDSig->locateKey();
+	if (! $objKey ) {
+		throw new Exception("We have no idea about the key");
+	}
+	$key = NULL;
+	
+	$objKeyInfo = XMLSecEnc::staticLocateKeyInfo($objKey, $objDSig);
+
+	if (! $objKeyInfo->key && empty($key)) {
+		$objKey->loadKey(dirname(__FILE__) . '/mycert.pem', TRUE);
+	}
+
+	if ($objXMLSecDSig->verify($objKey)) {
+		print "Signature validated!";
+	} else {
+		print "Failure!!!!!!!!";
+	}
+	print "\n";
 }
 ?>
 --EXPECTF--
-AOESP_SHA1: Passed
+SIGN_ENC_ELEMENT: Signature validated!
+SIGN_ENC_CONTENT: Signature validated!
