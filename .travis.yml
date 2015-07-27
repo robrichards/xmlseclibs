@@ -14,7 +14,7 @@ matrix:
   fast_finish: true
 
 script:
-  - phpunit tests
+  - phpunit --coverage-clover=coverage.xml tests
 
 after_success:
   - bash <(curl -s https://codecov.io/bash)
