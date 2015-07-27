@@ -18,7 +18,7 @@ matrix:
     - php: hhvm
     
 before_install:
-  - if [[ $EXECUTE_TEST_COVERALLS != 'true' ]]; then phpenv config-rm xdebug.ini || return 0; fi
+  - if [[ $EXECUTE_COVERAGE != 'true' ]]; then phpenv config-rm xdebug.ini || return 0; fi
 
 script:
   - if [[ $EXECUTE_COVERAGE == 'true' ]]; then phpunit --coverage-clover clover.xml tests; fi
