@@ -205,6 +205,43 @@ class XMLSecEnc
 
         return base64_decode($node->nodeValue);
     }
+    
+    /**
+     * Helper function to wrap the raw xml with the proper namespace declarations
+     *
+     * @param DOMNode $base_node The Node containg the raw xml
+     * @param string  $raw_xml The serialzed xml contained within the base node
+     *
+     * @return boolean Indicates if $raw_xml has been modified
+     */
+    private function wrapInNamespace($base_node, &$raw_xml)
+    {
+        $namespaced = false;
+        $doc = $base_node;
+        if ($doc->nodeType != XML_DOCUMENT_NODE) {
+            $doc = $base_node->ownerDocument;
+        }
+        $xPath = new DOMXPath($doc);
+        $arNamespaces = $xPath->query('namespace::*', $base_node);
+        if (! empty($arNamespaces)) {
+            $namespaced = true;
+            // wrap the new document inside namespaced shell
+            $wrapper = '<xmlseclibs_wrapper';
+            foreach ($arNamespaces AS $nsNode) {
+                if ($nsNode->prefix == 'xml') {
+                    continue;
+                }
+                $wrapper .= ' xmlns';
+                if (! empty($nsNode->prefix)) {
+                    $wrapper .= ':' . $nsNode->prefix;
+                }
+                $wrapper .= '="' . $nsNode->namespaceURI . '"';
+            }
+            $raw_xml = $wrapper . ">$raw_xml</xmlseclibs_wrapper>";
+        }
+        
+        return $namespaced;
+    }
 
     /**
      * Decrypt this encrypted node.
@@ -235,24 +272,7 @@ class XMLSecEnc
                         // check for namespaces in use in hierarchy when node is not a document
                         if ($this->rawNode->nodeType != XML_DOCUMENT_NODE) {
                             $base_node = $this->rawNode->parentNode;
-                            $xPath = new DOMXPath($this->rawNode->ownerDocument);
-                            $arNamespaces = $xPath->query('namespace::*', $base_node);
-                            if (! empty($arNamespaces)) {
-                                $namespaced = true;
-                                // wrap the new document inside namespaced shell
-                                $wrapper = '<xmlseclibs_wrapper';
-                                foreach ($arNamespaces AS $nsNode) {
-                                    if ($nsNode->prefix == 'xml') {
-                                        continue;
-                                    }
-                                    $wrapper .= ' xmlns';
-                                    if (! empty($nsNode->prefix)) {
-                                        $wrapper .= ':' . $nsNode->prefix;
-                                    }
-                                    $wrapper .= '="' . $nsNode->namespaceURI . '"';
-                                }
-                                $decrypted = $wrapper . ">$decrypted</xmlseclibs_wrapper>";
-                            }
+                            $namespaced = $this->wrapInNamespace($base_node, $decrypted);
                         }
                         $newdoc = new DOMDocument();
                         $newdoc->loadXML($decrypted);
@@ -267,15 +287,31 @@ class XMLSecEnc
                         $this->rawNode->parentNode->replaceChild($importEnc, $this->rawNode);
                         return $importEnc;
                     case (self::Content):
+                        $namespaced = false;
                         if ($this->rawNode->nodeType == XML_DOCUMENT_NODE) {
                             $doc = $this->rawNode;
                         } else {
                             $doc = $this->rawNode->ownerDocument;
+                            $base_node = $this->rawNode->parentNode;
+                            $namespaced = $this->wrapInNamespace($base_node, $decrypted);
                         }
-                        $newFrag = $doc->createDocumentFragment();
-                        $newFrag->appendXML($decrypted);
                         $parent = $this->rawNode->parentNode;
-                        $parent->replaceChild($newFrag, $this->rawNode);
+                        if ($namespaced) {
+                            $newdoc = new DOMDocument();
+                            $newdoc->loadXML($decrypted);
+                            $base_element = $this->rawNode->ownerDocument->importNode($newdoc->documentElement, true);
+                            
+                            $prev_node = $base_element->lastChild;
+                            $parent->replaceChild($prev_node, $this->rawNode);
+                            while ($cur_node = $base_element->lastChild) {
+                                $parent->insertBefore($cur_node, $prev_node);
+                                $prev_node = $cur_node;
+                            }
+                        } else {
+                            $newFrag = $doc->createDocumentFragment();
+                            $newFrag->appendXML($decrypted);
+                            $parent->replaceChild($newFrag, $this->rawNode);
+                        }
                         return $parent;
                     default:
                         return $decrypted;
