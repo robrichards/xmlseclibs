@@ -29,5 +29,5 @@ script:
   - if [[ $EXECUTE_COVERAGE != 'true' ]]; then phpunit tests; fi
   
 after_success:
-  - if [[ $EXECUTE_COVERAGE == 'true' ]]; then bash <(curl -s https://codecov.io/bash); fi
+  - if [[ $EXECUTE_COVERAGE_NA == 'true' ]]; then bash <(curl -s https://codecov.io/bash); fi
   
