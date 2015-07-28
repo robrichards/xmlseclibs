@@ -19,6 +19,10 @@ matrix:
     
 before_install:
   - if [[ $EXECUTE_COVERAGE != 'true' ]]; then phpenv config-rm xdebug.ini || return 0; fi
+  - composer self-update
+  
+install:
+  - travis_retry composer install --no-interaction --ignore-platform-reqs
 
 script:
   - if [[ $EXECUTE_COVERAGE == 'true' ]]; then phpunit --coverage-clover clover.xml tests; fi
