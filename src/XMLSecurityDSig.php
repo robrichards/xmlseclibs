@@ -262,7 +262,7 @@ class XMLSecurityDSig
         return null;
     }
 
-    public function calculateDigest($digestAlgorithm, $data)
+    public function calculateDigest($digestAlgorithm, $data, $encode = true)
     {
         switch ($digestAlgorithm) {
             case self::SHA1:
@@ -283,7 +283,13 @@ class XMLSecurityDSig
             default:
                 throw new Exception("Cannot validate digest: Unsupported Algorithm <$digestAlgorithm>");
         }
-        return base64_encode(hash($alg, $data, true));
+        
+        $digest = hash($alg, $data, true);
+        if ($encode) {
+            $digest = base64_encode($digest);
+        }
+        return $digest;
+        
     }
 
     public function validateDigest($refNode, $data)
@@ -292,10 +298,10 @@ class XMLSecurityDSig
         $xpath->registerNamespace('secdsig', self::XMLDSIGNS);
         $query = 'string(./secdsig:DigestMethod/@Algorithm)';
         $digestAlgorithm = $xpath->evaluate($query, $refNode);
-        $digValue = $this->calculateDigest($digestAlgorithm, $data);
+        $digValue = $this->calculateDigest($digestAlgorithm, $data, false);
         $query = 'string(./secdsig:DigestValue)';
         $digestValue = $xpath->evaluate($query, $refNode);
-        return ($digValue == $digestValue);
+        return ($digValue == base64_decode($digestValue));
     }
 
     public function processTransforms($refNode, $objData, $includeCommentNodes = true)
