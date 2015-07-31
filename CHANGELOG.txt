@@ -2,8 +2,24 @@ xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 ??, ??? ????, 2.0.0
 Features:
+- Namespace support. Classes now in the RobRichards\XMLSecLibs\ namespace.
+
+Improvements:
+- Dropped support for PHP 5.2
+
+31, Jul 2015, 1.4.1
+Bug Fixes:
+- Allow for large digest values that may have line breaks. fixes #62
+
+Features:
 - Support for locating specific signature when multiple exist in 
   document. (griga3k)
+
+Improvements:
+- Add optional argument to XMLSecurityDSig to define the prefix to be used, 
+  also allowing for null to use no prefix, for the dsig namespace. fixes #13
+- Code cleanup
+- Depreciated XMLSecurityDSig::generate_GUID for XMLSecurityDSig::generateGUID
 
 23, Jun 2015, 1.4.0
 Features:
