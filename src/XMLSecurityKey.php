@@ -76,7 +76,7 @@ class XMLSecurityKey
      */
     private $x509Certificate = null;
 
-    /* This variable contains the certificate thunbprint if we have loaded an X509-certificate. */
+    /* This variable contains the certificate thumbprint if we have loaded an X509-certificate. */
     private $X509Thumbprint = null;
 
     public function __construct($type, $params=null)
@@ -439,10 +439,23 @@ class XMLSecurityKey
         }
     }
 
+    /**
+     * @deprecated
+     * @see getAlgorithm()
+     */
     public function getAlgorith()
+    {
+        return $this->getAlgorithm();
+    }
+
+    /**
+     * @return string|null
+     */
+    public function getAlgorithm()
     {
         return $this->cryptParams['method'];
     }
+
 
     public static function makeAsnSegment($type, $string)
     {
@@ -531,6 +544,8 @@ class XMLSecurityKey
      * Create key from an EncryptedKey-element.
      *
      * @param DOMElement $element The EncryptedKey-element.
+     *
+     * @throws Exception
      *
      * @return XMLSecurityKey The new key.
      */
