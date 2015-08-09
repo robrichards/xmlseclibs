@@ -18,7 +18,7 @@ foreach ($arTests AS $testName=>$testFile) {
 
 	$objDSig = $objXMLSecDSig->locateSignature($doc);
 	if (! $objDSig) {
-		throw new Exception("Cannot locate Signature Node");
+		throw new XMLSecLibsException("Cannot locate Signature Node");
 	}
 	$objXMLSecDSig->canonicalizeSignedInfo();
 	$objXMLSecDSig->idKeys = array('wsu:Id');
@@ -27,7 +27,7 @@ foreach ($arTests AS $testName=>$testFile) {
 	$retVal = $objXMLSecDSig->validateReference();
 
 	if (! $retVal) {
-		throw new Exception("Reference Validation Failed");
+		throw new XMLSecLibsException("Reference Validation Failed");
 	}
 
 	$objKey = $objXMLSecDSig->locateKey();

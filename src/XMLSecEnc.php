@@ -4,7 +4,6 @@ namespace RobRichards\XMLSecLibs;
 use DomDocument;
 use DomNode;
 use DomXPath;
-use Exception;
 
 /**
  * xmlseclibs.php

@@ -2,7 +2,6 @@
 namespace RobRichards\XMLSecLibs;
 
 use DomElement;
-use Exception;
 
 /**
  * xmlseclibs.php
@@ -84,7 +83,7 @@ class XMLSecurityKey
      *
      * @param array|null $params
      *
-     * @throws Exception
+     * @throws XMLSecLibsException
      */
     public function __construct($type, $params=null)
     {
