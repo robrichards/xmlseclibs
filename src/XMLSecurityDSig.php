@@ -196,7 +196,7 @@ class XMLSecurityDSig
 
     /**
      * @param $method
-     * @throws Exception
+     * @throws XMLSecLibsException
      */
     public function setCanonicalMethod($method)
     {
@@ -208,7 +208,7 @@ class XMLSecurityDSig
                 $this->canonicalMethod = $method;
                 break;
             default:
-                throw new Exception('Invalid Canonical Method');
+                throw new XMLSecLibsException('Invalid Canonical Method');
         }
         if ($xpath = $this->getXPathObj()) {
             $query = './'.$this->searchpfx.':SignedInfo';
@@ -300,7 +300,7 @@ class XMLSecurityDSig
      * @param $data
      * @param bool|true $encode
      * @return string
-     * @throws Exception
+     * @throws XMLSecLibsException
      */
     public function calculateDigest($digestAlgorithm, $data, $encode = true)
     {
@@ -321,7 +321,7 @@ class XMLSecurityDSig
                 $alg = 'ripemd160';
                 break;
             default:
-                throw new Exception("Cannot validate digest: Unsupported Algorithm <$digestAlgorithm>");
+                throw new XMLSecLibsException("Cannot validate digest: Unsupported Algorithm <$digestAlgorithm>");
         }
         
         $digest = hash($alg, $data, true);
@@ -336,7 +336,7 @@ class XMLSecurityDSig
      * @param $refNode
      * @param $data
      * @return bool
-     * @throws Exception
+     * @throws XMLSecLibsException
      */
     public function validateDigest($refNode, $data)
     {
@@ -528,7 +528,7 @@ class XMLSecurityDSig
 
     /**
      * @return array
-     * @throws Exception
+     * @throws XMLSecLibsException
      */
     public function getRefIDs()
     {
@@ -538,7 +538,7 @@ class XMLSecurityDSig
         $query = "./secdsig:SignedInfo/secdsig:Reference";
         $nodeset = $xpath->query($query, $this->sigNode);
         if ($nodeset->length == 0) {
-            throw new Exception("Reference nodes not found");
+            throw new XMLSecLibsException("Reference nodes not found");
         }
         foreach ($nodeset AS $refNode) {
             $refids[] = $this->getRefNodeID($refNode);
@@ -548,7 +548,7 @@ class XMLSecurityDSig
 
     /**
      * @return bool
-     * @throws Exception
+     * @throws XMLSecLibsException
      */
     public function validateReference()
     {
@@ -560,7 +560,7 @@ class XMLSecurityDSig
         $query = "./secdsig:SignedInfo/secdsig:Reference";
         $nodeset = $xpath->query($query, $this->sigNode);
         if ($nodeset->length == 0) {
-            throw new Exception("Reference nodes not found");
+            throw new XMLSecLibsException("Reference nodes not found");
         }
         
         /* Initialize/reset the list of validated nodes. */
@@ -570,7 +570,7 @@ class XMLSecurityDSig
             if (! $this->processRefNode($refNode)) {
                 /* Clear the list of validated nodes. */
                 $this->validatedNodes = null;
-                throw new Exception("Reference validation failed");
+                throw new XMLSecLibsException("Reference validation failed");
             }
         }
         return true;
@@ -582,7 +582,7 @@ class XMLSecurityDSig
      * @param $algorithm
      * @param null $arTransforms
      * @param null $options
-     * @throws Exception
+     * @throws XMLSecLibsException
      */
     private function addRefInternal($sinfoNode, $node, $algorithm, $arTransforms=null, $options=null)
     {
@@ -744,6 +744,8 @@ class XMLSecurityDSig
             if ($algorithm) {
                 try {
                     $objKey = new XMLSecurityKey($algorithm, array('type' => 'public'));
+                } catch (XMLSecLibsException $e) {
+                    return null;
                 } catch (Exception $e) {
                     return null;
                 }
@@ -756,7 +758,7 @@ class XMLSecurityDSig
     /**
      * @param $objKey
      * @return mixed
-     * @throws Exception
+     * @throws XMLSecLibsException
      */
     public function verify($objKey)
     {
@@ -766,7 +768,7 @@ class XMLSecurityDSig
         $query = "string(./secdsig:SignatureValue)";
         $sigValue = $xpath->evaluate($query, $this->sigNode);
         if (empty($sigValue)) {
-            throw new Exception("Unable to locate SignatureValue");
+            throw new XMLSecLibsException("Unable to locate SignatureValue");
         }
         return $objKey->verifySignature($this->signedInfo, base64_decode($sigValue));
     }
@@ -920,7 +922,7 @@ class XMLSecurityDSig
      * @param bool|false $isURL
      * @param null $xpath
      * @param null $options
-     * @throws Exception
+     * @throws XMLSecLibsException
      */
     public static function staticAdd509Cert($parentRef, $cert, $isPEMFormat=true, $isURL=false, $xpath=null, $options=null)
     {
@@ -928,7 +930,7 @@ class XMLSecurityDSig
             $cert = file_get_contents($cert);
         }
         if (! $parentRef instanceof DOMElement) {
-            throw new Exception('Invalid parent Node parameter');
+            throw new XMLSecLibsException('Invalid parent Node parameter');
         }
         $baseDoc = $parentRef->ownerDocument;
         
@@ -1033,7 +1035,7 @@ class XMLSecurityDSig
      * @param bool|true $isPEMFormat
      * @param bool|false $isURL
      * @param null $options
-     * @throws Exception
+     * @throws XMLSecLibsException
      */
     public function add509Cert($cert, $isPEMFormat=true, $isURL=false, $options=null)
     {
