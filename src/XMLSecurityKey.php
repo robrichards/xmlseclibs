@@ -79,6 +79,13 @@ class XMLSecurityKey
     /* This variable contains the certificate thumbprint if we have loaded an X509-certificate. */
     private $X509Thumbprint = null;
 
+    /**
+     * @param $type
+     *
+     * @param array|null $params
+     *
+     * @throws Exception
+     */
     public function __construct($type, $params=null)
     {
         switch ($type) {
@@ -205,7 +212,12 @@ class XMLSecurityKey
         }
         return $this->cryptParams['keysize'];
     }
-      
+
+    /**
+     * @return string
+     *
+     * @throws Exception
+     */
     public function generateSessionKey()
     {
         if (!isset($this->cryptParams['keysize'])) {
@@ -240,6 +252,11 @@ class XMLSecurityKey
         return $key;
     }
 
+    /**
+     * @param $cert
+     *
+     * @return null|string
+     */
     public static function getRawThumbprint($cert)
     {
 
@@ -267,7 +284,16 @@ class XMLSecurityKey
         return null;
     }
 
-    public function loadKey($key, $isFile=false, $isCert = false)
+    /**
+     * @param $key
+     *
+     * @param bool|false $isFile
+     *
+     * @param bool|false $isCert
+     *
+     * @throws Exception
+     */
+    public function loadKey($key, $isFile = false, $isCert = false)
     {
         if ($isFile) {
             $this->key = file_get_contents($key);
@@ -312,6 +338,11 @@ class XMLSecurityKey
         }
     }
 
+    /**
+     * @param string $data plain data
+     *
+     * @return string encrypted data
+     */
     private function encryptMcrypt($data)
     {
         $td = mcrypt_module_open($this->cryptParams['cipher'], '', $this->cryptParams['mode'], '');
@@ -329,6 +360,11 @@ class XMLSecurityKey
         return $encrypted_data;
     }
 
+    /**
+     * @param string $data encrypted data
+     *
+     * @return string decrypted data
+     */
     private function decryptMcrypt($data)
     {
         $td = mcrypt_module_open($this->cryptParams['cipher'], '', $this->cryptParams['mode'], '');
@@ -349,6 +385,13 @@ class XMLSecurityKey
         return $decrypted_data;
     }
 
+    /**
+     * @param $data
+     *
+     * @return mixed
+     *
+     * @throws Exception
+     */
     private function encryptOpenSSL($data)
     {
         if ($this->cryptParams['type'] == 'public') {
@@ -363,6 +406,13 @@ class XMLSecurityKey
         return $encrypted_data;
     }
 
+    /**
+     * @param $data
+     *
+     * @return mixed
+     *
+     * @throws Exception
+     */
     private function decryptOpenSSL($data)
     {
         if ($this->cryptParams['type'] == 'public') {
@@ -377,6 +427,13 @@ class XMLSecurityKey
         return $decrypted;
     }
 
+    /**
+     * @param $data
+     *
+     * @return mixed
+     *
+     * @throws Exception
+     */
     private function signOpenSSL($data)
     {
         $algo = OPENSSL_ALGO_SHA1;
@@ -389,6 +446,13 @@ class XMLSecurityKey
         return $signature;
     }
 
+    /**
+     * @param $data
+     *
+     * @param $signature
+     *
+     * @return int
+     */
     private function verifyOpenSSL($data, $signature)
     {
         $algo = OPENSSL_ALGO_SHA1;
@@ -398,6 +462,13 @@ class XMLSecurityKey
         return openssl_verify($data, $signature, $this->key, $algo);
     }
 
+    /**
+     * @param $data
+     *
+     * @return mixed|string
+     *
+     * @throws Exception
+     */
     public function encryptData($data)
     {
         switch ($this->cryptParams['library']) {
@@ -408,6 +479,13 @@ class XMLSecurityKey
         }
     }
 
+    /**
+     * @param $data
+     *
+     * @return mixed|string
+     *
+     * @throws Exception
+     */
     public function decryptData($data)
     {
         switch ($this->cryptParams['library']) {
@@ -418,6 +496,13 @@ class XMLSecurityKey
         }
     }
 
+    /**
+     * @param $data
+     *
+     * @return mixed|string
+     *
+     * @throws Exception
+     */
     public function signData($data)
     {
         switch ($this->cryptParams['library']) {
@@ -428,6 +513,13 @@ class XMLSecurityKey
         }
     }
 
+    /**
+     * @param $data
+     *
+     * @param $signature
+     *
+     * @return bool|int
+     */
     public function verifySignature($data, $signature)
     {
         switch ($this->cryptParams['library']) {
@@ -441,6 +533,7 @@ class XMLSecurityKey
 
     /**
      * @deprecated
+     *
      * @see getAlgorithm()
      */
     public function getAlgorith()
@@ -456,7 +549,13 @@ class XMLSecurityKey
         return $this->cryptParams['method'];
     }
 
-
+    /**
+     * @param $type
+     *
+     * @param $string
+     *
+     * @return null|string
+     */
     public static function makeAsnSegment($type, $string)
     {
         switch ($type) {

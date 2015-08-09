@@ -59,17 +59,38 @@ class XMLSecEnc
     const URI = 3;
     const XMLENCNS = 'http://www.w3.org/2001/04/xmlenc#';
 
+    /**
+     * @var null
+     */
     private $encdoc = null;
+    /**
+     * @var null
+     */
     private $rawNode = null;
+    /**
+     * @var null
+     */
     public $type = null;
+    /**
+     * @var null
+     */
     public $encKey = null;
+    /**
+     * @var array
+     */
     private $references = array();
 
+    /**
+     *
+     */
     public function __construct()
     {
         $this->_resetTemplate();
     }
 
+    /**
+     *
+     */
     private function _resetTemplate()
     {
         $this->encdoc = new DOMDocument();
@@ -91,6 +112,9 @@ class XMLSecEnc
         $this->references[$name] = array("node" => $node, "type" => $type, "encnode" => $encdoc, "refuri" => $refuri);
     }
 
+    /**
+     * @param $node
+     */
     public function setNode($node)
     {
         $this->rawNode = $node;
@@ -166,6 +190,10 @@ class XMLSecEnc
         }
     }
 
+    /**
+     * @param $objKey
+     * @throws Exception
+     */
     public function encryptReferences($objKey)
     {
         $curRawNode = $this->rawNode;
@@ -268,6 +296,12 @@ class XMLSecEnc
         }
     }
 
+    /**
+     * @param $srcKey
+     * @param $rawKey
+     * @param bool|true $append
+     * @throws Exception
+     */
     public function encryptKey($srcKey, $rawKey, $append=true)
     {
         if ((! $srcKey instanceof XMLSecurityKey) || (! $rawKey instanceof XMLSecurityKey)) {
@@ -301,6 +335,11 @@ class XMLSecEnc
         return;
     }
 
+    /**
+     * @param $encKey
+     * @return DOMElement|string
+     * @throws Exception
+     */
     public function decryptKey($encKey)
     {
         if (! $encKey->isEncrypted) {
@@ -312,6 +351,10 @@ class XMLSecEnc
         return $this->decryptNode($encKey, false);
     }
 
+    /**
+     * @param $element
+     * @return DOMNode|null
+     */
     public function locateEncryptedData($element)
     {
         if ($element instanceof DOMDocument) {
@@ -328,6 +371,10 @@ class XMLSecEnc
         return null;
     }
 
+    /**
+     * @param null $node
+     * @return null|XMLSecurityKey
+     */
     public function locateKey($node=null)
     {
         if (empty($node)) {
@@ -354,6 +401,12 @@ class XMLSecEnc
         return null;
     }
 
+    /**
+     * @param null $objBaseKey
+     * @param null $node
+     * @return null|XMLSecurityKey
+     * @throws Exception
+     */
     public static function staticLocateKeyInfo($objBaseKey=null, $node=null)
     {
         if (empty($node) || (! $node instanceof DOMNode)) {
@@ -442,6 +495,12 @@ class XMLSecEnc
         return $objBaseKey;
     }
 
+    /**
+     * @param null $objBaseKey
+     * @param null $node
+     * @return null|XMLSecurityKey
+     * @throws Exception
+     */
     public function locateKeyInfo($objBaseKey=null, $node=null)
     {
         if (empty($node)) {
