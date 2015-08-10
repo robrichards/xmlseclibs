@@ -41,7 +41,12 @@
  */
 
 $xmlseclibs_srcdir = dirname(__FILE__) . '/src/';
+require $xmlseclibs_srcdir . '/Extension/Hash_Hmac.php';
+require $xmlseclibs_srcdir . '/Extension/Mcrypt.php';
+require $xmlseclibs_srcdir . '/Extension/OpenSSL.php';
 require $xmlseclibs_srcdir . '/XMLSecurityKey.php';
 require $xmlseclibs_srcdir . '/XMLSecurityDSig.php';
+require $xmlseclibs_srcdir . '/XMLSecLibsExtensionInterfaceInterfaces.php';
+require $xmlseclibs_srcdir . '/XMLSecLibsExtensionAbstract.php';
 require $xmlseclibs_srcdir . '/XMLSecLibsException.php';
 require $xmlseclibs_srcdir . '/XMLSecEnc.php';
