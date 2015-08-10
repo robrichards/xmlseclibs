@@ -2,6 +2,9 @@
 namespace RobRichards\XMLSecLibs;
 
 use DomElement;
+use RobRichards\XMLSecLibs\Extension\Hash_Hmac;
+use RobRichards\XMLSecLibs\Extension\Mcrypt;
+use RobRichards\XMLSecLibs\Extension\OpenSSL;
 
 /**
  * xmlseclibs.php
@@ -62,7 +65,6 @@ class XMLSecurityKey
     public $type = 0;
     public $key = null;
     public $passphrase = "";
-    public $iv = null;
     public $name = null;
     public $keyChain = null;
     public $isEncrypted = false;
@@ -338,130 +340,6 @@ class XMLSecurityKey
     }
 
     /**
-     * @param string $data plain data
-     *
-     * @return string encrypted data
-     */
-    private function encryptMcrypt($data)
-    {
-        $td = mcrypt_module_open($this->cryptParams['cipher'], '', $this->cryptParams['mode'], '');
-        $this->iv = mcrypt_create_iv(mcrypt_enc_get_iv_size($td), MCRYPT_RAND);
-        mcrypt_generic_init($td, $this->key, $this->iv);
-        if ($this->cryptParams['mode'] == MCRYPT_MODE_CBC) {
-            $bs = mcrypt_enc_get_block_size($td);
-            for ($datalen0 = $datalen = strlen($data); (($datalen % $bs) != ($bs - 1)); $datalen++)
-                $data .= chr(mt_rand(1, 127));
-            $data .= chr($datalen - $datalen0 + 1);
-        }
-        $encrypted_data = $this->iv.mcrypt_generic($td, $data);
-        mcrypt_generic_deinit($td);
-        mcrypt_module_close($td);
-        return $encrypted_data;
-    }
-
-    /**
-     * @param string $data encrypted data
-     *
-     * @return string decrypted data
-     */
-    private function decryptMcrypt($data)
-    {
-        $td = mcrypt_module_open($this->cryptParams['cipher'], '', $this->cryptParams['mode'], '');
-        $iv_length = mcrypt_enc_get_iv_size($td);
-
-        $this->iv = substr($data, 0, $iv_length);
-        $data = substr($data, $iv_length);
-
-        mcrypt_generic_init($td, $this->key, $this->iv);
-        $decrypted_data = mdecrypt_generic($td, $data);
-        mcrypt_generic_deinit($td);
-        mcrypt_module_close($td);
-        if ($this->cryptParams['mode'] == MCRYPT_MODE_CBC) {
-            $dataLen = strlen($decrypted_data);
-            $paddingLength = substr($decrypted_data, $dataLen - 1, 1);
-            $decrypted_data = substr($decrypted_data, 0, $dataLen - ord($paddingLength));
-        }
-        return $decrypted_data;
-    }
-
-    /**
-     * @param $data
-     *
-     * @return mixed
-     *
-     * @throws XMLSecLibsException
-     */
-    private function encryptOpenSSL($data)
-    {
-        if ($this->cryptParams['type'] == 'public') {
-            if (! openssl_public_encrypt($data, $encrypted_data, $this->key, $this->cryptParams['padding'])) {
-                throw new XMLSecLibsException('Failure encrypting Data');
-            }
-        } else {
-            if (! openssl_private_encrypt($data, $encrypted_data, $this->key, $this->cryptParams['padding'])) {
-                throw new XMLSecLibsException('Failure encrypting Data');
-            }
-        }
-        return $encrypted_data;
-    }
-
-    /**
-     * @param $data
-     *
-     * @return mixed
-     *
-     * @throws XMLSecLibsException
-     */
-    private function decryptOpenSSL($data)
-    {
-        if ($this->cryptParams['type'] == 'public') {
-            if (! openssl_public_decrypt($data, $decrypted, $this->key, $this->cryptParams['padding'])) {
-                throw new XMLSecLibsException('Failure decrypting Data');
-            }
-        } else {
-            if (! openssl_private_decrypt($data, $decrypted, $this->key, $this->cryptParams['padding'])) {
-                throw new XMLSecLibsException('Failure decrypting Data');
-            }
-        }
-        return $decrypted;
-    }
-
-    /**
-     * @param $data
-     *
-     * @return mixed
-     *
-     * @throws XMLSecLibsException
-     */
-    private function signOpenSSL($data)
-    {
-        $algo = OPENSSL_ALGO_SHA1;
-        if (! empty($this->cryptParams['digest'])) {
-            $algo = $this->cryptParams['digest'];
-        }
-        if (! openssl_sign($data, $signature, $this->key, $algo)) {
-            throw new XMLSecLibsException('Failure Signing Data: ' . openssl_error_string() . ' - ' . $algo);
-        }
-        return $signature;
-    }
-
-    /**
-     * @param $data
-     *
-     * @param $signature
-     *
-     * @return int
-     */
-    private function verifyOpenSSL($data, $signature)
-    {
-        $algo = OPENSSL_ALGO_SHA1;
-        if (! empty($this->cryptParams['digest'])) {
-            $algo = $this->cryptParams['digest'];
-        }
-        return openssl_verify($data, $signature, $this->key, $algo);
-    }
-
-    /**
      * @param $data
      *
      * @return mixed|string
@@ -472,10 +350,15 @@ class XMLSecurityKey
     {
         switch ($this->cryptParams['library']) {
             case 'mcrypt':
-                return $this->encryptMcrypt($data);
+                $objExtension = new Mcrypt($this->cryptParams, $this->key);
+                break;
             case 'openssl':
-                return $this->encryptOpenSSL($data);
+                $objExtension = new OpenSSL($this->cryptParams, $this->key);
+                break;
+            default:
+                throw new XMLSecLibsException('No, unknown or unsupported crypto-library called for encryption.');
         }
+        return $objExtension->encrypt($data);
     }
 
     /**
@@ -489,10 +372,15 @@ class XMLSecurityKey
     {
         switch ($this->cryptParams['library']) {
             case 'mcrypt':
-                return $this->decryptMcrypt($data);
+                $objExtension = new Mcrypt($this->cryptParams, $this->key);
+                break;
             case 'openssl':
-                return $this->decryptOpenSSL($data);
+                $objExtension = new OpenSSL($this->cryptParams, $this->key);
+                break;
+            default:
+                throw new XMLSecLibsException('No, unknown or unsupported crypto-library called for decryption.');
         }
+        return $objExtension->decrypt($data);
     }
 
     /**
@@ -506,10 +394,15 @@ class XMLSecurityKey
     {
         switch ($this->cryptParams['library']) {
             case 'openssl':
-                return $this->signOpenSSL($data);
+                $objExtension = new OpenSSL($this->cryptParams, $this->key);
+                break;
             case (self::HMAC_SHA1):
-                return hash_hmac("sha1", $data, $this->key, true);
+                $objExtension = new Hash_Hmac($this->cryptParams, $this->key);
+                break;
+            default:
+                throw new XMLSecLibsException('No, unknown or unsupported crypto-library called for decryption.');
         }
+        return $objExtension->signData($data);
     }
 
     /**
@@ -517,17 +410,23 @@ class XMLSecurityKey
      *
      * @param $signature
      *
+     * @throws XMLSecLibsException
+     *
      * @return bool|int
      */
     public function verifySignature($data, $signature)
     {
         switch ($this->cryptParams['library']) {
             case 'openssl':
-                return $this->verifyOpenSSL($data, $signature);
+                $objExtension = new OpenSSL($this->cryptParams, $this->key);
+                break;
             case (self::HMAC_SHA1):
-                $expectedSignature = hash_hmac("sha1", $data, $this->key, true);
-                return strcmp($signature, $expectedSignature) == 0;
+                $objExtension = new Hash_Hmac($this->cryptParams, $this->key);
+                break;
+            default:
+                throw new XMLSecLibsException('None, unknown or unsupported option for verifying called.');
         }
+        return $objExtension->verifySignature($data, $signature);
     }
 
     /**
