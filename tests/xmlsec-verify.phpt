@@ -5,6 +5,7 @@ Basic Verify
 require(dirname(__FILE__) . '/../xmlseclibs.php');
 use RobRichards\XMLSecLibs\XMLSecurityDSig;
 use RobRichards\XMLSecLibs\XMLSecEnc;
+use RobRichards\XMLSecLibs\XMLSecLibsException;
 
 $doc = new DOMDocument();
 $arTests = array('SIGN_TEST'=>'sign-basic-test.xml');

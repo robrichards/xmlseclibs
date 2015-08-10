@@ -28,6 +28,15 @@ abstract class XMLSecLibsExtensionAbstract implements XMLSecLibsExtensionInterfa
     protected $type        = 0;
 
     /**
+     * This variable contains the certificate as a string if this key represents an X509-certificate.
+     * If this key doesn't represent a certificate, this will be null.
+     */
+    protected $x509Certificate = null;
+
+    /* This variable contains the certificate thumbprint if we have loaded an X509-certificate. */
+    protected $X509Thumbprint = null;
+
+    /**
      * @param array $params
      * @param string $key
      */

@@ -89,6 +89,12 @@ class OpenSSL extends XMLSecLibsExtensionAbstract implements XMLSecLibsExtension
         return $signature;
     }
 
+    /**
+     * @param $key
+     * @param bool|false $isFile
+     * @param bool|false $isCert
+     * @throws XMLSecLibsException
+     */
     public function loadKey($key, $isFile = false, $isCert = false)
     {
         if ($isFile) {
