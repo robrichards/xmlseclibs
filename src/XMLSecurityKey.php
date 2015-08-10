@@ -628,6 +628,7 @@ class XMLSecurityKey
     }
 
     /**
+     * @deprecated
      * @param mixed $parent
      */
     public function serializeKey($parent)
