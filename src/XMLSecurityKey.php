@@ -295,47 +295,21 @@ class XMLSecurityKey
      */
     public function loadKey($key, $isFile = false, $isCert = false)
     {
-        if ($isFile) {
-            $this->key = file_get_contents($key);
-        } else {
-            $this->key = $key;
+        switch ($this->cryptParams['library']) {
+            case 'openssl':
+                $objExtension = new OpenSSL($this->cryptParams, $this->key);
+                $objExtension->setPassphrase($this->passphrase);
+                $objExtension->setType($this->type);
+                break;
+            case 'mcrypt':
+                $objExtension = new Mcrypt($this->cryptParams, $this->key);
+                $objExtension->setPassphrase($this->passphrase);
+                $objExtension->setType($this->type);
+                break;
+            default:
+                throw new XMLSecLibsException('Not implemented yet for this type.');
         }
-        if ($isCert) {
-            $this->key = openssl_x509_read($this->key);
-            openssl_x509_export($this->key, $str_cert);
-            $this->x509Certificate = $str_cert;
-            $this->key = $str_cert;
-        } else {
-            $this->x509Certificate = null;
-        }
-        if ($this->cryptParams['library'] == 'openssl') {
-            if ($this->cryptParams['type'] == 'public') {
-                if ($isCert) {
-                    /* Load the thumbprint if this is an X509 certificate. */
-                    $this->X509Thumbprint = self::getRawThumbprint($this->key);
-                }
-                $this->key = openssl_get_publickey($this->key);
-                if (! $this->key) {
-                    throw new XMLSecLibsException('Unable to extract public key');
-                }
-            } else {
-                $this->key = openssl_get_privatekey($this->key, $this->passphrase);
-            }
-        } else if ($this->cryptParams['cipher'] == MCRYPT_RIJNDAEL_128) {
-            /* Check key length */
-            switch ($this->type) {
-                case (self::AES256_CBC):
-                    if (strlen($this->key) < 25) {
-                        throw new XMLSecLibsException('Key must contain at least 25 characters for this cipher');
-                    }
-                    break;
-                case (self::AES192_CBC):
-                    if (strlen($this->key) < 17) {
-                        throw new XMLSecLibsException('Key must contain at least 17 characters for this cipher');
-                    }
-                    break;
-            }
-        }
+        return $objExtension->loadKey($key, $isFile, $isCert);
     }
 
     /**

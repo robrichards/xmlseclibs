@@ -21,6 +21,12 @@ abstract class XMLSecLibsExtensionAbstract implements XMLSecLibsExtensionInterfa
     /** @var string */
     protected $key         = '';
 
+    /** @var string */
+    protected $passphrase  = '';
+
+    /** @var int    */
+    protected $type        = 0;
+
     /**
      * @param array $params
      * @param string $key
@@ -28,6 +34,22 @@ abstract class XMLSecLibsExtensionAbstract implements XMLSecLibsExtensionInterfa
     public function __construct(array $params, $key = '') {
         $this->cryptParams = $params;
         $this->key         = $key;
+    }
+
+    /**
+     * @param int $type
+     */
+    public function setType($type)
+    {
+        $this->type = $type;
+    }
+
+    /**
+     * @param string $passphrase
+     */
+    public function setPassphrase($passphrase)
+    {
+        $this->passphrase = $passphrase;
     }
 
     /**
@@ -60,6 +82,16 @@ abstract class XMLSecLibsExtensionAbstract implements XMLSecLibsExtensionInterfa
      * @throws XMLSecLibsException
      */
     public function signData($data) {
+        throw new XMLSecLibsException('Method not implemented yet');
+    }
+
+    /**
+     * @param $key
+     * @param bool|false $isFile
+     * @param bool|false $isCert
+     */
+    public function loadKey($key, $isFile = false, $isCert = false)
+    {
         throw new XMLSecLibsException('Method not implemented yet');
     }
 

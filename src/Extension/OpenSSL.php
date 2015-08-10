@@ -11,6 +11,7 @@ namespace RobRichards\XMLSecLibs\Extension;
 use RobRichards\XMLSecLibs\XMLSecLibsException;
 use RobRichards\XMLSecLibs\XMLSecLibsExtensionAbstract;
 use RobRichards\XMLSecLibs\XMLSecLibsExtensionInterface;
+use RobRichards\XMLSecLibs\XMLSecurityKey;
 
 class OpenSSL extends XMLSecLibsExtensionAbstract implements XMLSecLibsExtensionInterface
 {
@@ -86,5 +87,36 @@ class OpenSSL extends XMLSecLibsExtensionAbstract implements XMLSecLibsExtension
             throw new XMLSecLibsException('Failure Signing Data: ' . openssl_error_string() . ' - ' . $algo);
         }
         return $signature;
+    }
+
+    public function loadKey($key, $isFile = false, $isCert = false)
+    {
+        if ($isFile) {
+            $this->key = file_get_contents($key);
+        } else {
+            $this->key = $key;
+        }
+        if ($isCert) {
+            $this->key = openssl_x509_read($this->key);
+            openssl_x509_export($this->key, $str_cert);
+            $this->x509Certificate = $str_cert;
+            $this->key = $str_cert;
+        } else {
+            $this->x509Certificate = null;
+        }
+
+        if ($this->cryptParams['type'] == 'public') {
+            if ($isCert) {
+                /* Load the thumbprint if this is an X509 certificate. */
+                $this->X509Thumbprint = XMLSecurityKey::getRawThumbprint($this->key);
+            }
+            $this->key = openssl_get_publickey($this->key);
+            if (! $this->key) {
+                throw new XMLSecLibsException('Unable to extract public key');
+            }
+        } else {
+            $this->key = openssl_get_privatekey($this->key, $this->passphrase);
+        }
+
     }
 }

@@ -37,4 +37,12 @@ interface XMLSecLibsExtensionInterface
      */
     public function signData($data);
 
+    /**
+     * @param $key
+     * @param bool|false $isFile
+     * @param bool|false $isCert
+     * @return mixed
+     */
+    public function loadKey($key, $isFile = false, $isCert = false);
+
 }

@@ -11,6 +11,8 @@ namespace RobRichards\XMLSecLibs\Extension;
 
 use RobRichards\XMLSecLibs\XMLSecLibsExtensionAbstract;
 use RobRichards\XMLSecLibs\XMLSecLibsExtensionInterface;
+use RobRichards\XMLSecLibs\XMLSecLibsException;
+use RobRichards\XMLSecLibs\XMLSecurityKey;
 
 class Mcrypt extends XMLSecLibsExtensionAbstract implements XMLSecLibsExtensionInterface
 {
@@ -60,6 +62,32 @@ class Mcrypt extends XMLSecLibsExtensionAbstract implements XMLSecLibsExtensionI
             $decrypted_data = substr($decrypted_data, 0, $dataLen - ord($paddingLength));
         }
         return $decrypted_data;
+    }
+
+    public function loadKey($key, $isFile = false, $isCert = false)
+    {
+        if ($isFile) {
+            $this->key = file_get_contents($key);
+        } else {
+            $this->key = $key;
+        }
+        $this->x509Certificate = null;
+
+        if ($this->cryptParams['cipher'] == MCRYPT_RIJNDAEL_128) {
+            /* Check key length */
+            switch ($this->type) {
+                case (XMLSecurityKey::AES256_CBC):
+                    if (strlen($this->key) < 25) {
+                        throw new XMLSecLibsException('Key must contain at least 25 characters for this cipher');
+                    }
+                    break;
+                case (XMLSecurityKey::AES192_CBC):
+                    if (strlen($this->key) < 17) {
+                        throw new XMLSecLibsException('Key must contain at least 17 characters for this cipher');
+                    }
+                    break;
+            }
+        }
     }
 
 }
