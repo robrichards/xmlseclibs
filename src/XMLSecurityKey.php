@@ -230,8 +230,7 @@ class XMLSecurityKey
             /* We have PHP >= 5.3 - use openssl to generate session key. */
             $key = openssl_random_pseudo_bytes($keysize);
         } else {
-            /* Generating random key using iv generation routines */
-            $key = mcrypt_create_iv($keysize, MCRYPT_RAND);
+            throw new XMLSecLibsException('The openssl-extension is needed for generating a session key.');
         }
         
         if ($this->type === self::TRIPLEDES_CBC) {
