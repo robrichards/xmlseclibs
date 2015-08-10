@@ -59,10 +59,19 @@ class XMLSecEnc
     const URI = 3;
     const XMLENCNS = 'http://www.w3.org/2001/04/xmlenc#';
 
+    /** @var null|DOMDocument */
     private $encdoc = null;
+
+    /** @var null|DOMNode  */
     private $rawNode = null;
+
+    /** @var string */
     public $type = null;
+
+    /** @var DOMElement */
     public $encKey = null;
+
+    /** @var array */
     private $references = array();
 
     public function __construct()
@@ -76,7 +85,13 @@ class XMLSecEnc
         $this->encdoc->loadXML(self::template);
     }
 
-    public function addReference($name, $node, $type)
+    /**
+     * @param string $name
+     * @param DOMNode $node
+     * @param $type
+     * @throws \Exception
+     */
+    public function addReference($name,DOMNode $node, $type)
     {
         if (! $node instanceOf DOMNode) {
             throw new Exception('$node is not of type DOMNode');
@@ -85,12 +100,15 @@ class XMLSecEnc
         $this->_resetTemplate();
         $encdoc = $this->encdoc;
         $this->encdoc = $curencdoc;
-        $refuri = XMLSecurityDSig::generate_GUID();
+        $refuri = XMLSecurityDSig::generateGUID();
         $element = $encdoc->documentElement;
         $element->setAttribute("Id", $refuri);
         $this->references[$name] = array("node" => $node, "type" => $type, "encnode" => $encdoc, "refuri" => $refuri);
     }
 
+    /**
+     * @param DOMNode $node
+     */
     public function setNode($node)
     {
         $this->rawNode = $node;
@@ -137,7 +155,7 @@ class XMLSecEnc
         }
 
         $encMethod = $this->encdoc->documentElement->appendChild($this->encdoc->createElementNS(self::XMLENCNS, 'xenc:EncryptionMethod'));
-        $encMethod->setAttribute('Algorithm', $objKey->getAlgorith());
+        $encMethod->setAttribute('Algorithm', $objKey->getAlgorithm());
         $cipherValue->parentNode->parentNode->insertBefore($encMethod, $cipherValue->parentNode->parentNode->firstChild);
 
         $strEncrypt = base64_encode($objKey->encryptData($data));
@@ -166,6 +184,10 @@ class XMLSecEnc
         }
     }
 
+    /**
+     * @param XMLSecurityKey $objKey
+     * @throws \Exception
+     */
     public function encryptReferences($objKey)
     {
         $curRawNode = $this->rawNode;
@@ -268,6 +290,14 @@ class XMLSecEnc
         }
     }
 
+    /**
+     * Encrypt the XMLSecurityKey
+     *
+     * @param XMLSecurityKey $srcKey
+     * @param XMLSecurityKey $rawKey
+     * @param bool $append
+     * @throws \Exception
+     */
     public function encryptKey($srcKey, $rawKey, $append=true)
     {
         if ((! $srcKey instanceof XMLSecurityKey) || (! $rawKey instanceof XMLSecurityKey)) {
@@ -301,6 +331,11 @@ class XMLSecEnc
         return;
     }
 
+    /**
+     * @param $encKey
+     * @return DOMElement|string
+     * @throws \Exception
+     */
     public function decryptKey($encKey)
     {
         if (! $encKey->isEncrypted) {
@@ -312,6 +347,10 @@ class XMLSecEnc
         return $this->decryptNode($encKey, false);
     }
 
+    /**
+     * @param DOMDocument $element
+     * @return DOMNode|null
+     */
     public function locateEncryptedData($element)
     {
         if ($element instanceof DOMDocument) {
@@ -328,6 +367,11 @@ class XMLSecEnc
         return null;
     }
 
+    /**
+     * Returns the key from the DOM
+     * @param null|DOMNode $node
+     * @return null|XMLSecurityKey
+     */
     public function locateKey($node=null)
     {
         if (empty($node)) {
@@ -354,6 +398,12 @@ class XMLSecEnc
         return null;
     }
 
+    /**
+     * @param null|XMLSecurityKey $objBaseKey
+     * @param null|DOMNode $node
+     * @return null|XMLSecurityKey
+     * @throws \Exception
+     */
     public static function staticLocateKeyInfo($objBaseKey=null, $node=null)
     {
         if (empty($node) || (! $node instanceof DOMNode)) {
@@ -442,6 +492,11 @@ class XMLSecEnc
         return $objBaseKey;
     }
 
+    /**
+     * @param null|XMLSecurityKey $objBaseKey
+     * @param null|DOMNode $node
+     * @return null|XMLSecurityKey
+     */
     public function locateKeyInfo($objBaseKey=null, $node=null)
     {
         if (empty($node)) {
