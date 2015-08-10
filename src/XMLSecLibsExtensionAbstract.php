@@ -8,6 +8,7 @@
 
 namespace RobRichards\XMLSecLibs;
 
+use RobRichards\XMLSecLibs\XMLSecLibsExtensionInterface;
 
 abstract class XMLSecLibsExtensionAbstract implements XMLSecLibsExtensionInterface
 {
