@@ -31,12 +31,12 @@ foreach ($arTests AS $testName=>$testFile) {
 		$objenc = new XMLSecEnc();
 		$encData = $objenc->locateEncryptedData($doc);
 		if (! $encData) {
-			throw new Exception("Cannot locate Encrypted Data");
+			throw new XMLSecLibsException("Cannot locate Encrypted Data");
 		}
 		$objenc->setNode($encData);
 		$objenc->type = $encData->getAttribute("Type");
 		if (! $objKey = $objenc->locateKey()) {
-			throw new Exception("We know the secret key, but not the algorithm");
+			throw new XMLSecLibsException("We know the secret key, but not the algorithm");
 		}
 		$key = NULL;
 		

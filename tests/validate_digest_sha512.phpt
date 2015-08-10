@@ -44,7 +44,7 @@ $objXMLSecDSig = new XMLSecurityDSig();
 
 $objDSig = $objXMLSecDSig->locateSignature($dom);
 if (! $objDSig) {
-	throw new Exception("Cannot locate Signature Node");
+	throw new XMLSecLibsException("Cannot locate Signature Node");
 }
 $objXMLSecDSig->canonicalizeSignedInfo();
 	

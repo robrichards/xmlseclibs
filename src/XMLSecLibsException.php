@@ -1,4 +1,9 @@
 <?php
+
+namespace RobRichards\XMLSecLibs;
+
+use Exception;
+
 /**
  * xmlseclibs.php
  *
@@ -35,18 +40,12 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  * @author    Robert Richards <rrichards@cdatazone.org>
+ * @author    Guido Faust   <guido.faust@questback.com>
  * @copyright 2007-2015 Robert Richards <rrichards@cdatazone.org>
  * @license   http://www.opensource.org/licenses/bsd-license.php  BSD License
- * @version   2.1.0-dev
  */
 
-$xmlseclibs_srcdir = dirname(__FILE__) . '/src/';
-require $xmlseclibs_srcdir . '/XMLSecurityKey.php';
-require $xmlseclibs_srcdir . '/XMLSecurityDSig.php';
-require $xmlseclibs_srcdir . '/XMLSecLibsExtensionInterfaceInterfaces.php';
-require $xmlseclibs_srcdir . '/XMLSecLibsExtensionAbstract.php';
-require $xmlseclibs_srcdir . '/XMLSecLibsException.php';
-require $xmlseclibs_srcdir . '/XMLSecEnc.php';
-require $xmlseclibs_srcdir . '/Extension/Hash_Hmac.php';
-require $xmlseclibs_srcdir . '/Extension/Mcrypt.php';
-require $xmlseclibs_srcdir . '/Extension/OpenSSL.php';
+class XMLSecLibsException extends \Exception
+{
+
+}

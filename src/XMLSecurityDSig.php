@@ -5,7 +5,6 @@ use DomDocument;
 use DomXPath;
 use DomNode;
 use DomElement;
-use Exception;
 
 /**
  * xmlseclibs.php
@@ -85,6 +84,9 @@ class XMLSecurityDSig
     /* This variable contains an associative array of validated nodes. */
     private $validatedNodes = null;
 
+    /**
+     * @param string $prefix
+     */
     public function __construct($prefix='ds')
     {
         $template = self::BASE_TEMPLATE;
@@ -99,11 +101,17 @@ class XMLSecurityDSig
         $this->sigNode = $sigdoc->documentElement;
     }
 
+    /**
+     * set xPathCtx to null
+     */
     private function resetXPathObj()
     {
         $this->xPathCtx = null;
     }
 
+    /**
+     * @return DomXPath|null
+     */
     private function getXPathObj()
     {
         if (empty($this->xPathCtx) && ! empty($this->sigNode)) {
@@ -146,6 +154,11 @@ class XMLSecurityDSig
         return self::generateGUID($prefix);
     }
 
+    /**
+     * @param $objDoc
+     * @param int $pos
+     * @return DOMElement|DOMNode|null
+     */
     public function locateSignature($objDoc, $pos=0)
     {
         if ($objDoc instanceof DOMDocument) {
@@ -164,6 +177,11 @@ class XMLSecurityDSig
         return null;
     }
 
+    /**
+     * @param $name
+     * @param null $value
+     * @return DOMElement
+     */
     public function createNewSignNode($name, $value=null)
     {
         $doc = $this->sigNode->ownerDocument;
@@ -175,6 +193,10 @@ class XMLSecurityDSig
         return $node;
     }
 
+    /**
+     * @param $method
+     * @throws XMLSecLibsException
+     */
     public function setCanonicalMethod($method)
     {
         switch ($method) {
@@ -185,7 +207,7 @@ class XMLSecurityDSig
                 $this->canonicalMethod = $method;
                 break;
             default:
-                throw new Exception('Invalid Canonical Method');
+                throw new XMLSecLibsException('Invalid Canonical Method');
         }
         if ($xpath = $this->getXPathObj()) {
             $query = './'.$this->searchpfx.':SignedInfo';
@@ -202,6 +224,13 @@ class XMLSecurityDSig
         }
     }
 
+    /**
+     * @param $node
+     * @param $canonicalmethod
+     * @param null $arXPath
+     * @param null $prefixList
+     * @return string
+     */
     private function canonicalizeData($node, $canonicalmethod, $arXPath=null, $prefixList=null)
     {
         $exclusive = false;
@@ -240,6 +269,9 @@ class XMLSecurityDSig
         return $node->C14N($exclusive, $withComments, $arXPath, $prefixList);
     }
 
+    /**
+     * @return null|string
+     */
     public function canonicalizeSignedInfo()
     {
 
@@ -262,6 +294,13 @@ class XMLSecurityDSig
         return null;
     }
 
+    /**
+     * @param $digestAlgorithm
+     * @param $data
+     * @param bool|true $encode
+     * @return string
+     * @throws XMLSecLibsException
+     */
     public function calculateDigest($digestAlgorithm, $data, $encode = true)
     {
         switch ($digestAlgorithm) {
@@ -281,7 +320,7 @@ class XMLSecurityDSig
                 $alg = 'ripemd160';
                 break;
             default:
-                throw new Exception("Cannot validate digest: Unsupported Algorithm <$digestAlgorithm>");
+                throw new XMLSecLibsException("Cannot validate digest: Unsupported Algorithm <$digestAlgorithm>");
         }
         
         $digest = hash($alg, $data, true);
@@ -292,6 +331,12 @@ class XMLSecurityDSig
         
     }
 
+    /**
+     * @param $refNode
+     * @param $data
+     * @return bool
+     * @throws XMLSecLibsException
+     */
     public function validateDigest($refNode, $data)
     {
         $xpath = new DOMXPath($refNode->ownerDocument);
@@ -304,6 +349,12 @@ class XMLSecurityDSig
         return ($digValue == base64_decode($digestValue));
     }
 
+    /**
+     * @param $refNode
+     * @param $objData
+     * @param bool|true $includeCommentNodes
+     * @return string
+     */
     public function processTransforms($refNode, $objData, $includeCommentNodes = true)
     {
         $data = $objData;
@@ -388,6 +439,10 @@ class XMLSecurityDSig
         return $data;
     }
 
+    /**
+     * @param $refNode
+     * @return bool
+     */
     public function processRefNode($refNode)
     {
         $dataObject = null;
@@ -453,6 +508,10 @@ class XMLSecurityDSig
         return true;
     }
 
+    /**
+     * @param $refNode
+     * @return null
+     */
     public function getRefNodeID($refNode)
     {
         if ($uri = $refNode->getAttribute("URI")) {
@@ -466,6 +525,10 @@ class XMLSecurityDSig
         return null;
     }
 
+    /**
+     * @return array
+     * @throws XMLSecLibsException
+     */
     public function getRefIDs()
     {
         $refids = array();
@@ -474,7 +537,7 @@ class XMLSecurityDSig
         $query = "./secdsig:SignedInfo/secdsig:Reference";
         $nodeset = $xpath->query($query, $this->sigNode);
         if ($nodeset->length == 0) {
-            throw new Exception("Reference nodes not found");
+            throw new XMLSecLibsException("Reference nodes not found");
         }
         foreach ($nodeset AS $refNode) {
             $refids[] = $this->getRefNodeID($refNode);
@@ -482,6 +545,10 @@ class XMLSecurityDSig
         return $refids;
     }
 
+    /**
+     * @return bool
+     * @throws XMLSecLibsException
+     */
     public function validateReference()
     {
         $docElem = $this->sigNode->ownerDocument->documentElement;
@@ -492,7 +559,7 @@ class XMLSecurityDSig
         $query = "./secdsig:SignedInfo/secdsig:Reference";
         $nodeset = $xpath->query($query, $this->sigNode);
         if ($nodeset->length == 0) {
-            throw new Exception("Reference nodes not found");
+            throw new XMLSecLibsException("Reference nodes not found");
         }
         
         /* Initialize/reset the list of validated nodes. */
@@ -502,12 +569,20 @@ class XMLSecurityDSig
             if (! $this->processRefNode($refNode)) {
                 /* Clear the list of validated nodes. */
                 $this->validatedNodes = null;
-                throw new Exception("Reference validation failed");
+                throw new XMLSecLibsException("Reference validation failed");
             }
         }
         return true;
     }
 
+    /**
+     * @param $sinfoNode
+     * @param $node
+     * @param $algorithm
+     * @param null $arTransforms
+     * @param null $options
+     * @throws XMLSecLibsException
+     */
     private function addRefInternal($sinfoNode, $node, $algorithm, $arTransforms=null, $options=null)
     {
         $prefix = null;
@@ -585,6 +660,12 @@ class XMLSecurityDSig
         $refNode->appendChild($digestValue);
     }
 
+    /**
+     * @param $node
+     * @param $algorithm
+     * @param null $arTransforms
+     * @param null $options
+     */
     public function addReference($node, $algorithm, $arTransforms=null, $options=null)
     {
         if ($xpath = $this->getXPathObj()) {
@@ -596,6 +677,12 @@ class XMLSecurityDSig
         }
     }
 
+    /**
+     * @param $arNodes
+     * @param $algorithm
+     * @param null $arTransforms
+     * @param null $options
+     */
     public function addReferenceList($arNodes, $algorithm, $arTransforms=null, $options=null)
     {
         if ($xpath = $this->getXPathObj()) {
@@ -609,6 +696,12 @@ class XMLSecurityDSig
         }
     }
 
+    /**
+     * @param $data
+     * @param null $mimetype
+     * @param null $encoding
+     * @return DomElement
+     */
     public function addObject($data, $mimetype=null, $encoding=null)
     {
         $objNode = $this->createNewSignNode('Object');
@@ -630,6 +723,10 @@ class XMLSecurityDSig
         return $objNode;
     }
 
+    /**
+     * @param null $node
+     * @return null|XMLSecurityKey
+     */
     public function locateKey($node=null)
     {
         if (empty($node)) {
@@ -646,6 +743,8 @@ class XMLSecurityDSig
             if ($algorithm) {
                 try {
                     $objKey = new XMLSecurityKey($algorithm, array('type' => 'public'));
+                } catch (XMLSecLibsException $e) {
+                    return null;
                 } catch (Exception $e) {
                     return null;
                 }
@@ -655,6 +754,11 @@ class XMLSecurityDSig
         return null;
     }
 
+    /**
+     * @param $objKey
+     * @return mixed
+     * @throws XMLSecLibsException
+     */
     public function verify($objKey)
     {
         $doc = $this->sigNode->ownerDocument;
@@ -663,16 +767,25 @@ class XMLSecurityDSig
         $query = "string(./secdsig:SignatureValue)";
         $sigValue = $xpath->evaluate($query, $this->sigNode);
         if (empty($sigValue)) {
-            throw new Exception("Unable to locate SignatureValue");
+            throw new XMLSecLibsException("Unable to locate SignatureValue");
         }
         return $objKey->verifySignature($this->signedInfo, base64_decode($sigValue));
     }
 
+    /**
+     * @param $objKey
+     * @param $data
+     * @return mixed
+     */
     public function signData($objKey, $data)
     {
         return $objKey->signData($data);
     }
 
+    /**
+     * @param $objKey
+     * @param null $appendToNode
+     */
     public function sign($objKey, $appendToNode = null)
     {
         // If we have a parent node append it now so C14N properly works
@@ -701,11 +814,18 @@ class XMLSecurityDSig
         }
     }
 
+    /**
+     *
+     */
     public function appendCert()
     {
 
     }
 
+    /**
+     * @param $objKey
+     * @param null $parent
+     */
     public function appendKey($objKey, $parent=null)
     {
         $objKey->serializeKey($parent);
@@ -736,12 +856,22 @@ class XMLSecurityDSig
         }
     }
 
+    /**
+     * @param $parentNode
+     * @param bool|false $insertBefore
+     * @return DomNode
+     */
     public function appendSignature($parentNode, $insertBefore = false)
     {
         $beforeNode = $insertBefore ? $parentNode->firstChild : null;
         return $this->insertSignature($parentNode, $beforeNode);
     }
 
+    /**
+     * @param $cert
+     * @param bool|true $isPEMFormat
+     * @return string
+     */
     public static function get509XCert($cert, $isPEMFormat=true)
     {
         $certs = self::staticGet509XCerts($cert, $isPEMFormat);
@@ -751,6 +881,11 @@ class XMLSecurityDSig
         return '';
     }
 
+    /**
+     * @param $certs
+     * @param bool|true $isPEMFormat
+     * @return array
+     */
     public static function staticGet509XCerts($certs, $isPEMFormat=true)
     {
         if ($isPEMFormat) {
@@ -779,13 +914,22 @@ class XMLSecurityDSig
         }
     }
 
+    /**
+     * @param $parentRef
+     * @param $cert
+     * @param bool|true $isPEMFormat
+     * @param bool|false $isURL
+     * @param null $xpath
+     * @param null $options
+     * @throws XMLSecLibsException
+     */
     public static function staticAdd509Cert($parentRef, $cert, $isPEMFormat=true, $isURL=false, $xpath=null, $options=null)
     {
         if ($isURL) {
             $cert = file_get_contents($cert);
         }
         if (! $parentRef instanceof DOMElement) {
-            throw new Exception('Invalid parent Node parameter');
+            throw new XMLSecLibsException('Invalid parent Node parameter');
         }
         $baseDoc = $parentRef->ownerDocument;
         
@@ -885,6 +1029,13 @@ class XMLSecurityDSig
         }
     }
 
+    /**
+     * @param $cert
+     * @param bool|true $isPEMFormat
+     * @param bool|false $isURL
+     * @param null $options
+     * @throws XMLSecLibsException
+     */
     public function add509Cert($cert, $isPEMFormat=true, $isURL=false, $options=null)
     {
         if ($xpath = $this->getXPathObj()) {

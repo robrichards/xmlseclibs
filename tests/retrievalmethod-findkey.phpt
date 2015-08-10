@@ -11,7 +11,7 @@ $doc->load(dirname(__FILE__) . "/retrievalmethod-findkey.xml");
 $objenc = new XMLSecEnc();
 $encData = $objenc->locateEncryptedData($doc);
 if (! $encData) {
-	throw new Exception("Cannot locate Encrypted Data");
+	throw new XMLSecLibsException("Cannot locate Encrypted Data");
 }
 $objenc->setNode($encData);
 $objenc->type = $encData->getAttribute("Type");
@@ -20,7 +20,7 @@ $objKey = $objenc->locateKey();
 $objKeyInfo = $objenc->locateKeyInfo($objKey);
 
 if (!$objKeyInfo->isEncrypted) {
-	throw new Exception('Expected $objKeyInfo to refer to an encrypted key by now.');
+	throw new XMLSecLibsException('Expected $objKeyInfo to refer to an encrypted key by now.');
 }
 
 echo "OK\n";
