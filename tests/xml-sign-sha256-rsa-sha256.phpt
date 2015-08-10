@@ -7,6 +7,7 @@ Signature RSA SHA256
 require(dirname(__FILE__) . '/../xmlseclibs.php');
 use RobRichards\XMLSecLibs\XMLSecurityDSig;
 use RobRichards\XMLSecLibs\XMLSecurityKey;
+use RobRichards\XMLSecLibs\XMLSecLibsException;
 
 if (file_exists(dirname(__FILE__) . '/sign-sha256-rsa-sha256-test.xml')) {
     unlink(dirname(__FILE__) . '/sign-sha256-rsa-sha256-test.xml');
