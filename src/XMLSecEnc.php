@@ -91,7 +91,7 @@ class XMLSecEnc
      * @param $type
      * @throws \Exception
      */
-    public function addReference($name,DOMNode $node, $type)
+    public function addReference($name, $node, $type)
     {
         if (! $node instanceOf DOMNode) {
             throw new Exception('$node is not of type DOMNode');
