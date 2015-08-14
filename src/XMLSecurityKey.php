@@ -1,7 +1,7 @@
 <?php
 namespace RobRichards\XMLSecLibs;
 
-use DomElement;
+use DOMElement;
 use Exception;
 
 /**
@@ -104,6 +104,7 @@ class XMLSecurityKey
     /**
      * @param string $type
      * @param null|array $params
+     * @throws Exception
      */
     public function __construct($type, $params=null)
     {
@@ -237,7 +238,7 @@ class XMLSecurityKey
      * In case of using DES3-CBC the key is checked for a proper parity bits set - Mcrypt doesn't care about the parity bits,
      * but others may care.
      * @return string
-     * @throws \Exception
+     * @throws Exception
      */
     public function generateSessionKey()
     {
@@ -312,7 +313,7 @@ class XMLSecurityKey
      * @param string $key
      * @param bool $isFile
      * @param bool $isCert
-     * @throws \Exception
+     * @throws Exception
      */
     public function loadKey($key, $isFile=false, $isCert = false)
     {
@@ -413,7 +414,7 @@ class XMLSecurityKey
      *
      * @param string $data
      * @return mixed
-     * @throws \Exception
+     * @throws Exception
      */
     private function encryptOpenSSL($data)
     {
@@ -434,7 +435,7 @@ class XMLSecurityKey
      *
      * @param string $data
      * @return mixed
-     * @throws \Exception
+     * @throws Exception
      */
     private function decryptOpenSSL($data)
     {
@@ -455,7 +456,7 @@ class XMLSecurityKey
      *
      * @param string $data
      * @return mixed
-     * @throws \Exception
+     * @throws Exception
      */
     private function signOpenSSL($data)
     {
@@ -670,6 +671,7 @@ class XMLSecurityKey
      * Create key from an EncryptedKey-element.
      *
      * @param DOMElement $element The EncryptedKey-element.
+     * @throws Exception
      *
      * @return XMLSecurityKey The new key.
      */

@@ -73,7 +73,7 @@ class XMLSecurityDSig
   </SignedInfo>
 </Signature>';
 
-    /** @var \DOMElement|null  */
+    /** @var DOMElement|null */
     public $sigNode = null;
 
     /** @var array */
@@ -216,7 +216,7 @@ class XMLSecurityDSig
 
     /**
      * @param string $method
-     * @throws \Exception
+     * @throws Exception
      */
     public function setCanonicalMethod($method)
     {
@@ -320,7 +320,7 @@ class XMLSecurityDSig
      * @param string $data
      * @param bool $encode
      * @return string
-     * @throws \Exception
+     * @throws Exception
      */
     public function calculateDigest($digestAlgorithm, $data, $encode = true)
     {
@@ -547,7 +547,7 @@ class XMLSecurityDSig
 
     /**
      * @return array
-     * @throws \Exception
+     * @throws Exception
      */
     public function getRefIDs()
     {
@@ -567,7 +567,7 @@ class XMLSecurityDSig
 
     /**
      * @return bool
-     * @throws \Exception
+     * @throws Exception
      */
     public function validateReference()
     {
@@ -719,7 +719,7 @@ class XMLSecurityDSig
      * @param DOMElement|string $data
      * @param null|string $mimetype
      * @param null|string $encoding
-     * @return DomElement
+     * @return DOMElement
      */
     public function addObject($data, $mimetype=null, $encoding=null)
     {
@@ -774,7 +774,7 @@ class XMLSecurityDSig
     /**
      * @param XMLSecurityKey $objKey
      * @return mixed
-     * @throws \Exception
+     * @throws Exception
      */
     public function verify($objKey)
     {
@@ -873,7 +873,7 @@ class XMLSecurityDSig
     /**
      * @param DOMNode $parentNode
      * @param bool $insertBefore
-     * @return DomNode
+     * @return DOMNode
      */
     public function appendSignature($parentNode, $insertBefore = false)
     {
@@ -935,7 +935,7 @@ class XMLSecurityDSig
      * @param bool $isURL
      * @param null|DOMXPath $xpath
      * @param null|array $options
-     * @throws \Exception
+     * @throws Exception
      */
     public static function staticAdd509Cert($parentRef, $cert, $isPEMFormat=true, $isURL=false, $xpath=null, $options=null)
     {

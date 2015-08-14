@@ -1,9 +1,8 @@
 <?php
 namespace RobRichards\XMLSecLibs;
 
-use DomDocument;
-use DomNode;
-use DomXPath;
+use DOMDocument;
+use DOMNode;
 use Exception;
 
 /**
@@ -89,7 +88,7 @@ class XMLSecEnc
      * @param string $name
      * @param DOMNode $node
      * @param $type
-     * @throws \Exception
+     * @throws Exception
      */
     public function addReference($name, $node, $type)
     {
@@ -119,6 +118,7 @@ class XMLSecEnc
      *
      * @param XMLSecurityKey $objKey  The encryption key and algorithm.
      * @param bool           $replace Whether the encrypted node should be replaced in the original tree. Default is true.
+     * @throws Exception
      *
      * @return DOMElement  The <xenc:EncryptedData>-element.
      */
@@ -186,7 +186,7 @@ class XMLSecEnc
 
     /**
      * @param XMLSecurityKey $objKey
-     * @throws \Exception
+     * @throws Exception
      */
     public function encryptReferences($objKey)
     {
@@ -212,6 +212,7 @@ class XMLSecEnc
     /**
      * Retrieve the CipherValue text from this encrypted node.
      *
+     * @throws Exception
      * @return string|null  The Ciphervalue text, or null if no CipherValue is found.
      */
     public function getCipherValue()
@@ -296,7 +297,7 @@ class XMLSecEnc
      * @param XMLSecurityKey $srcKey
      * @param XMLSecurityKey $rawKey
      * @param bool $append
-     * @throws \Exception
+     * @throws Exception
      */
     public function encryptKey($srcKey, $rawKey, $append=true)
     {
@@ -334,7 +335,7 @@ class XMLSecEnc
     /**
      * @param $encKey
      * @return DOMElement|string
-     * @throws \Exception
+     * @throws Exception
      */
     public function decryptKey($encKey)
     {
@@ -402,7 +403,7 @@ class XMLSecEnc
      * @param null|XMLSecurityKey $objBaseKey
      * @param null|DOMNode $node
      * @return null|XMLSecurityKey
-     * @throws \Exception
+     * @throws Exception
      */
     public static function staticLocateKeyInfo($objBaseKey=null, $node=null)
     {
