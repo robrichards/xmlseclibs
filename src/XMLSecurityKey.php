@@ -77,10 +77,7 @@ class XMLSecurityKey
     /** @var string|null */
     public $name = null;
 
-    /**
-     * @var mixed|null
-     * @deprecated
-     */
+    /** @var mixed|null */
     public $keyChain = null;
 
     /** @var bool */
