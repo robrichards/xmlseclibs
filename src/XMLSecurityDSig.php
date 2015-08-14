@@ -371,7 +371,7 @@ class XMLSecurityDSig
 
     /**
      * @param $refNode
-     * @param $objData
+     * @param DOMNode $objData
      * @param bool $includeCommentNodes
      * @return string
      */

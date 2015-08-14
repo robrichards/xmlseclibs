@@ -71,10 +71,10 @@ class XMLSecurityKey
     /** @var string  */
     public $passphrase = "";
 
-    /** @var string  */
+    /** @var string|null */
     public $iv = null;
 
-    /** @var string */
+    /** @var string|null */
     public $name = null;
 
     /**
@@ -86,7 +86,7 @@ class XMLSecurityKey
     /** @var bool */
     public $isEncrypted = false;
 
-    /** @var XMLSecEnc */
+    /** @var XMLSecEnc|null */
     public $encryptedCtx = null;
 
     /** @var mixed|null */
@@ -95,10 +95,14 @@ class XMLSecurityKey
     /**
      * This variable contains the certificate as a string if this key represents an X509-certificate.
      * If this key doesn't represent a certificate, this will be null.
+     * @varstring|null
      */
     private $x509Certificate = null;
 
-    /* This variable contains the certificate thumbprint if we have loaded an X509-certificate. */
+    /**
+     * This variable contains the certificate thumbprint if we have loaded an X509-certificate.
+     * @var string|null
+     */
     private $X509Thumbprint = null;
 
     /**
@@ -505,7 +509,7 @@ class XMLSecurityKey
     /**
      * Decrypts the given data (string) using the regarding php-extension, depending on the library assigned to algorithm in the contructor.
      *
-     * @param $data
+     * @param string $data
      * @return mixed|string
      */
     public function decryptData($data)
@@ -572,7 +576,7 @@ class XMLSecurityKey
     /**
      *
      * @param int $type
-     * @param $string
+     * @param string $string
      * @return null|string
      */
     public static function makeAsnSegment($type, $string)
@@ -602,7 +606,8 @@ class XMLSecurityKey
     }
 
     /**
-     * @hint Modulus and Exponent must already be base64 decoded
+     *
+     * Hint: Modulus and Exponent must already be base64 decoded
      * @param string $modulus
      * @param string $exponent
      * @return string
@@ -629,15 +634,12 @@ class XMLSecurityKey
     }
 
     /**
-     * @deprecated
      * @param mixed $parent
      */
     public function serializeKey($parent)
     {
 
     }
-    
-
 
     /**
      * Retrieve the X509 certificate this key represents.

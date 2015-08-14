@@ -65,10 +65,10 @@ class XMLSecEnc
     /** @var null|DOMNode  */
     private $rawNode = null;
 
-    /** @var string */
+    /** @var null|string */
     public $type = null;
 
-    /** @var DOMElement */
+    /** @var null|DOMElement */
     public $encKey = null;
 
     /** @var array */
@@ -88,7 +88,7 @@ class XMLSecEnc
     /**
      * @param string $name
      * @param DOMNode $node
-     * @param $type
+     * @param string $type
      * @throws Exception
      */
     public function addReference($name, $node, $type)
@@ -334,7 +334,7 @@ class XMLSecEnc
     }
 
     /**
-     * @param $encKey
+     * @param XMLSecurityKey $encKey
      * @return DOMElement|string
      * @throws Exception
      */
