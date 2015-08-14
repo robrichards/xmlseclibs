@@ -95,7 +95,7 @@ class XMLSecurityKey
     /**
      * This variable contains the certificate as a string if this key represents an X509-certificate.
      * If this key doesn't represent a certificate, this will be null.
-     * @varstring|null
+     * @var string|null
      */
     private $x509Certificate = null;
 
