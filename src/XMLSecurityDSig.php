@@ -99,7 +99,7 @@ class XMLSecurityDSig
 
     /**
      * This variable contains an associative array of validated nodes.
-     * @var array
+     * @var array|null
      */
     private $validatedNodes = null;
 
@@ -460,7 +460,7 @@ class XMLSecurityDSig
     }
 
     /**
-     * @param $refNode
+     * @param DOMNode $refNode
      * @return bool
      */
     public function processRefNode($refNode)
@@ -529,7 +529,7 @@ class XMLSecurityDSig
     }
 
     /**
-     * @param $refNode
+     * @param DOMNode $refNode
      * @return null
      */
     public function getRefNodeID($refNode)
@@ -596,7 +596,7 @@ class XMLSecurityDSig
     }
 
     /**
-     * @param $sinfoNode
+     * @param DOMNode $sinfoNode
      * @param DOMDocument $node
      * @param string $algorithm
      * @param null|array $arTransforms
@@ -680,7 +680,7 @@ class XMLSecurityDSig
     }
 
     /**
-     * @param $node
+     * @param DOMDocument $node
      * @param string $algorithm
      * @param null|array $arTransforms
      * @param null|array $options
