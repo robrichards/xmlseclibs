@@ -3,6 +3,7 @@ namespace RobRichards\XMLSecLibs;
 
 use DOMDocument;
 use DOMNode;
+use DOMXPath;
 use Exception;
 
 /**
