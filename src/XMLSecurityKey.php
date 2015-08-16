@@ -414,7 +414,7 @@ class XMLSecurityKey
      * Encrypts the given data (string) using the openssl-extension
      *
      * @param string $data
-     * @return mixed
+     * @return string
      * @throws Exception
      */
     private function encryptOpenSSL($data)
@@ -435,7 +435,7 @@ class XMLSecurityKey
      * Decrypts the given data (string) using the openssl-extension
      *
      * @param string $data
-     * @return mixed
+     * @return string
      * @throws Exception
      */
     private function decryptOpenSSL($data)
@@ -456,7 +456,7 @@ class XMLSecurityKey
      * Signs the given data (string) using the openssl-extension
      *
      * @param string $data
-     * @return mixed
+     * @return string
      * @throws Exception
      */
     private function signOpenSSL($data)
