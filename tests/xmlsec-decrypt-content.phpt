@@ -8,7 +8,7 @@ use RobRichards\XMLSecLibs\XMLSecEnc;
 /* When we need to locate our own key based on something like a key name */
 function locateLocalKey($objKey) {
 	/* In this example the key is identified by filename */
-	$filename = $objKey->name;
+	$filename = $objKey->getName();
 	if (! empty($filename)) {
 		$objKey->loadKey(dirname(__FILE__) . "/$filename", TRUE);
 	} else {
@@ -34,24 +34,25 @@ foreach ($arTests AS $testName=>$testFile) {
 			throw new Exception("Cannot locate Encrypted Data");
 		}
 		$objenc->setNode($encData);
-		$objenc->type = $encData->getAttribute("Type");
+		$objenc->setType($encData->getAttribute("Type"));
 		if (! $objKey = $objenc->locateKey()) {
 			throw new Exception("We know the secret key, but not the algorithm");
 		}
 		$key = NULL;
 		
 		if ($objKeyInfo = $objenc->locateKeyInfo($objKey)) {
-			if ($objKeyInfo->isEncrypted) {
-				$objencKey = $objKeyInfo->encryptedCtx;
+			if ($objKeyInfo->getIsEncrypted()) {
+				$objencKey = $objKeyInfo->getEncryptedCtx();
 				locateLocalKey($objKeyInfo);
 				$key = $objencKey->decryptKey($objKeyInfo);
 			}
 		}
 		
-		if (! $objKey->key && empty($key)) {
+		if (! $objKey->getKey() && empty($key)) {
 			locateLocalKey($objKey);
 		}
-		if (empty($objKey->key)) {
+		$objKeyKey = $objKey->getKey();
+		if (empty($objKeyKey)) {
 			$objKey->loadKey($key);
 		}
 		

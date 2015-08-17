@@ -14,12 +14,12 @@ if (! $encData) {
 	throw new Exception("Cannot locate Encrypted Data");
 }
 $objenc->setNode($encData);
-$objenc->type = $encData->getAttribute("Type");
+$objenc->setType($encData->getAttribute("Type"));
 $objKey = $objenc->locateKey();
 
 $objKeyInfo = $objenc->locateKeyInfo($objKey);
 
-if (!$objKeyInfo->isEncrypted) {
+if (!$objKeyInfo->getIsEncrypted()) {
 	throw new Exception('Expected $objKeyInfo to refer to an encrypted key by now.');
 }
 

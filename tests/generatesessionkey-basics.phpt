@@ -7,7 +7,7 @@ use RobRichards\XMLSecLibs\XMLSecurityKey;
 
 $key = new XMLSecurityKey(XMLSecurityKey::TRIPLEDES_CBC);
 $k = $key->generateSessionKey();
-if ($key->key !== $k) {
+if ($key->getKey() !== $k) {
     echo "Return value does not match generated key.";
     exit(1);
 }

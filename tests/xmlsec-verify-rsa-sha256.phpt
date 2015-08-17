@@ -20,8 +20,8 @@ foreach ($arTests AS $testName=>$testFile) {
 		throw new Exception("Cannot locate Signature Node");
 	}
 	$objXMLSecDSig->canonicalizeSignedInfo();
-	$objXMLSecDSig->idKeys = array('wsu:Id');
-	$objXMLSecDSig->idNS = array('wsu'=>'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd');
+	$objXMLSecDSig->setIdKeys(array('wsu:Id'));
+	$objXMLSecDSig->setIdNS(array('wsu'=>'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd'));
 	
 	$retVal = $objXMLSecDSig->validateReference();
 
@@ -37,7 +37,7 @@ foreach ($arTests AS $testName=>$testFile) {
 	
 	$objKeyInfo = XMLSecEnc::staticLocateKeyInfo($objKey, $objDSig);
 
-	if (! $objKeyInfo->key && empty($key)) {
+	if (! $objKeyInfo->getKey() && empty($key)) {
 		$objKey->loadKey(dirname(__FILE__) . '/mycert.pem', TRUE);
 	}
 
