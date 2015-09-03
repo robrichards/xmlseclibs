@@ -1002,7 +1002,8 @@ class XMLSecurityDSig
         // Attach all certificate nodes and any additional data
         foreach ($certs as $X509Cert) {
             if ($issuerSerial || $subjectName) {
-                if ($certData = openssl_x509_parse("-----BEGIN CERTIFICATE-----\n".chunk_split($X509Cert, 64, "\n")."-----END CERTIFICATE-----\n")) {
+                $certString = "-----BEGIN CERTIFICATE-----\n".chunk_split($X509Cert, 64, "\n")."-----END CERTIFICATE-----\n";
+                if ($certData = openssl_x509_parse($certString)) {
                     if ($subjectName && ! empty($certData['subject'])) {
                         if (is_array($certData['subject'])) {
                             $parts = array();
@@ -1034,6 +1035,15 @@ class XMLSecurityDSig
                         $x509IssuerNode->appendChild($x509Node);
                         $x509Node = $baseDoc->createElementNS(self::XMLDSIGNS, $dsig_pfx.'X509SerialNumber', $certData['serialNumber']);
                         $x509IssuerNode->appendChild($x509Node);
+                    }
+                    $pubkeyInfo = openssl_pkey_get_details(openssl_pkey_get_public($certString));
+                    if ($pubkeyInfo['type'] === OPENSSL_KEYTYPE_RSA) {
+                        $keyValueNode = $baseDoc->createElementNS(self::XMLDSIGNS, $dsig_pfx.'KeyValue');
+                        $keyInfo -> appendChild($keyValueNode);
+                        $rsaKeyValueNode = $baseDoc->createElementNS(self::XMLDSIGNS, $dsig_pfx.'RSAKeyValue');
+                        $keyValueNode -> appendChild($rsaKeyValueNode);
+                        $rsaKeyValueNode -> appendChild($baseDoc->createElementNS(self::XMLDSIGNS, $dsig_pfx.'Modulus', base64_encode($pubkeyInfo["rsa"]["n"])));
+                        $rsaKeyValueNode -> appendChild($baseDoc->createElementNS(self::XMLDSIGNS, $dsig_pfx.'Exponent', base64_encode($pubkeyInfo["rsa"]["e"])));
                     }
                 }
 
