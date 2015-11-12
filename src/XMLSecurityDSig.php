@@ -1007,7 +1007,13 @@ class XMLSecurityDSig
                         if (is_array($certData['subject'])) {
                             $parts = array();
                             foreach ($certData['subject'] AS $key => $value) {
-                                array_unshift($parts, "$key=$value");
+                                if (is_array($value)) {
+                                    foreach ($value as $valueElement) {
+                                        array_unshift($parts, "$key=$valueElement");
+                                    }
+                                } else {
+                                    array_unshift($parts, "$key=$value");
+                                }
                             }
                             $subjectNameValue = implode(',', $parts);
                         } else {
