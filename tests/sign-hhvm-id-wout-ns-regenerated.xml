@@ -1,0 +1,32 @@
+<?xml version="1.0"?>
+<samlp:Response xmlns:samlp="urn:oasis:names:tc:SAML:2.0:protocol" ID="response-id" InResponseTo="in-reponse-to" Version="2.0" IssueInstant="2013-10-27T11:55:37Z" Consent="urn:oasis:names:tc:SAML:2.0:consent:unspecified" Destination="http://destination.com">
+    <saml:Issuer xmlns:saml="urn:oasis:names:tc:SAML:2.0:assertion">the-issuer</saml:Issuer>
+    <Assertion xmlns="urn:oasis:names:tc:SAML:2.0:assertion" ID="assertion-id" Version="2.0" IssueInstant="2013-10-27T11:55:37Z">
+        <Issuer>assertion-issuer</Issuer>
+        <Subject>
+            <NameID Format="urn:oasis:names:tc:SAML:2.0:nameid-format:persistent">assertion-name-id</NameID>
+            <SubjectConfirmation Method="urn:oasis:names:tc:SAML:2.0:cm:bearer">
+                <SubjectConfirmationData InResponseTo="assertion-in-response-to" NotOnOrAfter="2013-10-27T12:00:37Z" Recipient="http://recipient.com"/>
+            </SubjectConfirmation>
+        </Subject>
+        <Conditions NotBefore="2013-10-27T11:55:37Z" NotOnOrAfter="2013-10-27T12:55:37Z">
+            <AudienceRestriction>
+                <Audience>http://audience.com</Audience>
+            </AudienceRestriction>
+        </Conditions>
+        <AttributeStatement>
+            <Attribute Name="http://schemas.xmlsoap.org/claims/CommonName" FriendlyName="Common Name">
+                <AttributeValue>cn value</AttributeValue>
+            </Attribute>
+            <Attribute Name="http://schemas.xmlsoap.org/claims/Group" FriendlyName="Group">
+                <AttributeValue>group one</AttributeValue>
+                <AttributeValue>group two</AttributeValue>
+            </Attribute>
+        </AttributeStatement>
+        <AuthnStatement AuthnInstant="2013-10-27T11:55:36Z" SessionIndex="session-index">
+            <AuthnContext>
+                <AuthnContextClassRef>authn-context-class-ref</AuthnContextClassRef>
+            </AuthnContext>
+        </AuthnStatement>
+    </Assertion>
+</samlp:Response>
