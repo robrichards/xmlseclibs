@@ -28,7 +28,7 @@ php composer.phar require "robrichards/xmlseclibs"
 xmlseclibs is being used in many different software.
 
 * [SimpleSAMLPHP](https://github.com/simplesamlphp/simplesamlphp)
-* [LightSAML](https://github.com/aerialship/lightsaml)
+* [LightSAML](https://github.com/lightsaml/lightsaml)
 
 ## Basic usage
 
