@@ -629,7 +629,7 @@ class XMLSecurityDSig
         if (! $node instanceof DOMDocument) {
             $uri = null;
             if (! $overwrite_id) {
-                $uri = $node->getAttributeNS($prefix_ns, $id_name);
+                $uri = $prefix_ns ? $node->getAttributeNS($prefix_ns, $id_name) : $node->getAttribute($id_name);
             }
             if (empty($uri)) {
                 $uri = self::generateGUID();
