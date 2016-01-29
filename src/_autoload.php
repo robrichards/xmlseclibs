@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Temporary autoloader to ensure compatibility with old, non-PSR-2 compliant classes.
+ * Temporary autoloader to ensure compatibility with old, non-PSR-4 compliant classes.
  *
  * @author Jaime Pérez Crespo <jaime.perez@uninett.no>
  */
