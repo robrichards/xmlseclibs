@@ -12,7 +12,8 @@
   "autoload": {
     "psr-4": {
       "RobRichards\\XMLSecLibs\\": "src"
-    }
+    },
+    "files": ["src/_autoload.php"]
   },
   "require": {
     "php": ">= 5.3"
