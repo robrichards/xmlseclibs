@@ -419,6 +419,8 @@ class XMLSecEnc
         $xpath = new DOMXPath($doc);
         $xpath->registerNamespace('xmlsecenc', self::XMLENCNS);
         $xpath->registerNamespace('xmlsecdsig', XMLSecurityDSig::XMLDSIGNS);
+        $xpath->registerNamespace('wsse', XMLSecurityDSig::WSSENS);
+        $xpath->registerNamespace('wsu', XMLSecurityDSig::WSUNS);
         $query = "./xmlsecdsig:KeyInfo";
         $nodeset = $xpath->query($query, $node);
         $encmeth = $nodeset->item(0);
@@ -457,6 +459,35 @@ class XMLSecEnc
                         }
                     }
                     break;
+                case 'SecurityTokenReference':
+                    $query = "./wsse:Reference";
+                    $keyRefElement = $xpath->query($query, $child)->item(0);
+                    if (!$keyRefElement) {
+                        throw new Exception("Unable to locate reference within SecurityTokenReference");
+                    }
+                    $uri = $keyRefElement->getAttribute('URI');
+                    if (substr($uri,0,1) !== '#') {
+                        /* URI not a reference - unsupported. */
+                        break;
+                    }
+                    $id = substr($uri, 1);
+
+                    $query = "//wsse:BinarySecurityToken[@Id='$id']";
+                    $keyElement = $xpath->query($query)->item(0);
+                    if (!$keyElement) {
+                        $query = "//wsse:BinarySecurityToken[@wsu:Id='$id']";
+                        $keyElement = $xpath->query($query)->item(0);
+                        if (!$keyElement) {
+                            throw new Exception("Unable to locate BinarySecurityToken with @Id='$id'.");
+                        }
+                    }
+
+                    $x509cert = $keyElement->textContent;
+                    $x509cert = str_replace(array("\r", "\n", " "), "", $x509cert);
+                    $x509cert = "-----BEGIN CERTIFICATE-----\n".chunk_split($x509cert, 64, "\n")."-----END CERTIFICATE-----\n";
+                    $objBaseKey->loadKey($x509cert, false, true);
+                    break;
+
                 case 'RetrievalMethod':
                     $type = $child->getAttribute('Type');
                     if ($type !== 'http://www.w3.org/2001/04/xmlenc#EncryptedKey') {

@@ -51,6 +51,7 @@ class XMLSecurityDSig
 {
     const XMLDSIGNS = 'http://www.w3.org/2000/09/xmldsig#';
     const WSSENS = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd';
+    const WSUNS = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd';
     const SHA1 = 'http://www.w3.org/2000/09/xmldsig#sha1';
     const SHA256 = 'http://www.w3.org/2001/04/xmlenc#sha256';
     const SHA384 = 'http://www.w3.org/2001/04/xmldsig-more#sha384';
@@ -596,6 +597,7 @@ class XMLSecurityDSig
                 throw new Exception("Reference validation failed");
             }
         }
+
         return true;
     }
 
