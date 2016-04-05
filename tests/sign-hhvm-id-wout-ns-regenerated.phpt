@@ -5,7 +5,7 @@ Signing on HHVM a node which id attribute does not have namespace prefix, preven
 --FILE--
 <?php
 
-require(dirname(__FILE__) . '/../xmlseclibs.php');
+require __DIR__ . '/../vendor/autoload.php';
 
 use RobRichards\XMLSecLibs\XMLSecurityDSig;
 use RobRichards\XMLSecLibs\XMLSecurityKey;

@@ -4,7 +4,7 @@ Verify RSA SHA256
 <?php if (version_compare(PHP_VERSION, '5.3.0', '<')) die('SKIP Requires PHP version 5.3.0 or newer.'); ?>
 --FILE--
 <?php
-require(dirname(__FILE__) . '/../xmlseclibs.php');
+require __DIR__ . '/../vendor/autoload.php';
 use RobRichards\XMLSecLibs\XMLSecurityDSig;
 use RobRichards\XMLSecLibs\XMLSecEnc;
 

@@ -14,11 +14,16 @@
       "RobRichards\\XMLSecLibs\\": "src"
     }
   },
+  "autoload-dev": {
+    "psr-4": {
+      "RobRichards\\XMLSecLibs\\Tests\\": "tests/src"
+    }
+  },
   "require": {
-    "php": ">= 5.3"
-   },
-  "suggest": {
-    "ext-openssl": "OpenSSL extension",
-    "ext-mcrypt": "MCrypt extension"
+    "ext-openssl": "*",
+    "php": ">= 7.0"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^5.7.4"
   }
 }

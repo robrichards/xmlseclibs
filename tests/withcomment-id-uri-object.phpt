@@ -4,7 +4,7 @@ WithComments with an ID reference.
 Checks that comments are removed when using an ID URI in a Reference.
 --FILE--
 <?php
-require(dirname(__FILE__) . '/../xmlseclibs.php');
+require __DIR__ . '/../vendor/autoload.php';
 use RobRichards\XMLSecLibs\XMLSecurityDSig;
 
 $doc = new DOMDocument();

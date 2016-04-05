@@ -2,7 +2,7 @@
 Test getSymmetricKeySize().
 --FILE--
 <?php
-require(dirname(__FILE__) . '/../xmlseclibs.php');
+require __DIR__ . '/../vendor/autoload.php';
 use RobRichards\XMLSecLibs\XMLSecurityKey;
 
 $keysizes = array(
