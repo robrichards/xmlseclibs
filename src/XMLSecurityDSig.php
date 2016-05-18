@@ -621,7 +621,7 @@ class XMLSecurityDSig
         if (! $node instanceof DOMDocument) {
             $uri = null;
             if (! $overwrite_id) {
-                $uri = $node->getAttributeNS($prefix_ns, $id_name);
+                $uri = $prefix_ns ? $node->getAttributeNS($prefix_ns, $id_name) : $node->getAttribute($id_name);
             }
             if (empty($uri)) {
                 $uri = self::generateGUID();
@@ -999,7 +999,13 @@ class XMLSecurityDSig
                         if (is_array($certData['subject'])) {
                             $parts = array();
                             foreach ($certData['subject'] AS $key => $value) {
-                                array_unshift($parts, "$key=$value");
+                                if (is_array($value)) {
+                                    foreach ($value as $valueElement) {
+                                        array_unshift($parts, "$key=$valueElement");
+                                    }
+                                } else {
+                                    array_unshift($parts, "$key=$value");
+                                }
                             }
                             $subjectNameValue = implode(',', $parts);
                         } else {
