@@ -1,5 +1,18 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+08, Sep 2016, 2.0.1
+Bug Fixes:
+- Strip whitespace characters when parsing X509Certificate. fixes #84
+  (klemen.bratec)
+- Certificate 'subject' values can be arrays. fixes #80 (Andreas Stangl)
+- HHVM signing node with ID attribute w/out namespace regenerates ID value.
+  fixes #88 (Milos Tomic)
+
+Improvements:
+- Fix typos and add some PHPDoc Blocks. (gfaust-qb)
+- Update lightSAML link. (Milos Tomic)
+- Update copyright dates.
+
 31, Jul 2015, 2.0.0
 Features:
 - Namespace support. Classes now in the RobRichards\XMLSecLibs\ namespace.
