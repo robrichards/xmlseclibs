@@ -4,3 +4,4 @@ tests/sign-empty-uri.xml
 tests/sign-sha256-rsa-sha256-test.xml
 tests/sign-subject.xml
 vendor/
+.idea
