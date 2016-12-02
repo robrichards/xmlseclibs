@@ -10,7 +10,7 @@ use RobRichards\XMLSecLibs\XMLSecurityDSig;
 $doc = new DOMDocument();
 $doc->load(dirname(__FILE__) . '/withcomment-id-uri.xml');
 $objXMLSecDSig = new XMLSecurityDSig();
-$objXMLSecDSig->idKeys = array('xml:id');
+$objXMLSecDSig->setIdKeys(array('xml:id'));
 
 $objDSig = $objXMLSecDSig->locateSignature($doc);
 if (! $objDSig) {
