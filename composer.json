@@ -15,8 +15,9 @@
     }
   },
   "require": {
+    "paragonie/random_compat": "~1.3.0|^2",
     "php": ">= 5.3"
-   },
+  },
   "suggest": {
     "ext-openssl": "OpenSSL extension",
     "ext-mcrypt": "MCrypt extension"

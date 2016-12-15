@@ -2,6 +2,14 @@ sudo: false
 
 language: php
 
+env:
+  global:
+    COMPOSER_DISABLE_XDEBUG_WARN=true
+
+cache:
+  directories:
+    - $HOME/.composer/cache
+
 matrix:
   fast_finish: true
   include:
@@ -9,10 +17,11 @@ matrix:
     - php: 5.4
     - php: 5.5
     - php: 5.6
-      env:
-        - EXECUTE_COVERAGE=true
-    - php: 7
-    - php: hhvm
+    - php: 7.0
+      env: EXECUTE_COVERAGE=true
+
+install:
+  - travis_retry composer install --prefer-dist
     
 script:
   - if [[ $EXECUTE_COVERAGE == 'true' ]]; then phpunit --coverage-clover clover.xml tests; fi

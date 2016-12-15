@@ -38,9 +38,12 @@
  * @copyright 2007-2016 Robert Richards <rrichards@cdatazone.org>
  * @license   http://www.opensource.org/licenses/bsd-license.php  BSD License
  * @version   2.0.1
+ * @deprecated
  */
 
-$xmlseclibs_srcdir = dirname(__FILE__) . '/src/';
-require $xmlseclibs_srcdir . '/XMLSecurityKey.php';
-require $xmlseclibs_srcdir . '/XMLSecurityDSig.php';
-require $xmlseclibs_srcdir . '/XMLSecEnc.php';
+if (!file_exists(__DIR__ . '/vendor/autoload.php')) {
+    die('You must set up the project dependencies using `composer install`'.PHP_EOL.
+        'See https://getcomposer.org/download/ for instructions on installing Composer'.PHP_EOL);
+}
+
+require __DIR__ . '/vendor/autoload.php';

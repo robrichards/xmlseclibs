@@ -235,7 +235,7 @@ class XMLSecurityKey
     }
 
     /**
-     * Generates a session key using the openssl-extension or using the mcrypt-extension as a fallback.
+     * Generates a session key using `random_bytes`.
      * In case of using DES3-CBC the key is checked for a proper parity bits set - Mcrypt doesn't care about the parity bits,
      * but others may care.
      * @return string
@@ -247,14 +247,7 @@ class XMLSecurityKey
             throw new Exception('Unknown key size for type "' . $this->type . '".');
         }
         $keysize = $this->cryptParams['keysize'];
-        
-        if (function_exists('openssl_random_pseudo_bytes')) {
-            /* We have PHP >= 5.3 - use openssl to generate session key. */
-            $key = openssl_random_pseudo_bytes($keysize);
-        } else {
-            /* Generating random key using iv generation routines */
-            $key = mcrypt_create_iv($keysize, MCRYPT_RAND);
-        }
+        $key = random_bytes($keysize);
         
         if ($this->type === self::TRIPLEDES_CBC) {
             /* Make sure that the generated key has the proper parity bits set.
