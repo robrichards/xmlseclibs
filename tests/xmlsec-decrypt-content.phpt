@@ -17,7 +17,11 @@ function locateLocalKey($objKey) {
 }
 
 $arTests = array('AOESP_SHA1'=>'oaep_sha1-res.xml',
-   'AOESP_SHA1_CONTENT'=>'oaep_sha1-content-res.xml');
+   'AOESP_SHA1_CONTENT'=>'oaep_sha1-content-res.xml',
+   'AES-128'=>'basic-doc-encrypted-aes128-cbc.xml',
+   'AES-192'=>'basic-doc-encrypted-aes192-cbc.xml',
+   'AES-256'=>'basic-doc-encrypted-aes256-cbc.xml',
+   '3DES-CBC'=>'basic-doc-encrypted-tripledes-cbc.xml');
 
 $doc = new DOMDocument();
 
