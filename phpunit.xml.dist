@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit bootstrap="vendor/autoload.php" colors="true">
+    <testsuites>
+        <testsuite name="old">
+            <directory suffix=".phpt">tests/</directory>
+        </testsuite>
+        <testsuite name="new">
+            <directory suffix="Test.php">tests/src/</directory>
+        </testsuite>
+    </testsuites>
+    <filter>
+        <whitelist processUncoveredFilesFromWhitelist="true">
+            <directory suffix=".php">src/</directory>
+        </whitelist>
+    </filter>
+    <php>
+        <ini name="date.timezone" value="UTC"/>
+    </php>
+</phpunit>

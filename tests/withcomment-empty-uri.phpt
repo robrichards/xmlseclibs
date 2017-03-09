@@ -4,7 +4,7 @@ WithComments with empty URI.
 Checks that comments are removed when using an empty URI in a Reference.
 --FILE--
 <?php
-require(dirname(__FILE__) . '/../xmlseclibs.php');
+require __DIR__ . '/../vendor/autoload.php';
 use RobRichards\XMLSecLibs\XMLSecurityDSig;
 
 $doc = new DOMDocument();

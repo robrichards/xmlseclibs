@@ -315,7 +315,7 @@ class XMLSecEnc
             $this->encKey = $encKey;
         }
         $encMethod = $encKey->appendChild($this->encdoc->createElementNS(self::XMLENCNS, 'xenc:EncryptionMethod'));
-        $encMethod->setAttribute('Algorithm', $srcKey->getAlgorith());
+        $encMethod->setAttribute('Algorithm', $srcKey->getAlgorithm());
         if (! empty($srcKey->name)) {
             $keyInfo = $encKey->appendChild($this->encdoc->createElementNS('http://www.w3.org/2000/09/xmldsig#', 'dsig:KeyInfo'));
             $keyInfo->appendChild($this->encdoc->createElementNS('http://www.w3.org/2000/09/xmldsig#', 'dsig:KeyName', $srcKey->name));

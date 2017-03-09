@@ -4,7 +4,7 @@ C14N_COMMENTS signatures.
 Test signing with C14N with comments.
 --FILE--
 <?php
-require(dirname(__FILE__) . '/../xmlseclibs.php');
+require __DIR__ . '/../vendor/autoload.php';
 use RobRichards\XMLSecLibs\XMLSecurityDSig;
 use RobRichards\XMLSecLibs\XMLSecurityKey;
 

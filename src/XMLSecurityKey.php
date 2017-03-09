@@ -111,32 +111,36 @@ class XMLSecurityKey
     {
         switch ($type) {
             case (self::TRIPLEDES_CBC):
-                $this->cryptParams['library'] = 'mcrypt';
-                $this->cryptParams['cipher'] = MCRYPT_TRIPLEDES;
-                $this->cryptParams['mode'] = MCRYPT_MODE_CBC;
+                $this->cryptParams['library'] = 'openssl';
+                $this->cryptParams['cipher'] = 'des-ede3-cbc';
+                $this->cryptParams['type'] = 'symmetric';
                 $this->cryptParams['method'] = 'http://www.w3.org/2001/04/xmlenc#tripledes-cbc';
                 $this->cryptParams['keysize'] = 24;
+                $this->cryptParams['blocksize'] = 8;
                 break;
             case (self::AES128_CBC):
-                $this->cryptParams['library'] = 'mcrypt';
-                $this->cryptParams['cipher'] = MCRYPT_RIJNDAEL_128;
-                $this->cryptParams['mode'] = MCRYPT_MODE_CBC;
+                $this->cryptParams['library'] = 'openssl';
+                $this->cryptParams['cipher'] = 'aes-128-cbc';
+                $this->cryptParams['type'] = 'symmetric';
                 $this->cryptParams['method'] = 'http://www.w3.org/2001/04/xmlenc#aes128-cbc';
                 $this->cryptParams['keysize'] = 16;
+                $this->cryptParams['blocksize'] = 16;
                 break;
             case (self::AES192_CBC):
-                $this->cryptParams['library'] = 'mcrypt';
-                $this->cryptParams['cipher'] = MCRYPT_RIJNDAEL_128;
-                $this->cryptParams['mode'] = MCRYPT_MODE_CBC;
+                $this->cryptParams['library'] = 'openssl';
+                $this->cryptParams['cipher'] = 'aes-192-cbc';
+                $this->cryptParams['type'] = 'symmetric';
                 $this->cryptParams['method'] = 'http://www.w3.org/2001/04/xmlenc#aes192-cbc';
                 $this->cryptParams['keysize'] = 24;
+                $this->cryptParams['blocksize'] = 16;
                 break;
             case (self::AES256_CBC):
-                $this->cryptParams['library'] = 'mcrypt';
-                $this->cryptParams['cipher'] = MCRYPT_RIJNDAEL_128;
-                $this->cryptParams['mode'] = MCRYPT_MODE_CBC;
+                $this->cryptParams['library'] = 'openssl';
+                $this->cryptParams['cipher'] = 'aes-256-cbc';
+                $this->cryptParams['type'] = 'symmetric';
                 $this->cryptParams['method'] = 'http://www.w3.org/2001/04/xmlenc#aes256-cbc';
                 $this->cryptParams['keysize'] = 32;
+                $this->cryptParams['blocksize'] = 16;
                 break;
             case (self::RSA_1_5):
                 $this->cryptParams['library'] = 'openssl';
@@ -235,9 +239,8 @@ class XMLSecurityKey
     }
 
     /**
-     * Generates a session key using the openssl-extension or using the mcrypt-extension as a fallback.
-     * In case of using DES3-CBC the key is checked for a proper parity bits set - Mcrypt doesn't care about the parity bits,
-     * but others may care.
+     * Generates a session key using `random_bytes`.
+     * In case of using DES3-CBC the key is checked for a proper parity bits set
      * @return string
      * @throws Exception
      */
@@ -247,20 +250,11 @@ class XMLSecurityKey
             throw new Exception('Unknown key size for type "' . $this->type . '".');
         }
         $keysize = $this->cryptParams['keysize'];
-        
-        if (function_exists('openssl_random_pseudo_bytes')) {
-            /* We have PHP >= 5.3 - use openssl to generate session key. */
-            $key = openssl_random_pseudo_bytes($keysize);
-        } else {
-            /* Generating random key using iv generation routines */
-            $key = mcrypt_create_iv($keysize, MCRYPT_RAND);
-        }
-        
+        $key = random_bytes($keysize);
+
+        // Make sure that the generated key has the proper parity bits set.
         if ($this->type === self::TRIPLEDES_CBC) {
-            /* Make sure that the generated key has the proper parity bits set.
-             * Mcrypt doesn't care about the parity bits, but others may care.
-            */
-            for ($i = 0; $i < strlen($key); $i++) {
+            for ($i = 0; $i < $this->byteStrLen($key); $i++) {
                 $byte = ord($key[$i]) & 0xfe;
                 $parity = 1;
                 for ($j = 1; $j < 8; $j++) {
@@ -270,7 +264,7 @@ class XMLSecurityKey
                 $key[$i] = chr($byte);
             }
         }
-        
+
         $this->key = $key;
         return $key;
     }
@@ -331,8 +325,9 @@ class XMLSecurityKey
         } else {
             $this->x509Certificate = null;
         }
-        if ($this->cryptParams['library'] == 'openssl') {
-            if ($this->cryptParams['type'] == 'public') {
+
+        switch ($this->cryptParams['type']) {
+            case 'public':
                 if ($isCert) {
                     /* Load the thumbprint if this is an X509 certificate. */
                     $this->X509Thumbprint = self::getRawThumbprint($this->key);
@@ -341,73 +336,20 @@ class XMLSecurityKey
                 if (! $this->key) {
                     throw new Exception('Unable to extract public key');
                 }
-            } else {
+                break;
+
+            case 'private':
                 $this->key = openssl_get_privatekey($this->key, $this->passphrase);
-            }
-        } else if ($this->cryptParams['cipher'] == MCRYPT_RIJNDAEL_128) {
-            /* Check key length */
-            switch ($this->type) {
-                case (self::AES256_CBC):
-                    if (strlen($this->key) < 25) {
+                break;
+
+            case'symmetric':
+                    if ($this->byteStrLen($this->key) < $this->cryptParams['keysize']) {
                         throw new Exception('Key must contain at least 25 characters for this cipher');
                     }
                     break;
-                case (self::AES192_CBC):
-                    if (strlen($this->key) < 17) {
-                        throw new Exception('Key must contain at least 17 characters for this cipher');
-                    }
-                    break;
-            }
+            default:
+                throw new Exception('Unknown type');
         }
-    }
-
-    /**
-     * Encrypts the given data (string) using the mcrypt-extension
-     *
-     * @param string $data
-     * @return string
-     */
-    private function encryptMcrypt($data)
-    {
-        $td = mcrypt_module_open($this->cryptParams['cipher'], '', $this->cryptParams['mode'], '');
-        $this->iv = mcrypt_create_iv(mcrypt_enc_get_iv_size($td), MCRYPT_RAND);
-        mcrypt_generic_init($td, $this->key, $this->iv);
-        if ($this->cryptParams['mode'] == MCRYPT_MODE_CBC) {
-            $bs = mcrypt_enc_get_block_size($td);
-            for ($datalen0 = $datalen = strlen($data); (($datalen % $bs) != ($bs - 1)); $datalen++)
-                $data .= chr(mt_rand(1, 127));
-            $data .= chr($datalen - $datalen0 + 1);
-        }
-        $encrypted_data = $this->iv.mcrypt_generic($td, $data);
-        mcrypt_generic_deinit($td);
-        mcrypt_module_close($td);
-        return $encrypted_data;
-    }
-
-    /**
-     * Decrypts the given data (string) using the mcrypt-extension
-     *
-     * @param string $data
-     * @return string
-     */
-    private function decryptMcrypt($data)
-    {
-        $td = mcrypt_module_open($this->cryptParams['cipher'], '', $this->cryptParams['mode'], '');
-        $iv_length = mcrypt_enc_get_iv_size($td);
-
-        $this->iv = substr($data, 0, $iv_length);
-        $data = substr($data, $iv_length);
-
-        mcrypt_generic_init($td, $this->key, $this->iv);
-        $decrypted_data = mdecrypt_generic($td, $data);
-        mcrypt_generic_deinit($td);
-        mcrypt_module_close($td);
-        if ($this->cryptParams['mode'] == MCRYPT_MODE_CBC) {
-            $dataLen = strlen($decrypted_data);
-            $paddingLength = substr($decrypted_data, $dataLen - 1, 1);
-            $decrypted_data = substr($decrypted_data, 0, $dataLen - ord($paddingLength));
-        }
-        return $decrypted_data;
     }
 
     /**
@@ -417,18 +359,45 @@ class XMLSecurityKey
      * @return string
      * @throws Exception
      */
-    private function encryptOpenSSL($data)
+    private function encryptSymmetric($data)
     {
-        if ($this->cryptParams['type'] == 'public') {
-            if (! openssl_public_encrypt($data, $encrypted_data, $this->key, $this->cryptParams['padding'])) {
-                throw new Exception('Failure encrypting Data');
-            }
-        } else {
-            if (! openssl_private_encrypt($data, $encrypted_data, $this->key, $this->cryptParams['padding'])) {
-                throw new Exception('Failure encrypting Data');
-            }
+        $this->iv = random_bytes(openssl_cipher_iv_length($this->cryptParams['cipher']));
+        $data = $this->padISO10126($data, $this->cryptParams['blocksize']);
+        $encrypted = openssl_encrypt($data, $this->cryptParams['cipher'], $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $this->iv);
+        if (false === $encrypted) {
+            throw new Exception('Failure encrypting Data (openssl symmetric) - ' . openssl_error_string());
         }
-        return $encrypted_data;
+        return $this->iv . $encrypted;
+    }
+
+    /**
+     * Encrypts the given data (string) using the openssl-extension
+     *
+     * @param string $data
+     * @return string
+     * @throws Exception
+     */
+    private function encryptPublic($data)
+    {
+        if (! openssl_public_encrypt($data, $encrypted, $this->key, $this->cryptParams['padding'])) {
+            throw new Exception('Failure encrypting Data (openssl public) - ' . openssl_error_string());
+        }
+        return $encrypted;
+    }
+
+    /**
+     * Encrypts the given data (string) using the openssl-extension
+     *
+     * @param string $data
+     * @return string
+     * @throws Exception
+     */
+    private function encryptPrivate($data)
+    {
+        if (! openssl_private_encrypt($data, $encrypted, $this->key, $this->cryptParams['padding'])) {
+            throw new Exception('Failure encrypting Data (openssl private) - ' . openssl_error_string());
+        }
+        return $encrypted;
     }
 
     /**
@@ -438,18 +407,107 @@ class XMLSecurityKey
      * @return string
      * @throws Exception
      */
-    private function decryptOpenSSL($data)
+    private function decryptSymmetric($data)
     {
-        if ($this->cryptParams['type'] == 'public') {
-            if (! openssl_public_decrypt($data, $decrypted, $this->key, $this->cryptParams['padding'])) {
-                throw new Exception('Failure decrypting Data');
-            }
-        } else {
-            if (! openssl_private_decrypt($data, $decrypted, $this->key, $this->cryptParams['padding'])) {
-                throw new Exception('Failure decrypting Data');
-            }
+        $iv_length = openssl_cipher_iv_length($this->cryptParams['cipher']);
+        $this->iv = $this->byteSubStr($data, 0, $iv_length);
+        $data = $this->byteSubStr($data, $iv_length);
+        $decrypted = openssl_decrypt($data, $this->cryptParams['cipher'], $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $this->iv);
+        if (false === $decrypted) {
+            throw new Exception('Failure decrypting Data (openssl symmetric) - ' . openssl_error_string());
+        }
+        return $this->unpadISO10126($decrypted);
+    }
+
+    /**
+     * Decrypts the given data (string) using the openssl-extension
+     *
+     * @param string $data
+     * @return string
+     * @throws Exception
+     */
+    private function decryptPublic($data)
+    {
+        if (! openssl_public_decrypt($data, $decrypted, $this->key, $this->cryptParams['padding'])) {
+            throw new Exception('Failure decrypting Data (openssl public) - ' . openssl_error_string);
         }
         return $decrypted;
+    }
+
+    /**
+     * Decrypts the given data (string) using the openssl-extension
+     *
+     * @param string $data
+     * @return string
+     * @throws Exception
+     */
+    private function decryptPrivate($data)
+    {
+        if (! openssl_private_decrypt($data, $decrypted, $this->key, $this->cryptParams['padding'])) {
+            throw new Exception('Failure decrypting Data (openssl private) - ' . openssl_error_string);
+        }
+        return $decrypted;
+    }
+
+    /**
+     * ISO 10126 Padding
+     *
+     * @param string $data
+     * @param integer $blockSize
+     * @throws Exception
+     * @return string
+     */
+    private function padISO10126($data, $blockSize)
+    {
+        if ($blockSize > 256) {
+            throw new Exception('Block size higher than 256 not allowed');
+        }
+        $padChr = $blockSize - ($this->byteStrLen($data) % $blockSize);
+        $pattern = chr($padChr);
+        return $data . str_repeat($pattern, $padChr);
+    }
+
+    /**
+     * Remove ISO 10126 Padding
+     *
+     * @param string $data
+     * @return string
+     */
+    private function unpadISO10126($data)
+    {
+        $padChr = $this->byteSubStr($data, -1);
+        $padLen = ord($padChr);
+        return $this->byteSubStr($data, 0, -$padLen);
+    }
+
+    /**
+     * Byte strlen wrapper to compensate for mbstring.func_overload
+     *
+     * @param string $string
+     * @return integer
+     */
+    private function byteStrLen($string)
+    {
+        return function_exists('mb_byteStrLen') ?
+            mb_strlen($string, '8bit') : strlen($string);
+    }
+
+    /**
+     * Byte substr wrapper to compensate for mbstring.func_overload
+     *
+     * @param string $string
+     * @param integer $start
+     * @param integer $length
+     * @return string
+     */
+    private function byteSubStr($string, $start, $length = null)
+    {
+        if (null === $length) {
+            $length = $this->byteStrLen($string);
+        }
+
+        return function_exists('mb_byteSubStr') ?
+            mb_substr($string, $start, $length, '8bit') : substr($string, $start, $length);
     }
 
     /**
@@ -488,34 +546,44 @@ class XMLSecurityKey
     }
 
     /**
-     * Encrypts the given data (string) using the regarding php-extension, depending on the library assigned to algorithm in the contructor.
+     * Encrypts the given data (string) using openssl, depending on the library assigned to algorithm in the contructor.
      *
      * @param string $data
      * @return mixed|string
+     * @throws Exception
      */
     public function encryptData($data)
     {
-        switch ($this->cryptParams['library']) {
-            case 'mcrypt':
-                return $this->encryptMcrypt($data);
-            case 'openssl':
-                return $this->encryptOpenSSL($data);
+        switch ($this->cryptParams['type']) {
+            case 'symmetric':
+                return $this->encryptSymmetric($data);
+            case 'public':
+                return $this->encryptPublic($data);
+            case 'private':
+                return $this->encryptPrivate($data);
+            default:
+                throw new Exception('Invalid encryption type');
         }
     }
 
     /**
-     * Decrypts the given data (string) using the regarding php-extension, depending on the library assigned to algorithm in the contructor.
+     * Decrypts the given data (string) using openssl, depending on the library assigned to algorithm in the contructor.
      *
      * @param string $data
      * @return mixed|string
+     * @throws Exception
      */
     public function decryptData($data)
     {
-        switch ($this->cryptParams['library']) {
-            case 'mcrypt':
-                return $this->decryptMcrypt($data);
-            case 'openssl':
-                return $this->decryptOpenSSL($data);
+        switch ($this->cryptParams['type']) {
+            case 'symmetric':
+                return $this->decryptSymmetric($data);
+            case 'public':
+                return $this->decryptPublic($data);
+            case 'private':
+                return $this->decryptPrivate($data);
+            default:
+                throw new Exception('Invalid openssl decryption type');
         }
     }
 
@@ -588,7 +656,7 @@ class XMLSecurityKey
                 break;
         }
 
-        $length = strlen($string);
+        $length = $this->byteStrLen($string);
 
         if ($length < 128) {
             $output = sprintf("%c%c%s", $type, $length, $string);
@@ -623,7 +691,7 @@ class XMLSecurityKey
         $publicKeyInfoBase64 = base64_encode($publicKeyInfo);
         $encoding = "-----BEGIN PUBLIC KEY-----\n";
         $offset = 0;
-        while ($segment = substr($publicKeyInfoBase64, $offset, 64)) {
+        while ($segment = $this->byteSubStr($publicKeyInfoBase64, $offset, 64)) {
             $encoding = $encoding.$segment."\n";
             $offset += 64;
         }

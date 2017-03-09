@@ -2,7 +2,7 @@
 Test the getCipherData() function.
 --FILE--
 <?php
-require(dirname(__FILE__) . '/../xmlseclibs.php');
+require __DIR__ . '/../vendor/autoload.php';
 use RobRichards\XMLSecLibs\XMLSecEnc;
 
 $doc = new DOMDocument();
