@@ -573,7 +573,9 @@ class XMLSecurityDSig
     {
         $docElem = $this->sigNode->ownerDocument->documentElement;
         if (! $docElem->isSameNode($this->sigNode)) {
-            $this->sigNode->parentNode->removeChild($this->sigNode);
+            if ($this->sigNode->parentNode != null) {
+                $this->sigNode->parentNode->removeChild($this->sigNode);
+            }
         }
         $xpath = $this->getXPathObj();
         $query = "./secdsig:SignedInfo/secdsig:Reference";
