@@ -55,12 +55,12 @@ $objDSig->addReference(
 
 // Create a new (private) Security key
 $objKey = new XMLSecurityKey(XMLSecurityKey::RSA_SHA256, array('type'=>'private'));
-// Load the private key
-$objKey->loadKey('./path/to/privatekey.pem', TRUE);
-/* 
-If key has a passphrase, set it using 
+/*
+If key has a passphrase, set it using
 $objKey->passphrase = '<passphrase>';
 */
+// Load the private key
+$objKey->loadKey('./path/to/privatekey.pem', TRUE);
 
 // Sign the XML file
 $objDSig->sign($objKey);
