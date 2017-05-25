@@ -1,5 +1,9 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+25, May 2017, 3.0.0
+Improvements:
+- Remove use of mcrypt
+
 08, Sep 2016, 2.0.1
 Bug Fixes:
 - Strip whitespace characters when parsing X509Certificate. fixes #84
