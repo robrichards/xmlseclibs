@@ -1,8 +1,12 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+??, ??? 2017, 3.0.1
+Improvements:
+- Add OneLogin to supported software
+
 25, May 2017, 3.0.0
 Improvements:
-- Remove use of mcrypt
+- Remove use of mcrypt (skymeyer)
 
 08, Sep 2016, 2.0.1
 Bug Fixes:
