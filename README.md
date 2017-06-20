@@ -30,7 +30,7 @@ xmlseclibs is being used in many different software.
 
 * [SimpleSAMLPHP](https://github.com/simplesamlphp/simplesamlphp)
 * [LightSAML](https://github.com/lightsaml/lightsaml)
-* [OneLogin] (https://github.com/onelogin/php-saml)
+* [OneLogin](https://github.com/onelogin/php-saml)
 
 ## Basic usage
 
