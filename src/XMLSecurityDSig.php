@@ -50,6 +50,8 @@ use Exception;
 class XMLSecurityDSig
 {
     const XMLDSIGNS = 'http://www.w3.org/2000/09/xmldsig#';
+    const WSSENS = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd';
+    const WSUNS = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd';
     const SHA1 = 'http://www.w3.org/2000/09/xmldsig#sha1';
     const SHA256 = 'http://www.w3.org/2001/04/xmlenc#sha256';
     const SHA384 = 'http://www.w3.org/2001/04/xmldsig-more#sha384';
@@ -75,6 +77,9 @@ class XMLSecurityDSig
 
     /** @var DOMElement|null */
     public $sigNode = null;
+
+    /** @var array */
+    public $securityTokenNodes = array();
 
     /** @var array */
     public $idKeys = array();
@@ -594,6 +599,7 @@ class XMLSecurityDSig
                 throw new Exception("Reference validation failed");
             }
         }
+
         return true;
     }
 
@@ -866,10 +872,17 @@ class XMLSecurityDSig
         $signatureElement = $document->importNode($this->sigNode, true);
 
         if ($beforeNode == null) {
-            return $node->insertBefore($signatureElement);
+            $rv = $node->insertBefore($signatureElement);
         } else {
-            return $node->insertBefore($signatureElement, $beforeNode);
+            $rv = $node->insertBefore($signatureElement, $beforeNode);
         }
+
+        foreach ($this->securityTokenNodes as $st) {
+            $stt = $document->importNode($st, true);
+            $node->insertBefore($stt, $rv);
+        }
+
+        return $rv;
     }
 
     /**
@@ -1061,6 +1074,96 @@ class XMLSecurityDSig
     {
         if ($xpath = $this->getXPathObj()) {
             self::staticAdd509Cert($this->sigNode, $cert, $isPEMFormat, $isURL, $xpath, $options);
+        }
+    }
+
+    /**
+     * @param string $cert
+     * @param bool $isPEMFormat
+     * @param bool $isURL
+     * @param null|DOMXPath $xpath
+     * @param null|array $options
+     * @throws Exception
+     */
+    public function add509CertByReference($cert, $isPEMFormat=true, $isURL=false, $xpath=null, $options=null)
+    {
+        if ($isURL) {
+            $cert = file_get_contents($cert);
+        }
+        $baseDoc = $this->sigNode->ownerDocument;
+
+        if (empty($xpath)) {
+            $xpath = new DOMXPath($this->sigNode->ownerDocument);
+            $xpath->registerNamespace('secdsig', self::XMLDSIGNS);
+        }
+
+        $key_id_ns = null;
+        $key_id_pfx = "";
+        $key_id_name = "Id";
+        if (! empty($options["key_id_prefix"]))    { $key_id_pfx  = $options["key_id_prefix"]; }
+        if (! empty($options["key_id_prefix_ns"])) { $key_id_ns   = $options["key_id_prefix_ns"]; }
+        if (! empty($options["key_id_name"]))      { $key_id_name = $options["key_id_name"]; }
+
+        $query = "./secdsig:KeyInfo";
+        $nodeset = $xpath->query($query, $this->sigNode);
+        $keyInfo = $nodeset->item(0);
+        $dsig_pfx = '';
+        if (! $keyInfo) {
+            $pfx = $this->sigNode->lookupPrefix(self::XMLDSIGNS);
+            if (! empty($pfx)) {
+                $dsig_pfx = $pfx.":";
+            }
+            $inserted = false;
+            $keyInfo = $baseDoc->createElementNS(self::XMLDSIGNS, $dsig_pfx.'KeyInfo');
+
+            $query = "./secdsig:Object";
+            $nodeset = $xpath->query($query, $this->sigNode);
+            if ($sObject = $nodeset->item(0)) {
+                $sObject->parentNode->insertBefore($keyInfo, $sObject);
+                $inserted = true;
+            }
+
+            if (! $inserted) {
+                $this->sigNode->appendChild($keyInfo);
+            }
+        } else {
+            $pfx = $keyInfo->lookupPrefix(self::XMLDSIGNS);
+            if (! empty($pfx)) {
+                $dsig_pfx = $pfx.":";
+            }
+        }
+
+
+
+        // Add all certs if there are more than one
+        $certs = self::staticGet509XCerts($cert, $isPEMFormat);
+
+        // Attach all certificate nodes as binary security tokens
+        $ws_pfx = "";
+        $pfx = $keyInfo->lookupPrefix(self::WSSENS);
+        if (! empty($pfx)) {
+            $ws_pfx = $pfx.":";
+        }
+        foreach ($certs as $X509Cert) {
+            $x509CertNode = $baseDoc->createElementNS(self::WSSENS, $ws_pfx.'BinarySecurityToken', $X509Cert);
+            $x509CertNode->SetAttribute("EncodingType", "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary");
+            $x509CertNode->SetAttribute("ValueType", "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-x509-token-profile-1.0#X509v3");
+
+            $id = "key-" . sha1(base64_decode($X509Cert));
+            if (! empty($key_id_prefix_ns)) {
+                $x509CertNode->SetAttributeNS($key_id_prefix_ns, $key_id_prefix.":".$key_id_name, $id);
+            } else {
+                $x509CertNode->SetAttribute($key_id_name, $id);
+            }
+
+            $this->securityTokenNodes[] = $x509CertNode;
+
+            $stref = $baseDoc->createElementNS(self::WSSENS, $ws_pfx.'SecurityTokenReference');
+            $ref = $baseDoc->createElementNS(self::WSSENS, $ws_pfx.'Reference');
+            $ref->SetAttribute("URI", "#".$id);
+            $ref->SetAttribute("ValueType", "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-x509-token-profile-1.0#X509v3");
+            $stref->appendChild($ref);
+            $keyInfo->appendChild($stref);
         }
     }
 
