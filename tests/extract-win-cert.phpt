@@ -34,7 +34,7 @@ foreach ($arTests AS $testName=>$testFile) {
 	if ($testName == 'SIGN_TEST') {
 		$objKey->loadKey(dirname(__FILE__) . '/mycert.pem', TRUE);
 		print $testName.": ";
-		if ($objXMLSecDSig->verify($objKey)) {
+		if ($objXMLSecDSig->verify($objKey) === 1) {
 			print "Signature validated!";
 		} else {
 			print "Failure!!!!!!!!";

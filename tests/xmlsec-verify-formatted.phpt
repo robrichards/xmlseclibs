@@ -40,7 +40,7 @@ foreach ($arTests AS $testName=>$testFile) {
 	}
 	
 	print $testName.": ";
-	if ($objXMLSecDSig->verify($objKey)) {
+	if ($objXMLSecDSig->verify($objKey) === 1) {
 		print "Signature validated!";
 	} else {
 		print "Failure!!!!!!!!";
