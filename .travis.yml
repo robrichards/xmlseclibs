@@ -9,6 +9,8 @@ matrix:
       env:
         - EXECUTE_COVERAGE=true
     - php: 7
+    - php: 7.1
+  allow_failures:
     - php: hhvm
     
 script:
