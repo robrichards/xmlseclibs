@@ -774,6 +774,17 @@ class XMLSecurityDSig
     }
 
     /**
+     * Returns:
+     *  Bool when verifying HMAC_SHA1;
+     *  Int otherwise, with following meanings:
+     *    1 on succesful signature verification,
+     *    0 when signature verification failed,
+     *   -1 if an error occurred during processing.
+     *
+     * NOTE: be very careful when checking the int return value, because in
+     * PHP, -1 will be cast to True when in boolean context. Always check the
+     * return value in a strictly typed way, e.g. "$obj->verify(...) === 1".
+     *
      * @param XMLSecurityKey $objKey
      * @return bool|int
      * @throws Exception
