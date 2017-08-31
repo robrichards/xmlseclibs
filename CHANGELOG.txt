@@ -1,5 +1,7 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+??, ??? 2017, 3.0.2-dev
+
 31, Aug 2017, 3.0.1
 Bug Fixes:
 - Fixed missing () in function call. (Dennis Væversted)
