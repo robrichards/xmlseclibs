@@ -448,7 +448,7 @@ class XMLSecurityKey
     private function decryptPublic($data)
     {
         if (! openssl_public_decrypt($data, $decrypted, $this->key, $this->cryptParams['padding'])) {
-            throw new Exception('Failure decrypting Data (openssl public) - ' . openssl_error_string);
+            throw new Exception('Failure decrypting Data (openssl public) - ' . openssl_error_string());
         }
         return $decrypted;
     }
