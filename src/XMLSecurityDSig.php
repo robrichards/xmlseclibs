@@ -110,7 +110,7 @@ class XMLSecurityDSig
      */
     public function __construct($prefix='ds', $options=null)
     {
-        $template = (!empty($options['excludeWhiteSpace']) && $options['excludeWhiteSpace'] === true) ? self::BASE_TEMPLATE_NO_WHITESPACE : self::BASE_TEMPLATE;
+        $template = (!empty($options['excludeWhitespace']) && $options['excludeWhitespace'] === true) ? self::BASE_TEMPLATE_NO_WHITESPACE : self::BASE_TEMPLATE;
 
         if (! empty($prefix)) {
             $this->prefix = $prefix.':';
