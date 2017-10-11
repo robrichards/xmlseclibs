@@ -990,12 +990,16 @@ class XMLSecurityDSig
 
         $issuerSerial = false;
         $subjectName = false;
+        $addPubKeyInfo = false;
         if (is_array($options)) {
             if (! empty($options['issuerSerial'])) {
                 $issuerSerial = true;
             }
             if (! empty($options['subjectName'])) {
                 $subjectName = true;
+            }
+            if (! empty($options['pubKeyInfo'])) {
+                $addPubKeyInfo = true;
             }
         }
 
@@ -1036,14 +1040,16 @@ class XMLSecurityDSig
                         $x509Node = $baseDoc->createElementNS(self::XMLDSIGNS, $dsig_pfx.'X509SerialNumber', $certData['serialNumber']);
                         $x509IssuerNode->appendChild($x509Node);
                     }
-                    $pubkeyInfo = openssl_pkey_get_details(openssl_pkey_get_public($certString));
-                    if ($pubkeyInfo['type'] === OPENSSL_KEYTYPE_RSA) {
-                        $keyValueNode = $baseDoc->createElementNS(self::XMLDSIGNS, $dsig_pfx.'KeyValue');
-                        $keyInfo -> appendChild($keyValueNode);
-                        $rsaKeyValueNode = $baseDoc->createElementNS(self::XMLDSIGNS, $dsig_pfx.'RSAKeyValue');
-                        $keyValueNode -> appendChild($rsaKeyValueNode);
-                        $rsaKeyValueNode -> appendChild($baseDoc->createElementNS(self::XMLDSIGNS, $dsig_pfx.'Modulus', base64_encode($pubkeyInfo["rsa"]["n"])));
-                        $rsaKeyValueNode -> appendChild($baseDoc->createElementNS(self::XMLDSIGNS, $dsig_pfx.'Exponent', base64_encode($pubkeyInfo["rsa"]["e"])));
+                    if ($addPubKeyInfo) {
+                        $pubkeyInfo = openssl_pkey_get_details(openssl_pkey_get_public($certString));
+                        if ($pubkeyInfo['type'] === OPENSSL_KEYTYPE_RSA) {
+                            $keyValueNode = $baseDoc->createElementNS(self::XMLDSIGNS, $dsig_pfx.'KeyValue');
+                            $keyInfo -> appendChild($keyValueNode);
+                            $rsaKeyValueNode = $baseDoc->createElementNS(self::XMLDSIGNS, $dsig_pfx.'RSAKeyValue');
+                            $keyValueNode -> appendChild($rsaKeyValueNode);
+                            $rsaKeyValueNode -> appendChild($baseDoc->createElementNS(self::XMLDSIGNS, $dsig_pfx.'Modulus', base64_encode($pubkeyInfo["rsa"]["n"])));
+                            $rsaKeyValueNode -> appendChild($baseDoc->createElementNS(self::XMLDSIGNS, $dsig_pfx.'Exponent', base64_encode($pubkeyInfo["rsa"]["e"])));
+                        }
                     }
                 }
 
