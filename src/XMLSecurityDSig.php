@@ -1005,7 +1005,7 @@ class XMLSecurityDSig
 
         // Attach all certificate nodes and any additional data
         foreach ($certs as $X509Cert) {
-            if ($issuerSerial || $subjectName) {
+            if ($issuerSerial || $subjectName || $addPubKeyInfo) {
                 $certString = "-----BEGIN CERTIFICATE-----\n".chunk_split($X509Cert, 64, "\n")."-----END CERTIFICATE-----\n";
                 if ($certData = openssl_x509_parse($certString)) {
                     if ($subjectName && ! empty($certData['subject'])) {
