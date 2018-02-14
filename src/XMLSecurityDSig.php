@@ -500,8 +500,6 @@ class XMLSecurityDSig
                 } else {
                     $dataObject = $refNode->ownerDocument;
                 }
-            } else {
-                $dataObject = file_get_contents($arUrl);
             }
         } else {
             /* This reference identifies the root node with an empty URI. This should
