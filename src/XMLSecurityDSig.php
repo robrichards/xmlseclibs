@@ -493,7 +493,8 @@ class XMLSecurityDSig
                     $iDlist = '@Id="'.XPath::filter($identifier).'"';
                     if (is_array($this->idKeys)) {
                         foreach ($this->idKeys AS $idKey) {
-                            $iDlist .= " or @$idKey='".XPATH::filter($idKey)."'";
+                            $iDlist .= " or @".XPath::filter($idKey)."='".XPATH::filter($identifier).
+                                "'";
                         }
                     }
                     $query = '//*['.$iDlist.']';

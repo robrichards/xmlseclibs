@@ -13,7 +13,7 @@ class XPath
         self::ALPHANUMERIC => '#[^\w\d]#',
         self::NUMERIC => '#[^\d]#',
         self::LETTERS => '#[^\w]#',
-        self::EXTENDED_ALPHANUMERIC => '#[^\w\d\s-_]#'
+        self::EXTENDED_ALPHANUMERIC => '/[^\w\d\s-_:]/'
     ];
 
 
