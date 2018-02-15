@@ -6,6 +6,7 @@ use DOMElement;
 use DOMNode;
 use DOMXPath;
 use Exception;
+use RobRichards\XMLSecLibs\Utils\XPath as XPath;
 
 /**
  * xmlseclibs.php
@@ -489,10 +490,10 @@ class XMLSecurityDSig
                             $xPath->registerNamespace($nspf, $ns);
                         }
                     }
-                    $iDlist = '@Id="'.$identifier.'"';
+                    $iDlist = '@Id="'.XPath::filter($identifier).'"';
                     if (is_array($this->idKeys)) {
                         foreach ($this->idKeys AS $idKey) {
-                            $iDlist .= " or @$idKey='$identifier'";
+                            $iDlist .= " or @$idKey='".XPATH::filter($idKey)."'";
                         }
                     }
                     $query = '//*['.$iDlist.']';

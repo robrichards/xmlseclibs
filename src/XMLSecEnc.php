@@ -5,6 +5,7 @@ use DOMDocument;
 use DOMNode;
 use DOMXPath;
 use Exception;
+use RobRichards\XMLSecLibs\Utils\XPath as XPath;
 
 /**
  * xmlseclibs.php
@@ -470,7 +471,7 @@ class XMLSecEnc
                     }
                     $id = substr($uri, 1);
 
-                    $query = "//xmlsecenc:EncryptedKey[@Id='$id']";
+                    $query = "//xmlsecenc:EncryptedKey[@Id='".XPath::filter($id)."']";
                     $keyElement = $xpath->query($query)->item(0);
                     if (!$keyElement) {
                         throw new Exception("Unable to locate EncryptedKey with @Id='$id'.");
