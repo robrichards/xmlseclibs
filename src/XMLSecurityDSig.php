@@ -490,11 +490,11 @@ class XMLSecurityDSig
                             $xPath->registerNamespace($nspf, $ns);
                         }
                     }
-                    $iDlist = '@Id="'.XPath::filter($identifier).'"';
+                    $iDlist = '@Id="'.XPath::filterAttrValue($identifier, XPath::DOUBLE_QUOTE).'"';
                     if (is_array($this->idKeys)) {
                         foreach ($this->idKeys AS $idKey) {
-                            $iDlist .= " or @".XPath::filter($idKey)."='".XPATH::filter($identifier).
-                                "'";
+                            $iDlist .= " or @".XPath::filterAttrName($idKey).'="'.
+                                XPATH::filterAttrValue($identifier, XPAth::DOUBLE_QUOTE).'"';
                         }
                     }
                     $query = '//*['.$iDlist.']';

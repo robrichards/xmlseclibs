@@ -4,29 +4,41 @@ namespace RobRichards\XMLSecLibs\Utils;
 
 class XPath
 {
-    const ALPHANUMERIC = 0;
-    const NUMERIC = 1;
-    const LETTERS = 2;
-    const EXTENDED_ALPHANUMERIC = 3;
+    const ALPHANUMERIC = '[^\w\d]';
+    const NUMERIC = '[^\d]';
+    const LETTERS = '[^\w]';
+    const EXTENDED_ALPHANUMERIC = '[^\w\d\s-_:\.]';
 
-    private static $regex = [
-        self::ALPHANUMERIC => '#[^\w\d]#',
-        self::NUMERIC => '#[^\d]#',
-        self::LETTERS => '#[^\w]#',
-        self::EXTENDED_ALPHANUMERIC => '/[^\w\d\s-_:]/'
-    ];
+    const SINGLE_QUOTE = '\'';
+    const DOUBLE_QUOTE = '"';
+    const ALL_QUOTES = '[\'"]';
 
 
     /**
-     * Filter a string for save inclusion in an XPath query.
+     * Filter an attribute value for save inclusion in an XPath query.
      *
-     * @param string $input The query parameter to filter.
-     * @param int $allow The character set that we should allow.
+     * @param string $value The value to filter.
+     * @param string $quotes The quotes used to delimit the value in the XPath query.
      *
-     * @return string The input filtered with only allowed characters.
+     * @return string The filtered attribute value.
      */
-    public static function filter($input, $allow = self::EXTENDED_ALPHANUMERIC)
+    public static function filterAttrValue($value, $quotes = self::ALL_QUOTES)
     {
-        return preg_replace(self::$regex[$allow], '', $input);
+        return preg_replace('#'.$quotes.'#', '', $value);
+    }
+
+
+    /**
+     * Filter an attribute name for save inclusion in an XPath query.
+     *
+     * @param string $name The attribute name to filter.
+     * @param mixed $allow The set of characters to allow. Can be one of the constants provided by this class, or a
+     * custom regex without the '#' character (used as delimiter).
+     *
+     * @return string The filtered attribute name.
+     */
+    public static function filterAttrName($name, $allow = self::EXTENDED_ALPHANUMERIC)
+    {
+        return preg_replace('#'.$allow.'#', '', $name);
     }
 }
