@@ -4,10 +4,10 @@ namespace RobRichards\XMLSecLibs\Utils;
 
 class XPath
 {
-    const ALPHANUMERIC = '[^\w\d]';
-    const NUMERIC = '[^\d]';
-    const LETTERS = '[^\w]';
-    const EXTENDED_ALPHANUMERIC = '[^\w\d\s-_:\.]';
+    const ALPHANUMERIC = '\w\d';
+    const NUMERIC = '\d';
+    const LETTERS = '\w';
+    const EXTENDED_ALPHANUMERIC = '\w\d\s-_:\.';
 
     const SINGLE_QUOTE = '\'';
     const DOUBLE_QUOTE = '"';
@@ -33,12 +33,12 @@ class XPath
      *
      * @param string $name The attribute name to filter.
      * @param mixed $allow The set of characters to allow. Can be one of the constants provided by this class, or a
-     * custom regex without the '#' character (used as delimiter).
+     * custom regex excluding the '#' character (used as delimiter).
      *
      * @return string The filtered attribute name.
      */
     public static function filterAttrName($name, $allow = self::EXTENDED_ALPHANUMERIC)
     {
-        return preg_replace('#'.$allow.'#', '', $name);
+        return preg_replace('#[^'.$allow.']#', '', $name);
     }
 }
