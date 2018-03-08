@@ -12,6 +12,7 @@ matrix:
         - EXECUTE_COVERAGE=true
     - php: 7
     - php: 7.1
+    - php: 7.2
   allow_failures:
     - php: hhvm
     
