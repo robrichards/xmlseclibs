@@ -25,6 +25,7 @@ foreach ($arTests AS $testName=>$testFile) {
 			throw new Exception("Reference Validation Failed");
 		}
 	} catch (Exception $e) {
+		print $testName.": ";
 		print "Injection detected!";
 		continue;
 	}	
