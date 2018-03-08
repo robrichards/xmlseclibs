@@ -1,5 +1,5 @@
 --TEST--
-Basic Verify
+Injection Verify
 --FILE--
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');
