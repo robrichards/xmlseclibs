@@ -585,6 +585,16 @@ class XMLSecurityKey
 
     /**
      * Verifies the data (string) against the given signature using the extension assigned to the type in the constructor.
+     *
+     * Returns in case of openSSL:
+     *  1 on succesful signature verification,
+     *  0 when signature verification failed,
+     *  -1 if an error occurred during processing.
+     *
+     * NOTE: be very careful when checking the return value, because in PHP,
+     * -1 will be cast to True when in boolean context. So always check the
+     * return value in a strictly typed way, e.g. "$obj->verify(...) === 1".
+     *
      * @param string $data
      * @param string $signature
      * @return bool|int
