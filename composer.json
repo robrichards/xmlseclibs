@@ -1,5 +1,5 @@
 {
-  "name": "robrichards/xmlseclibs",
+  "name": "simplesamlphp/xmlsec",
   "description": "A PHP library for XML Security",
   "license": "BSD-3-Clause",
   "keywords": [
@@ -8,14 +8,30 @@
     "signature",
     "security"
   ],
-  "homepage": "https://github.com/robrichards/xmlseclibs",
+  "homepage": "https://github.com/simplesamlphp/xmlsec",
+  "authors": [
+    {
+        "name": "Rob Richards",
+        "email": "rrichards@cdatazone.org",
+        "homepage": "https://www.cdatazone.org/",
+        "role": "Developer"
+    },
+    {
+        "name": "Jaime Perez Crespo",
+        "email": "jaime.perez@uninett.no",
+        "role": "Maintainer"
+    }
+  ],
   "autoload": {
     "psr-4": {
-      "RobRichards\\XMLSecLibs\\": "src"
+      "SimpleSAML\\XMLSec\\": "src"
     }
   },
   "require": {
     "php": ">= 5.4",
     "ext-openssl": "*"
+  },
+  "suggest": {
+    "paragonie/random_compat": "When running PHP versions older than 7, this polyfill allows to generate cryptographically secure random data"
   }
 }
