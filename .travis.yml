@@ -18,7 +18,7 @@ matrix:
 before_script: composer install
 
 script:
-  - if [[ $EXECUTE_COVERAGE == 'true' ]]; then phpunit --coverage-clover coverage.xml --bootstrap vendor/autoload.php tests; else phpunit --bootstrap vendor/autoload.php tests; fi
+  - if [[ $EXECUTE_COVERAGE == 'true' ]]; then phpunit --coverage-clover coverage.xml -c tests; else phpunit -c tests; fi
   
 after_success:
   - if [[ $EXECUTE_COVERAGE == 'true' ]]; then bash <(curl -s https://codecov.io/bash); fi
