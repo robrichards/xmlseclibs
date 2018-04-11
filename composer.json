@@ -31,6 +31,9 @@
     "php": ">= 5.4",
     "ext-openssl": "*"
   },
+  "require-dev": {
+    "phpunit/phpunit": "~4.8"
+  },
   "suggest": {
     "paragonie/random_compat": "When running PHP versions older than 7, this polyfill allows to generate cryptographically secure random data"
   }
