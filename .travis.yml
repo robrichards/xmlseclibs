@@ -18,7 +18,7 @@ matrix:
 before_script: composer install
 
 script:
-  - if [[ $EXECUTE_COVERAGE == 'true' ]]; then phpunit --coverage-clover coverage.xml -c tests; else phpunit -c tests; fi
+  - if [[ $EXECUTE_COVERAGE == 'true' ]]; then phpunit -c tests/phpunit.xml --coverage-clover coverage.xml; else phpunit -c tests/phpunit.xml; fi
   
 after_success:
   - if [[ $EXECUTE_COVERAGE == 'true' ]]; then bash <(curl -s https://codecov.io/bash); fi
