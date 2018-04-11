@@ -2,6 +2,7 @@
 
 namespace SimpleSAML\XMLSec\Test\Key;
 
+use SimpleSAML\XMLSec\Exception\InvalidArgumentException;
 use SimpleSAML\XMLSec\Key\X509Certificate;
 
 /**
@@ -59,6 +60,17 @@ class X509CertificateTest extends \PHPUnit_Framework_TestCase
             $this->markTestSkipped();
         }
         $this->assertEquals(openssl_x509_fingerprint($this->f), X509Certificate::getRawThumbprint($this->f));
+    }
+
+
+    /**
+     * Test thumbprint generation when no valid PEM-encoded certificate is passed.
+     *
+     * @expectedException InvalidArgumentException
+     */
+    public function testGetRawThumbprintFromWrongCert()
+    {
+        X509Certificate::getRawThumbprint('this is not a valid PEM certificate');
     }
 
 

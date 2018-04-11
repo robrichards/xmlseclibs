@@ -49,7 +49,7 @@ class X509Certificate extends PublicKey
      *
      * @return string The thumbprint associated with the given certificate.
      *
-     * @throws RuntimeException If $cert is not a PEM-encoded certificate.
+     * @throws InvalidArgumentException If $cert is not a PEM-encoded certificate.
      */
     public static function getRawThumbprint($cert)
     {
@@ -61,7 +61,7 @@ class X509Certificate extends PublicKey
         array_pop($lines);
 
         if (empty($lines)) {
-            throw new RuntimeException('Cannot get thumbprint for certificate.');
+            throw new InvalidArgumentException('Cannot get thumbprint for certificate.');
         }
 
         $lines = array_map("trim", $lines);
