@@ -56,7 +56,7 @@ class X509CertificateTest extends \PHPUnit_Framework_TestCase
      */
     public function testGetRawThumbprint()
     {
-        if (!function_exists('openssl_x509_fingerprintt')) {
+        if (!function_exists('openssl_x509_fingerprint')) {
             $this->markTestSkipped();
         }
         $this->assertEquals(openssl_x509_fingerprint($this->f), X509Certificate::getRawThumbprint($this->f));
