@@ -8,12 +8,15 @@ matrix:
     - php: 5.4
     - php: 5.5
     - php: 5.6
-
+      env:
+        - EXECUTE_COVERAGE=true
     - php: 7.0.27
     - php: 7.1
   allow_failures:
     - php: hhvm
     
+before_script: composer install
+
 script:
   - if [[ $EXECUTE_COVERAGE == 'true' ]]; then phpunit --coverage-clover clover.xml --bootstrap vendor/autoload.php tests; else phpunit --bootstrap vendor/autoload.php tests; fi
   
