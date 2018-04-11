@@ -18,6 +18,11 @@
     <filter>
         <whitelist processUncoveredFilesFromWhitelist="true">
             <directory>../src</directory>
+            <exclude>
+                <file>../src/XMLSecEnc.php</file>
+                <file>../src/XMLSecurityDSig.php</file>
+                <file>../src/XMLSecurityKey.php</file>
+            </exclude>
         </whitelist>
     </filter>
 </phpunit>
