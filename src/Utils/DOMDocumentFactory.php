@@ -91,7 +91,7 @@ final class DOMDocumentFactory
         $xml = file_get_contents($file);
         if ($xml === false) {
             throw new RuntimeException(sprintf(
-                'Contents of readable file "%s" could not be gotten',
+                'Contents of readable file "%s" could not be read',
                 $file
             ));
         }
