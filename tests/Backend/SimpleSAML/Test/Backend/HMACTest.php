@@ -4,6 +4,7 @@ namespace SimpleSAML\Test\Backend;
 
 use SimpleSAML\XMLSec\Backend\HMAC;
 use SimpleSAML\XMLSec\Constants;
+use SimpleSAML\XMLSec\Exception\InvalidArgumentException;
 use SimpleSAML\XMLSec\Key\SymmetricKey;
 
 /**
@@ -39,6 +40,19 @@ class HMACTest extends \PHPUnit_Framework_TestCase
         $backend = new HMAC();
         $backend->setDigestAlg(Constants::$DIGEST_ALGORITHMS[Constants::DIGEST_SHA1]);
         $this->assertEquals(self::SIGNATURE, bin2hex($backend->sign($this->key, self::PLAINTEXT)));
+    }
+
+
+    /**
+     * Test for wrong digests passed to sign().
+     *
+     * @expectedException InvalidArgumentException
+     */
+    public function testSignWithNonDigest()
+    {
+        $backend = new HMAC();
+        $backend->setDigestAlg('foo');
+        @$backend->sign($this->key, self::PLAINTEXT);
     }
 
 
