@@ -39,9 +39,11 @@ class Random
 
 
     /**
-     * @param string $prefix
+     * Generate a globally unique identifier.
      *
-     * @return string
+     * @param string $prefix Prefix to be prepended to the identifier.
+     *
+     * @return string A random globally unique identifier.
      */
     public static function generateGUID($prefix = '_')
     {
