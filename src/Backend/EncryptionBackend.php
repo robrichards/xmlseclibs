@@ -2,6 +2,7 @@
 
 namespace SimpleSAML\XMLSec\Backend;
 
+use SimpleSAML\XMLSec\Exception\InvalidArgumentException;
 use SimpleSAML\XMLSec\Exception\RuntimeException;
 use SimpleSAML\XMLSec\Key\AbstractKey;
 
@@ -18,25 +19,11 @@ interface EncryptionBackend
      *
      * @param string $cipher The identifier of the cipher.
      *
+     * @throws InvalidArgumentException If the cipher is unknown or not supported.
+     *
      * @see \SimpleSAML\XMLSec\Constants
      */
     public function setCipher($cipher);
-
-
-    /**
-     * Set the block size to be used by block ciphers.
-     *
-     * @param int $blocksize The block size.
-     */
-    public function setBlockSize($blocksize);
-
-
-    /**
-     * Set the size of the key to be used by the cipher.
-     *
-     * @param int $keysize The key size.
-     */
-    public function setKeySize($keysize);
 
 
     /**
@@ -60,7 +47,7 @@ interface EncryptionBackend
      *
      * @return string The decrypted ciphertext (plaintext).
      *
-     * @throws RuntimeException If there is an error while decrypting the plaintext.
+     * @throws RuntimeException If there is an error while decrypting the ciphertext.
      */
     public function decrypt(AbstractKey $key, $ciphertext);
 }
