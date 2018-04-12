@@ -17,17 +17,31 @@ class HMAC implements SignatureBackend
 {
 
     /** @var string */
-    protected $digest = Constants::DIGEST_SHA256;
+    protected $digest;
+
+
+    /**
+     * Build an HMAC backend.
+     */
+    public function __construct()
+    {
+        $this->digest = Constants::$DIGEST_ALGORITHMS[Constants::DIGEST_SHA256];
+    }
 
 
     /**
      * Set the digest algorithm to be used by this backend.
      *
      * @param string $digest The identifier of the digest algorithm.
+     *
+     * @throws InvalidArgumentException If the given digest is not valid.
      */
     public function setDigestAlg($digest)
     {
-        $this->digest = $digest;
+        if (!isset(Constants::$DIGEST_ALGORITHMS[$digest])) {
+            throw new InvalidArgumentException('Unknown digest or non-cryptographic hash function.');
+        }
+        $this->digest = Constants::$DIGEST_ALGORITHMS[$digest];
     }
 
 
@@ -38,16 +52,10 @@ class HMAC implements SignatureBackend
      * @param string $plaintext The original text to sign.
      *
      * @return string The (binary) signature corresponding to the given plaintext.
-     *
-     * @throws RuntimeException If the digest algorithm is unknown or a non-cryptographic hash function.
      */
     public function sign(AbstractKey $key, $plaintext)
     {
-        $hash = hash_hmac($this->digest, $plaintext, $key->get(), true);
-        if ($hash === false) {
-            throw new InvalidArgumentException('"'.$this->digest.'" is unknown or non-cryptographic hash function.');
-        }
-        return $hash;
+        return hash_hmac($this->digest, $plaintext, $key->get(), true);
     }
 
 

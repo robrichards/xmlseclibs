@@ -2,6 +2,7 @@
 
 namespace SimpleSAML\XMLSec\Backend;
 
+use SimpleSAML\XMLSec\Exception\InvalidArgumentException;
 use SimpleSAML\XMLSec\Exception\RuntimeException;
 use SimpleSAML\XMLSec\Key\AbstractKey;
 
@@ -17,6 +18,8 @@ interface SignatureBackend
      * Set the digest algorithm to use.
      *
      * @param string $digest The identifier of the digest algorithm.
+     *
+     * @throws InvalidArgumentException If the given digest is not valid.
      */
     public function setDigestAlg($digest);
 

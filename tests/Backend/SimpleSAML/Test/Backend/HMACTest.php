@@ -38,21 +38,20 @@ class HMACTest extends \PHPUnit_Framework_TestCase
     public function testSign()
     {
         $backend = new HMAC();
-        $backend->setDigestAlg(Constants::$DIGEST_ALGORITHMS[Constants::DIGEST_SHA1]);
+        $backend->setDigestAlg(Constants::DIGEST_SHA1);
         $this->assertEquals(self::SIGNATURE, bin2hex($backend->sign($this->key, self::PLAINTEXT)));
     }
 
 
     /**
-     * Test for wrong digests passed to sign().
+     * Test for wrong digests.
      *
      * @expectedException InvalidArgumentException
      */
-    public function testSignWithNonDigest()
+    public function testSetUnknownDigest()
     {
         $backend = new HMAC();
         $backend->setDigestAlg('foo');
-        @$backend->sign($this->key, self::PLAINTEXT);
     }
 
 
@@ -63,7 +62,7 @@ class HMACTest extends \PHPUnit_Framework_TestCase
     {
         // test successful verification
         $backend = new HMAC();
-        $backend->setDigestAlg(Constants::$DIGEST_ALGORITHMS[Constants::DIGEST_SHA1]);
+        $backend->setDigestAlg(Constants::DIGEST_SHA1);
         $this->assertTrue($backend->verify($this->key, self::PLAINTEXT, hex2bin(self::SIGNATURE)));
 
         // test failure to verify with different plaintext
@@ -81,7 +80,7 @@ class HMACTest extends \PHPUnit_Framework_TestCase
         $this->assertFalse($backend->verify($key, self::PLAINTEXT, hex2bin(self::SIGNATURE)));
 
         // test failure to verify with wrong digest algorithm
-        $backend->setDigestAlg(Constants::$DIGEST_ALGORITHMS[Constants::DIGEST_RIPEMD160]);
+        $backend->setDigestAlg(Constants::DIGEST_RIPEMD160);
         $this->assertFalse($backend->verify($this->key, self::PLAINTEXT, hex2bin(self::SIGNATURE)));
     }
 }
