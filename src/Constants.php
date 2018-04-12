@@ -40,11 +40,41 @@ class Constants
      */
     const BLOCK_ENC_3DES = 'http://www.w3.org/2001/04/xmlenc#tripledes-cbc';
     const BLOCK_ENC_AES128 = 'http://www.w3.org/2001/04/xmlenc#aes128-cbc';
-    const BLOCK_ENC_AES128_GCM = 'http://www.w3.org/2009/xmlenc11#aes128-gcm';
     const BLOCK_ENC_AES192 = 'http://www.w3.org/2001/04/xmlenc#aes192-cbc';
-    const BLOCK_ENC_AES192_GCM = 'http://www.w3.org/2009/xmlenc11#aes192-gcm';
     const BLOCK_ENC_AES256 = 'http://www.w3.org/2001/04/xmlenc#aes256-cbc';
+    const BLOCK_ENC_AES128_GCM = 'http://www.w3.org/2009/xmlenc11#aes128-gcm';
+    const BLOCK_ENC_AES192_GCM = 'http://www.w3.org/2009/xmlenc11#aes192-gcm';
     const BLOCK_ENC_AES256_GCM = 'http://www.w3.org/2009xmlenc11#aes256-gcm';
+
+    public static $BLOCK_CIPHER_ALGORITHMS = [
+        self::BLOCK_ENC_3DES => 'des-ede3-cbc',
+        self::BLOCK_ENC_AES128 => 'aes-128-cbc',
+        self::BLOCK_ENC_AES192 => 'aes-192-cbc',
+        self::BLOCK_ENC_AES256 => 'aes-256-cb',
+        self::BLOCK_ENC_AES128_GCM => 'aes-128-gcm',
+        self::BLOCK_ENC_AES192_GCM => 'aes-192-gcm',
+        self::BLOCK_ENC_AES256_GCM => 'aes-256-gcm',
+    ];
+
+    public static $BLOCK_SIZES = [
+        self::BLOCK_ENC_3DES => 8,
+        self::BLOCK_ENC_AES128 => 16,
+        self::BLOCK_ENC_AES192 => 16,
+        self::BLOCK_ENC_AES256 => 16,
+        self::BLOCK_ENC_AES128_GCM => 16,
+        self::BLOCK_ENC_AES192_GCM => 16,
+        self::BLOCK_ENC_AES256_GCM => 16,
+    ];
+
+    public static $BLOCK_CIPHER_KEY_SIZES = [
+        self::BLOCK_ENC_3DES => 24,
+        self::BLOCK_ENC_AES128 => 16,
+        self::BLOCK_ENC_AES192 => 24,
+        self::BLOCK_ENC_AES256 => 32,
+        self::BLOCK_ENC_AES128_GCM => 16,
+        self::BLOCK_ENC_AES192_GCM => 24,
+        self::BLOCK_ENC_AES256_GCM => 32,
+    ];
 
     /**
      * Canonicalization algorithms
