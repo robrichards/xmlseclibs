@@ -27,7 +27,7 @@ interface SignatureBackend
      * @param AbstractKey $key The key to use to sign.
      * @param string $plaintext The original text to sign.
      *
-     * @return string The signature corresponding to the given plaintext.
+     * @return string The (binary) signature corresponding to the given plaintext.
      *
      * @throws RuntimeException If there is an error while signing the plaintext.
      */
@@ -38,8 +38,8 @@ interface SignatureBackend
      * Verify a signature with this cipher and a given key.
      *
      * @param AbstractKey $key The key to use to verify.
-     * @param string $plaintext The original text signed.
-     * @param string $signature The signature to verify.
+     * @param string $plaintext The original signed text.
+     * @param string $signature The (binary) signature to verify.
      *
      * @return boolean True if the signature can be verified, false otherwise.
      */
