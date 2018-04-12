@@ -8,6 +8,7 @@ use SimpleSAML\XMLSec\Exception\RuntimeException;
 use SimpleSAML\XMLSec\Key\AbstractKey;
 use SimpleSAML\XMLSec\Key\AsymmetricKey;
 use SimpleSAML\XMLSec\Key\PrivateKey;
+use SimpleSAML\XMLSec\Utils\Random;
 
 /**
  * Backend for encryption and digital signatures based on the native openssl library.
@@ -72,11 +73,7 @@ class OpenSSL implements EncryptionBackend, SignatureBackend
 
         // symmetric encryption
         $ivlen = openssl_cipher_iv_length($this->cipher);
-        if (function_exists('random_bytes')) {
-            $iv = random_bytes($ivlen);
-        } else {
-            $iv = openssl_random_pseudo_bytes($ivlen);
-        }
+        $iv = Random::generateRandomBytes($ivlen);
         $plaintext = $this->pad($plaintext);
         $ciphertext = openssl_encrypt(
             $plaintext,
