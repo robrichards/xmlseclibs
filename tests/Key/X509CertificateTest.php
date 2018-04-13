@@ -2,6 +2,7 @@
 
 namespace SimpleSAML\XMLSec\Test\Key;
 
+use SimpleSAML\XMLSec\Constants;
 use SimpleSAML\XMLSec\Exception\InvalidArgumentException;
 use SimpleSAML\XMLSec\Key\X509Certificate;
 
@@ -70,7 +71,13 @@ class X509CertificateTest extends \PHPUnit_Framework_TestCase
         if (!function_exists('openssl_x509_fingerprint')) {
             $this->markTestSkipped();
         }
-        $this->assertEquals(openssl_x509_fingerprint($this->f), $this->c->getRawThumbprint());
+
+        $f = openssl_x509_fingerprint($this->f);
+        $this->assertEquals($f, $this->c->getRawThumbprint());
+
+        $m = new \ReflectionMethod('\SimpleSAML\XMLSec\Key\X509Certificate', 'manuallyComputeThumbprint');
+        $m->setAccessible(true);
+        $this->assertEquals($f, $m->invokeArgs($this->c, [Constants::DIGEST_SHA1]));
     }
 
 

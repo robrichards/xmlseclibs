@@ -49,6 +49,33 @@ class X509Certificate extends PublicKey
 
 
     /**
+     * Compute a certificate digest manually.
+     *
+     * @param string $alg The digest algorithm to use.
+     *
+     * @return string The thumbprint associated with the given certificate.
+     */
+    protected function manuallyComputeThumbprint($alg)
+    {
+        // remove beginning and end delimiters
+        $lines = explode("\n", trim($this->certificate));
+        array_shift($lines);
+        array_pop($lines);
+
+        return $this->thumbprint[$alg] = strtolower(
+            hash(
+                Constants::$DIGEST_ALGORITHMS[$alg],
+                base64_decode(
+                    implode(
+                        array_map("trim", $lines)
+                    )
+                )
+            )
+        );
+    }
+
+
+    /**
      * Get the raw thumbprint of a certificate
      *
      * @param string $alg The digest algorithm to use. Defaults to SHA1.
@@ -75,25 +102,7 @@ class X509Certificate extends PublicKey
             );
         }
 
-        // remove beginning and end delimiters
-        $lines = explode("\n", $this->certificate);
-        array_shift($lines);
-        array_pop($lines);
-
-        if (empty($lines)) {
-            throw new InvalidArgumentException('Cannot get thumbprint for certificate.');
-        }
-
-        return $this->thumbprint[$alg] = strtolower(
-            hash(
-                Constants::$DIGEST_ALGORITHMS[$alg],
-                base64_decode(
-                    implode(
-                        array_map("trim", $lines)
-                    )
-                )
-            )
-        );
+        return $this->manuallyComputeThumbprint($alg);
     }
 
 
