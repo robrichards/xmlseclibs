@@ -11,6 +11,31 @@ class Security
 {
 
     /**
+     * Manually compare two strings in constant time.
+     *
+     * @param string $known The reference string.
+     * @param string $user The user-provided string to test.
+     *
+     * @return bool True if both strings are equal, false otherwise.
+     */
+    protected static function manuallyCompareStrings($known, $user)
+    {
+        $len = mb_strlen($known, '8bit');
+        if ($len !== mb_strlen($user, '8bit')) {
+            return false; // length differs
+        }
+
+        $diff = 0;
+        for ($i = 0; $i < $len; $i++) {
+            $diff |= ord($known[$i]) ^ ord($user[$i]);
+        }
+
+        // if all the bytes in $known and $user are identical, $diff should be equal to 0
+        return $diff === 0;
+    }
+
+
+    /**
      * Compare two strings in constant time.
      *
      * This function allows us to compare two given strings without any timing side channels
@@ -29,17 +54,6 @@ class Security
         }
 
         // compare manually in constant time
-        $len = mb_strlen($known, '8bit');
-        if ($len !== mb_strlen($user, '8bit')) {
-            return false; // length differs
-        }
-
-        $diff = 0;
-        for ($i = 0; $i < $len; $i++) {
-            $diff |= ord($known[$i]) ^ ord($user[$i]);
-        }
-
-        // if all the bytes in $known and $user are identical, $diff should be equal to 0
-        return $diff === 0;
+        return self::manuallyCompareStrings($known, $user);
     }
 }
