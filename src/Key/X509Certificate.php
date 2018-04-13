@@ -2,6 +2,7 @@
 
 namespace SimpleSAML\XMLSec\Key;
 
+use SimpleSAML\XMLSec\Constants;
 use SimpleSAML\XMLSec\Exception\InvalidArgumentException;
 use SimpleSAML\XMLSec\Exception\RuntimeException;
 
@@ -15,8 +16,11 @@ class X509Certificate extends PublicKey
     /** @var string */
     protected $certificate;
 
-    /** @var string */
-    protected $thumbprint;
+    /** @var array */
+    protected $thumbprint = [];
+
+    /** @var array */
+    protected $parsed = [];
 
 
     /**
@@ -38,25 +42,41 @@ class X509Certificate extends PublicKey
             throw new RuntimeException('Cannot export certificate to PEM: '.openssl_error_string());
         }
         parent::__construct(openssl_pkey_get_public($this->certificate));
-        $this->thumbprint = self::getRawThumbprint($this->certificate);
+        $this->thumbprint[Constants::DIGEST_SHA1] = $this->getRawThumbprint();
+
+        $this->parsed = openssl_x509_parse($this->certificate);
     }
 
 
     /**
      * Get the raw thumbprint of a certificate
      *
-     * @param string $cert The PEM-encoded X509 certificate.
+     * @param string $alg The digest algorithm to use. Defaults to SHA1.
      *
      * @return string The thumbprint associated with the given certificate.
      *
-     * @throws InvalidArgumentException If $cert is not a PEM-encoded certificate.
+     * @throws InvalidArgumentException If $alg is not a valid digest identifier.
      */
-    public static function getRawThumbprint($cert)
+    public function getRawThumbprint($alg = Constants::DIGEST_SHA1)
     {
-        $cert = trim($cert);
+        if (isset($this->thumbprint[$alg])) {
+            return $this->thumbprint[$alg];
+        }
+
+        if (!isset(Constants::$DIGEST_ALGORITHMS[$alg])) {
+            throw new InvalidArgumentException('Invalid digest algorithm identifier');
+        }
+
+        if (function_exists('openssl_x509_fingerprint')) {
+            // if available, use the openssl function
+            return $this->thumbprint[$alg] = openssl_x509_fingerprint(
+                $this->certificate,
+                Constants::$DIGEST_ALGORITHMS[$alg]
+            );
+        }
 
         // remove beginning and end delimiters
-        $lines = explode("\n", $cert);
+        $lines = explode("\n", $this->certificate);
         array_shift($lines);
         array_pop($lines);
 
@@ -64,8 +84,16 @@ class X509Certificate extends PublicKey
             throw new InvalidArgumentException('Cannot get thumbprint for certificate.');
         }
 
-        $lines = array_map("trim", $lines);
-        return strtolower(hash('sha1', base64_decode(implode(array_map("trim", $lines)))));
+        return $this->thumbprint[$alg] = strtolower(
+            hash(
+                Constants::$DIGEST_ALGORITHMS[$alg],
+                base64_decode(
+                    implode(
+                        array_map("trim", $lines)
+                    )
+                )
+            )
+        );
     }
 
 
@@ -77,6 +105,19 @@ class X509Certificate extends PublicKey
     public function getCertificate()
     {
         return $this->certificate;
+    }
+
+
+    /**
+     * Get the details of this certificate.
+     *
+     * @return array An array with all the details of the certificate.
+     *
+     * @see openssl_x509_parse()
+     */
+    public function getCertificateDetails()
+    {
+        return $this->parsed;
     }
 
 

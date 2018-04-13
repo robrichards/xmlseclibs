@@ -19,6 +19,9 @@ class X509CertificateTest extends \PHPUnit_Framework_TestCase
     /** @var string */
     protected $f;
 
+    /** @var X509Certificate */
+    protected $c;
+
 
     /**
      * Initialize the test by loading the file ourselves.
@@ -27,6 +30,7 @@ class X509CertificateTest extends \PHPUnit_Framework_TestCase
     {
         $this->f = file_get_contents('tests/mycert.pem');
         $this->cert = openssl_pkey_get_details(openssl_pkey_get_public(openssl_x509_read($this->f)));
+        $this->c = new X509Certificate($this->f);
     }
 
 
@@ -35,8 +39,7 @@ class X509CertificateTest extends \PHPUnit_Framework_TestCase
      */
     public function testCreation()
     {
-        $c = new X509Certificate($this->f);
-        $pubDetails = openssl_pkey_get_details($c->get());
+        $pubDetails = openssl_pkey_get_details($this->c->get());
         $this->assertEquals($this->cert['key'], $pubDetails['key']);
     }
 
@@ -46,8 +49,16 @@ class X509CertificateTest extends \PHPUnit_Framework_TestCase
      */
     public function testGetCertificate()
     {
-        $c = new X509Certificate($this->f);
-        $this->assertEquals($this->f, $c->getCertificate());
+        $this->assertEquals($this->f, $this->c->getCertificate());
+    }
+
+
+    /**
+     * Test for retrieval of the certificate's details.
+     */
+    public function testGetCertificateDetails()
+    {
+        $this->assertEquals(openssl_x509_parse($this->f), $this->c->getCertificateDetails());
     }
 
 
@@ -59,18 +70,18 @@ class X509CertificateTest extends \PHPUnit_Framework_TestCase
         if (!function_exists('openssl_x509_fingerprint')) {
             $this->markTestSkipped();
         }
-        $this->assertEquals(openssl_x509_fingerprint($this->f), X509Certificate::getRawThumbprint($this->f));
+        $this->assertEquals(openssl_x509_fingerprint($this->f), $this->c->getRawThumbprint());
     }
 
 
     /**
-     * Test thumbprint generation when no valid PEM-encoded certificate is passed.
+     * Test thumbprint generation with an invalid digest algorithm.
      *
      * @expectedException InvalidArgumentException
      */
-    public function testGetRawThumbprintFromWrongCert()
+    public function testGetRawThumbprintWithWrongAlg()
     {
-        X509Certificate::getRawThumbprint('this is not a valid PEM certificate');
+        $this->c->getRawThumbprint('invalid');
     }
 
 
