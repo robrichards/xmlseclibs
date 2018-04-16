@@ -87,23 +87,24 @@ class Constants
     /**
      * Signature algorithms
      */
-    const SIG_RSA_SHA1 = "http://www.w3.org/2000/09/xmldsig#rsa-sha1";
-    const SIG_RSA_SHA224 = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha224";
-    const SIG_RSA_SHA256 = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256";
-    const SIG_RSA_SHA384 = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha384";
-    const SIG_RSA_SHA512 = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha512";
-    const SIG_RSA_RIPEMD160 = "http://www.w3.org/2001/04/xmldsig-more#rsa-ripemd160";
-    const SIG_HMAC_SHA1 = "http://www.w3.org/2000/09/xmldsig#hmac-sha1";
-    const SIG_HMAC_SHA224 = "http://www.w3.org/2001/04/xmldsig-more#hmac-sha224";
-    const SIG_HMAC_SHA256 = "http://www.w3.org/2001/04/xmldsig-more#hmac-sha256";
-    const SIG_HMAC_SHA384 = "http://www.w3.org/2001/04/xmldsig-more#hmac-sha384";
-    const SIG_HMAC_SHA512 = "http://www.w3.org/2001/04/xmldsig-more#hmac-sha512";
-    const SIG_HMAC_RIPEMD160 = "http://www.w3.org/2001/04/xmldsig-more#hmac-ripemd160";
+    const SIG_RSA_SHA1 = 'http://www.w3.org/2000/09/xmldsig#rsa-sha1';
+    const SIG_RSA_SHA224 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha224';
+    const SIG_RSA_SHA256 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256';
+    const SIG_RSA_SHA384 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha384';
+    const SIG_RSA_SHA512 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha512';
+    const SIG_RSA_RIPEMD160 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-ripemd160';
+    const SIG_HMAC_SHA1 = 'http://www.w3.org/2000/09/xmldsig#hmac-sha1';
+    const SIG_HMAC_SHA224 = 'http://www.w3.org/2001/04/xmldsig-more#hmac-sha224';
+    const SIG_HMAC_SHA256 = 'http://www.w3.org/2001/04/xmldsig-more#hmac-sha256';
+    const SIG_HMAC_SHA384 = 'http://www.w3.org/2001/04/xmldsig-more#hmac-sha384';
+    const SIG_HMAC_SHA512 = 'http://www.w3.org/2001/04/xmldsig-more#hmac-sha512';
+    const SIG_HMAC_RIPEMD160 = 'http://www.w3.org/2001/04/xmldsig-more#hmac-ripemd160';
 
     /**
      * XML & XPath namespaces and identifiers
      */
-    const XMLDSIGNS = "http://www.w3.org/2000/09/xmldsig#";
-    const XMLDSIG_ENVELOPED = "http://www.w3.org/2000/09/xmldsig#enveloped-signature";
+    const XMLDSIGNS = 'http://www.w3.org/2000/09/xmldsig#';
+    const XMLDSIG11NS = 'http://www.w3.org/2009/xmldsig11#';
+    const XMLDSIG_ENVELOPED = 'http://www.w3.org/2000/09/xmldsig#enveloped-signature';
     const XPATH_URI = 'http://www.w3.org/TR/1999/REC-xpath-19991116';
 }
