@@ -3,6 +3,7 @@
 namespace SimpleSAML\XMLSec\Test\Alg;
 
 use SimpleSAML\XMLSec\Alg\Signature\RSA;
+use SimpleSAML\XMLSec\Alg\Signature\SignatureAlgorithmFactory;
 use SimpleSAML\XMLSec\Constants;
 use SimpleSAML\XMLSec\Key\PrivateKey;
 use SimpleSAML\XMLSec\Key\PublicKey;
@@ -26,11 +27,15 @@ class RSASignatureTest extends \PHPUnit_Framework_TestCase
     /** @var string */
     protected $plaintext = 'plaintext';
 
+    /** @var SignatureAlgorithmFactory */
+    protected $factory;
+
 
     public function setUp()
     {
         $this->publicKey = PublicKey::fromFile('tests/pubkey.pem');
         $this->privateKey = PrivateKey::fromFile('tests/privkey.pem');
+        $this->factory = new SignatureAlgorithmFactory([]);
     }
 
 
@@ -40,7 +45,7 @@ class RSASignatureTest extends \PHPUnit_Framework_TestCase
     public function testSign()
     {
         // test RSA-SHA1
-        $rsa = new RSA($this->privateKey, Constants::DIGEST_SHA1);
+        $rsa = $this->factory->getAlgorithm(Constants::SIG_RSA_SHA1, $this->privateKey);
         $this->assertEquals(
             '002e8007f09d327b48a7393c9e3666c0d0d73a437804d6e71191bc227546d62351cda58173d69dd792c783337c4ed903a59b6fdfd'.
             '221a0dd22e8632e66c020e1c07400b02625fcdb3821495593e0e0a776a616a2cdf268b3070f7d02e78fdc531c02759ad1fc292ee2'.
@@ -51,7 +56,7 @@ class RSASignatureTest extends \PHPUnit_Framework_TestCase
         );
 
         // test RSA-SHA224
-        $rsa = new RSA($this->privateKey, Constants::DIGEST_SHA224);
+        $rsa = $this->factory->getAlgorithm(Constants::SIG_RSA_SHA224, $this->privateKey);
         $this->assertEquals(
             'de43cf0f92c3bcabaf5087240fa02a07d7801600ea5800a2078372ff6e6376a98e1d05d017748c2cd3003275df08c3cf93342ed1b'.
             'a7a3b1b20237c3883b40a8988b9e29b3b42967da926fec2c4f8f10859089f4b41faa2b0996bbc6b968ac71036a16125f97e47114c'.
@@ -62,7 +67,7 @@ class RSASignatureTest extends \PHPUnit_Framework_TestCase
         );
 
         // test RSA-SHA256
-        $rsa = new RSA($this->privateKey, Constants::DIGEST_SHA256);
+        $rsa = $this->factory->getAlgorithm(Constants::SIG_RSA_SHA256, $this->privateKey);
         $this->assertEquals(
             '4c1fee00368a4c0abd37bc9f0d30d675c68b7415526e128334cdbe1c8ea3c7da40f65ad4385f1b1bdbfa151ffa3d0da120f77ce92'.
             '0180b777494b1771ece238098f0ca69569b46a716d1dc4bac240720d61de6b7547877b357c441cc9e1e4d2fbae952fbbc18ebc459'.
@@ -73,7 +78,7 @@ class RSASignatureTest extends \PHPUnit_Framework_TestCase
         );
 
         // test RSA-SHA384
-        $rsa = new RSA($this->privateKey, Constants::DIGEST_SHA384);
+        $rsa = $this->factory->getAlgorithm(Constants::SIG_RSA_SHA384, $this->privateKey);
         $this->assertEquals(
             '97bb8bbd713caaf720671b8178ff8645da6b8c5cf573f2b21b70915ed94200de561e86d6acdfdadac4544212f9ec7fabee0406a20'.
             'ec1386918916430579d1565809a8313a540a9a35de6ef8131b8c4b192508c0b0958daa197f69b705fb46ff823ec8a6564f261d4f2'.
@@ -84,7 +89,7 @@ class RSASignatureTest extends \PHPUnit_Framework_TestCase
         );
 
         // test RSA-SHA512
-        $rsa = new RSA($this->privateKey, Constants::DIGEST_SHA512);
+        $rsa = $this->factory->getAlgorithm(Constants::SIG_RSA_SHA512, $this->privateKey);
         $this->assertEquals(
             'd91bd94dbb71c15248f364898d7c88d112440211f685b8ed61b20b6bfcd7805ad054db70e97e3c8060d1dd219b186c603f027a666'.
             '8a5076da14e4e95c4451f054cf4b2b34e3db5bcdf1bf4ec5a79e08b9413c8f4fbfa2274bb42322b55d2db6048c91bbd84fdedeebf'.
@@ -95,7 +100,7 @@ class RSASignatureTest extends \PHPUnit_Framework_TestCase
         );
 
         // test RSA-RIPEMD160
-        $rsa = new RSA($this->privateKey, Constants::DIGEST_RIPEMD160);
+        $rsa = $this->factory->getAlgorithm(Constants::SIG_RSA_RIPEMD160, $this->privateKey);
         $this->assertEquals(
             '61c0f9e5e4db30ec33ce59a082a161890cc3f3ea16c66a8a7df732db62e46dd21e0ef4eca92920109bd5defe15f804aae90a29d7b'.
             '0898487d36dbbc4cf567785a9537ef746dd710e17115d76cb63832aab2778e1ceed484d39e88ccf57d10248d7dfdfd3102730e816'.
@@ -113,7 +118,7 @@ class RSASignatureTest extends \PHPUnit_Framework_TestCase
     public function testVerify()
     {
         // test RSA-SHA1
-        $rsa = new RSA($this->publicKey, Constants::DIGEST_SHA1);
+        $rsa = $this->factory->getAlgorithm(Constants::SIG_RSA_SHA1, $this->publicKey);
         $this->assertTrue($rsa->verify(
             $this->plaintext,
             hex2bin(
@@ -127,7 +132,7 @@ class RSASignatureTest extends \PHPUnit_Framework_TestCase
         ));
 
         // test RSA-SHA1 with certificate
-        $rsa = new RSA(X509Certificate::fromFile('tests/mycert.pem'), Constants::DIGEST_SHA1);
+        $rsa = $this->factory->getAlgorithm(Constants::SIG_RSA_SHA1, X509Certificate::fromFile('tests/mycert.pem'));
         $this->assertTrue($rsa->verify(
             $this->plaintext,
             hex2bin(
@@ -141,7 +146,7 @@ class RSASignatureTest extends \PHPUnit_Framework_TestCase
         ));
 
         // test RSA-SHA224
-        $rsa = new RSA($this->publicKey, Constants::DIGEST_SHA224);
+        $rsa = $this->factory->getAlgorithm(Constants::SIG_RSA_SHA224, $this->publicKey);
         $this->assertTrue($rsa->verify(
             $this->plaintext,
             hex2bin(
@@ -155,7 +160,7 @@ class RSASignatureTest extends \PHPUnit_Framework_TestCase
         ));
 
         // test RSA-SHA256
-        $rsa = new RSA($this->publicKey, Constants::DIGEST_SHA256);
+        $rsa = $this->factory->getAlgorithm(Constants::SIG_RSA_SHA256, $this->publicKey);
         $this->assertTrue($rsa->verify(
             $this->plaintext,
             hex2bin(
@@ -169,7 +174,7 @@ class RSASignatureTest extends \PHPUnit_Framework_TestCase
         ));
 
         // test RSA-SHA384
-        $rsa = new RSA($this->publicKey, Constants::DIGEST_SHA384);
+        $rsa = $this->factory->getAlgorithm(Constants::SIG_RSA_SHA384, $this->publicKey);
         $this->assertTrue($rsa->verify(
             $this->plaintext,
             hex2bin(
@@ -183,7 +188,7 @@ class RSASignatureTest extends \PHPUnit_Framework_TestCase
         ));
 
         // test RSA-SHA512
-        $rsa = new RSA($this->publicKey, Constants::DIGEST_SHA512);
+        $rsa = $this->factory->getAlgorithm(Constants::SIG_RSA_SHA512, $this->publicKey);
         $this->assertTrue($rsa->verify(
             $this->plaintext,
             hex2bin(
@@ -197,7 +202,7 @@ class RSASignatureTest extends \PHPUnit_Framework_TestCase
         ));
 
         // test RSA-RIPEMD160
-        $rsa = new RSA($this->publicKey, Constants::DIGEST_RIPEMD160);
+        $rsa = $this->factory->getAlgorithm(Constants::SIG_RSA_RIPEMD160, $this->publicKey);
         $this->assertTrue($rsa->verify(
             $this->plaintext,
             hex2bin(
@@ -218,7 +223,7 @@ class RSASignatureTest extends \PHPUnit_Framework_TestCase
     public function testVerificationFailure()
     {
         // test wrong plaintext
-        $rsa = new RSA($this->publicKey, Constants::DIGEST_SHA1);
+        $rsa = $this->factory->getAlgorithm(Constants::SIG_RSA_SHA1, $this->publicKey);
         $this->assertFalse($rsa->verify(
             $this->plaintext.'.',
             '002e8007f09d327b48a7393c9e3666c0d0d73a437804d6e71191bc227546d62351cda58173d69dd792c783337c4ed903a59b6'.
@@ -241,7 +246,7 @@ class RSASignatureTest extends \PHPUnit_Framework_TestCase
         ));
 
         // test wrong key
-        $rsa = new RSA(PublicKey::fromFile('tests/wrongpubkey.pem'), Constants::DIGEST_SHA1);
+        $rsa = $this->factory->getAlgorithm(Constants::SIG_RSA_SHA1, PublicKey::fromFile('tests/wrongpubkey.pem'));
         $this->assertFalse($rsa->verify(
             $this->plaintext,
             '002e8007f09d327b48a7393c9e3666c0d0d73a437804d6e71191bc227546d62351cda58173d69dd792c783337c4ed903a59b6'.
@@ -259,11 +264,14 @@ class RSASignatureTest extends \PHPUnit_Framework_TestCase
      */
     public function testVerifyWithSymmetricKey()
     {
+        $key = SymmetricKey::generate(16);
         if (version_compare(phpversion(), '7.0', '>=')) {
             $this->setExpectedException('TypeError');
-            new RSA(SymmetricKey::generate(16));
+            new RSA($key);
         } else {
-            $this->markTestSkipped();
+            // test via factory
+            $this->setExpectedException('RuntimeException');
+            $this->factory->getAlgorithm(Constants::SIG_RSA_SHA1, $key);
         }
     }
 }
