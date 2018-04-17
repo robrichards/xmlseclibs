@@ -141,12 +141,11 @@ class HMACSignatureTest extends \PHPUnit_Framework_TestCase
 
     /**
      * Test that verification fails when the wrong type of key is passed.
-     *
-     * @expectedException \TypeError
      */
     public function testVerifyWithCertificate()
     {
         if (version_compare(phpversion(), '7.0', '>=')) {
+            $this->setExpectedException('TypeError');
             new HMAC(X509Certificate::fromFile('tests/mycert.pem'));
         } else {
             $this->markTestSkipped();
@@ -156,12 +155,11 @@ class HMACSignatureTest extends \PHPUnit_Framework_TestCase
 
     /**
      * Test that verification fails when the wrong type of key is passed.
-     *
-     * @expectedException \TypeError
      */
     public function testVerifyWithPublicKey()
     {
         if (version_compare(phpversion(), '7.0', '>=')) {
+            $this->setExpectedException('TypeError');
             new HMAC(PublicKey::fromFile('tests/pubkey.pem'));
         } else {
             $this->markTestSkipped();
@@ -171,12 +169,11 @@ class HMACSignatureTest extends \PHPUnit_Framework_TestCase
 
     /**
      * Test that verification fails when the wrong type of key is passed.
-     *
-     * @expectedException \TypeError
      */
     public function testVerifyWithPrivateKey()
     {
         if (version_compare(phpversion(), '7.0', '>=')) {
+            $this->setExpectedException('TypeError');
             new HMAC(PrivateKey::fromFile('tests/privkey.pem'));
         } else {
             $this->markTestSkipped();
