@@ -130,16 +130,20 @@ class XMLSecEnc
         if (empty($this->rawNode)) {
             throw new Exception('Node to encrypt has not been set');
         }
+
         if (! $objKey instanceof XMLSecurityKey) {
             throw new Exception('Invalid Key');
         }
+
         $doc = $this->rawNode->ownerDocument;
         $xPath = new DOMXPath($this->encdoc);
         $objList = $xPath->query('/xenc:EncryptedData/xenc:CipherData/xenc:CipherValue');
         $cipherValue = $objList->item(0);
+
         if ($cipherValue == null) {
             throw new Exception('Error locating CipherValue element within template');
         }
+
         switch ($this->type) {
             case (self::Element):
                 $data = $doc->saveXML($this->rawNode);
@@ -156,7 +160,12 @@ class XMLSecEnc
                 throw new Exception('Type is currently not supported');
         }
 
-        $encMethod = $this->encdoc->documentElement->appendChild($this->encdoc->createElementNS(self::XMLENCNS, 'xenc:EncryptionMethod'));
+        $encMethod = $this->encdoc->documentElement->appendChild(
+            $this->encdoc->createElementNS(
+                self::XMLENCNS,
+                'xenc:EncryptionMethod'
+            )
+        );
         $encMethod->setAttribute('Algorithm', $objKey->getAlgorithm());
         $cipherValue->parentNode->parentNode->insertBefore($encMethod, $cipherValue->parentNode->parentNode->firstChild);
 
@@ -164,25 +173,25 @@ class XMLSecEnc
         $value = $this->encdoc->createTextNode($strEncrypt);
         $cipherValue->appendChild($value);
 
-        if ($replace) {
-            switch ($this->type) {
-                case (self::Element):
-                    if ($this->rawNode->nodeType == XML_DOCUMENT_NODE) {
-                        return $this->encdoc;
-                    }
-                    $importEnc = $this->rawNode->ownerDocument->importNode($this->encdoc->documentElement, true);
-                    $this->rawNode->parentNode->replaceChild($importEnc, $this->rawNode);
-                    return $importEnc;
-                case (self::Content):
-                    $importEnc = $this->rawNode->ownerDocument->importNode($this->encdoc->documentElement, true);
-                    while ($this->rawNode->firstChild) {
-                        $this->rawNode->removeChild($this->rawNode->firstChild);
-                    }
-                    $this->rawNode->appendChild($importEnc);
-                    return $importEnc;
-            }
-        } else {
+        if (!$replace) {
             return $this->encdoc->documentElement;
+        }
+
+        switch ($this->type) {
+            case (self::Element):
+                if ($this->rawNode->nodeType == XML_DOCUMENT_NODE) {
+                    return $this->encdoc;
+                }
+                $importEnc = $this->rawNode->ownerDocument->importNode($this->encdoc->documentElement, true);
+                $this->rawNode->parentNode->replaceChild($importEnc, $this->rawNode);
+                return $importEnc;
+            case (self::Content):
+                $importEnc = $this->rawNode->ownerDocument->importNode($this->encdoc->documentElement, true);
+                while ($this->rawNode->firstChild) {
+                    $this->rawNode->removeChild($this->rawNode->firstChild);
+                }
+                $this->rawNode->appendChild($importEnc);
+                return $importEnc;
         }
     }
 
@@ -207,6 +216,7 @@ class XMLSecEnc
                 throw $e;
             }
         }
+
         $this->rawNode = $curRawNode;
         $this->type = $curType;
     }
@@ -232,7 +242,7 @@ class XMLSecEnc
         $node = $nodeset->item(0);
 
         if (!$node) {
-                return null;
+            return null;
         }
 
         return base64_decode($node->nodeValue);
@@ -258,38 +268,40 @@ class XMLSecEnc
         }
 
         $encryptedData = $this->getCipherValue();
-        if ($encryptedData) {
-            $decrypted = $objKey->decryptData($encryptedData);
-            if ($replace) {
-                switch ($this->type) {
-                    case (self::Element):
-                        $newdoc = new DOMDocument();
-                        $newdoc->loadXML($decrypted);
-                        if ($this->rawNode->nodeType == XML_DOCUMENT_NODE) {
-                            return $newdoc;
-                        }
-                        $importEnc = $this->rawNode->ownerDocument->importNode($newdoc->documentElement, true);
-                        $this->rawNode->parentNode->replaceChild($importEnc, $this->rawNode);
-                        return $importEnc;
-                    case (self::Content):
-                        if ($this->rawNode->nodeType == XML_DOCUMENT_NODE) {
-                            $doc = $this->rawNode;
-                        } else {
-                            $doc = $this->rawNode->ownerDocument;
-                        }
-                        $newFrag = $doc->createDocumentFragment();
-                        $newFrag->appendXML($decrypted);
-                        $parent = $this->rawNode->parentNode;
-                        $parent->replaceChild($newFrag, $this->rawNode);
-                        return $parent;
-                    default:
-                        return $decrypted;
-                }
-            } else {
-                return $decrypted;
-            }
-        } else {
+
+        if (!$encryptedData) {
             throw new Exception("Cannot locate encrypted data");
+        }
+
+        $decrypted = $objKey->decryptData($encryptedData);
+
+        if (!$replace) {
+            return $decrypted;
+        }
+
+        switch ($this->type) {
+            case (self::Element):
+                $newdoc = new DOMDocument();
+                $newdoc->loadXML($decrypted);
+                if ($this->rawNode->nodeType == XML_DOCUMENT_NODE) {
+                    return $newdoc;
+                }
+                $importEnc = $this->rawNode->ownerDocument->importNode($newdoc->documentElement, true);
+                $this->rawNode->parentNode->replaceChild($importEnc, $this->rawNode);
+                return $importEnc;
+            case (self::Content):
+                if ($this->rawNode->nodeType == XML_DOCUMENT_NODE) {
+                    $doc = $this->rawNode;
+                } else {
+                    $doc = $this->rawNode->ownerDocument;
+                }
+                $newFrag = $doc->createDocumentFragment();
+                $newFrag->appendXML($decrypted);
+                $parent = $this->rawNode->parentNode;
+                $parent->replaceChild($newFrag, $this->rawNode);
+                return $parent;
+            default:
+                return $decrypted;
         }
     }
 
@@ -310,7 +322,13 @@ class XMLSecEnc
         $root = $this->encdoc->documentElement;
         $encKey = $this->encdoc->createElementNS(self::XMLENCNS, 'xenc:EncryptedKey');
         if ($append) {
-            $keyInfo = $root->insertBefore($this->encdoc->createElementNS('http://www.w3.org/2000/09/xmldsig#', 'dsig:KeyInfo'), $root->firstChild);
+            $keyInfo = $root->insertBefore(
+                $this->encdoc->createElementNS(
+                    'http://www.w3.org/2000/09/xmldsig#',
+                    'dsig:KeyInfo'
+                ),
+                $root->firstChild
+            );
             $keyInfo->appendChild($encKey);
         } else {
             $this->encKey = $encKey;
@@ -318,8 +336,19 @@ class XMLSecEnc
         $encMethod = $encKey->appendChild($this->encdoc->createElementNS(self::XMLENCNS, 'xenc:EncryptionMethod'));
         $encMethod->setAttribute('Algorithm', $srcKey->getAlgorith());
         if (! empty($srcKey->name)) {
-            $keyInfo = $encKey->appendChild($this->encdoc->createElementNS('http://www.w3.org/2000/09/xmldsig#', 'dsig:KeyInfo'));
-            $keyInfo->appendChild($this->encdoc->createElementNS('http://www.w3.org/2000/09/xmldsig#', 'dsig:KeyName', $srcKey->name));
+            $keyInfo = $encKey->appendChild(
+                $this->encdoc->createElementNS(
+                    'http://www.w3.org/2000/09/xmldsig#',
+                    'dsig:KeyInfo'
+                )
+            );
+            $keyInfo->appendChild(
+                $this->encdoc->createElementNS(
+                    'http://www.w3.org/2000/09/xmldsig#',
+                    'dsig:KeyName',
+                    $srcKey->name
+                )
+            );
         }
         $cipherData = $encKey->appendChild($this->encdoc->createElementNS(self::XMLENCNS, 'xenc:CipherData'));
         $cipherData->appendChild($this->encdoc->createElementNS(self::XMLENCNS, 'xenc:CipherValue', $strEncKey));
@@ -331,6 +360,7 @@ class XMLSecEnc
                 $dataRef->setAttribute("URI", '#' . $refuri);
             }
         }
+
         return;
     }
 
@@ -344,9 +374,11 @@ class XMLSecEnc
         if (! $encKey->isEncrypted) {
             throw new Exception("Key is not Encrypted");
         }
+
         if (empty($encKey->key)) {
             throw new Exception("Key is missing data to perform the decryption");
         }
+
         return $this->decryptNode($encKey, false);
     }
 
@@ -361,12 +393,14 @@ class XMLSecEnc
         } else {
             $doc = $element->ownerDocument;
         }
+
         if ($doc) {
             $xpath = new DOMXPath($doc);
             $query = "//*[local-name()='EncryptedData' and namespace-uri()='".self::XMLENCNS."']";
             $nodeset = $xpath->query($query);
             return $nodeset->item(0);
         }
+
         return null;
     }
 
@@ -380,9 +414,11 @@ class XMLSecEnc
         if (empty($node)) {
             $node = $this->rawNode;
         }
+
         if (! $node instanceof DOMNode) {
             return null;
         }
+
         if ($doc = $node->ownerDocument) {
             $xpath = new DOMXPath($doc);
             $xpath->registerNamespace('xmlsecenc', self::XMLENCNS);
@@ -412,6 +448,7 @@ class XMLSecEnc
         if (empty($node) || (! $node instanceof DOMNode)) {
             return null;
         }
+
         $doc = $node->ownerDocument;
         if (!$doc) {
             return null;
