@@ -2,7 +2,6 @@
 
 namespace SimpleSAML\XMLSec\Test\Alg;
 
-use SimpleSAML\XMLSec\Alg\Signature\HMAC;
 use SimpleSAML\XMLSec\Alg\Signature\SignatureAlgorithmFactory;
 use SimpleSAML\XMLSec\Constants;
 use SimpleSAML\XMLSec\Exception\RuntimeException;
