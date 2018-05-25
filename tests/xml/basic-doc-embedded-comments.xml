@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Root xmlns="urn:envelope">
+  <Value>
+	Hello, World!
+    <!-- This is a comment -->
+  </Value>
+</Root>

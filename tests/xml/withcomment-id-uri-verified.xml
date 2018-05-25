@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<root xml:id="SomeID">
+  
+  
+  
+  <childnode>
+    sometext
+    
+  </childnode>
+</root>
