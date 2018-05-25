@@ -637,13 +637,13 @@ class SignatureTest extends \PHPUnit_Framework_TestCase
 
         $this->assertEquals(
             '123456789',
-            $verified->ownerDocument->getElementsByTagName('CustomerId')[0]->textContent,
+            $verified->ownerDocument->getElementsByTagName('CustomerId')->item(0)->textContent,
             'Contents after signature verification are affected by inserted comments.'
         );
 
         $this->assertEquals(
             '123456789',
-            $doc->getElementsByTagName('CustomerId')[0]->textContent,
+            $doc->getElementsByTagName('CustomerId')->item(0)->textContent,
             'XML backend is ignoring nodes after comments.'
         );
     }
