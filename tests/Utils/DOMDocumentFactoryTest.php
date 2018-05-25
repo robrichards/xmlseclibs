@@ -26,7 +26,7 @@ class DOMDocumentFactoryTest extends \PHPUnit_Framework_TestCase
      */
     public function testFromFile()
     {
-        $this->assertInstanceOf('DOMDocument', DOMDocumentFactory::fromFile('tests/basic-doc.xml'));
+        $this->assertInstanceOf('DOMDocument', DOMDocumentFactory::fromFile('tests/xml/basic-doc.xml'));
     }
 
 
@@ -37,7 +37,7 @@ class DOMDocumentFactoryTest extends \PHPUnit_Framework_TestCase
      */
     public function testFromFileWrongArgument()
     {
-        DOMDocumentFactory::fromFile(array());
+        DOMDocumentFactory::fromFile([]);
     }
 
 
