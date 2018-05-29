@@ -488,7 +488,8 @@ class SignatureTest extends \PHPUnit_Framework_TestCase
      */
     public function testVerifySigWithAlgBlacklistedByDefault()
     {
-        $signature = Signature::fromXML(DOMDocumentFactory::fromFile('tests/xml/sign-basic-test.xml'));
+        $xml = DOMDocumentFactory::fromFile('tests/xml/sign-basic-test.xml');
+        $signature = Signature::fromXML($xml->documentElement);
         $signature->verify($this->cert);
     }
 
@@ -500,7 +501,8 @@ class SignatureTest extends \PHPUnit_Framework_TestCase
      */
     public function testVerifySigWithCustomBlacklistedAlg()
     {
-        $signature = Signature::fromXML(DOMDocumentFactory::fromFile('tests/xml/sign-sha256-rsa-sha256-test.xml'));
+        $xml = DOMDocumentFactory::fromFile('tests/xml/sign-sha256-rsa-sha256-test.xml');
+        $signature = Signature::fromXML($xml->documentElement);
         $signature->setBlacklistedAlgorithms([C::SIG_RSA_SHA256]);
         $signature->verify($this->cert);
     }
