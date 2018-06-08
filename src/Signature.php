@@ -401,7 +401,7 @@ class Signature
      * @return Signature A Signature object corresponding to the signature present in the given DOM document or element.
      *
      * @throws InvalidArgumentException If $node is not an instance of DOMDocument or DOMElement.
-     * @throws RuntimeException If there is no signature in the $node.
+     * @throws NoSignatureFound If there is no signature in the $node.
      */
     public static function fromXML(\DOMNode $node)
     {
