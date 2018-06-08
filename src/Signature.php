@@ -741,7 +741,9 @@ class Signature
         $this->sigMethodNode->setAttribute('Algorithm', $alg);
         $factory = new SignatureAlgorithmFactory($this->algBlacklist);
         $signer = $factory->getAlgorithm($alg, $key);
-        $digestAlg = $factory->getDigestAlgorithm();
+        if ($this->backend !== null) {
+            $signer->setBackend($this->backend);
+        }
 
         if (empty($this->references)) {
             // no references have been added, ref root
@@ -749,7 +751,7 @@ class Signature
             if (!$this->enveloping) {
                 $transforms[] = C::XMLDSIG_ENVELOPED;
             }
-            $this->addReference($this->root->ownerDocument, $digestAlg, $transforms, []);
+            $this->addReference($this->root->ownerDocument, $signer->getDigest(), $transforms, []);
         }
 
         if ($appendToNode) {
@@ -804,7 +806,11 @@ class Signature
         }
 
         $factory = new SignatureAlgorithmFactory($this->algBlacklist);
-        return $factory->getAlgorithm($this->sigAlg, $key)->verify($siginfo, base64_decode($sigval));
+        $alg = $factory->getAlgorithm($this->sigAlg, $key);
+        if ($this->backend !== null) {
+            $alg->setBackend($this->backend);
+        }
+        return $alg->verify($siginfo, base64_decode($sigval));
     }
 
 

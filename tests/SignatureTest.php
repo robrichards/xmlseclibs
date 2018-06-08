@@ -4,7 +4,6 @@ namespace SimpleSAML\XMLSec\Test;
 
 use SimpleSAML\XMLSec\Constants as C;
 use SimpleSAML\XMLSec\Exception\InvalidArgumentException;
-use SimpleSAML\XMLSec\Exception\RuntimeException;
 use SimpleSAML\XMLSec\Key\PrivateKey;
 use SimpleSAML\XMLSec\Key\X509Certificate;
 use SimpleSAML\XMLSec\Signature;

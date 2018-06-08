@@ -2,6 +2,8 @@
 
 namespace SimpleSAML\XMLSec\Alg;
 
+use SimpleSAML\XMLSec\Backend\EncryptionBackend;
+
 /**
  * An interface representing algorithms that can be used for encryption.
  *
@@ -9,6 +11,14 @@ namespace SimpleSAML\XMLSec\Alg;
  */
 interface EncryptionAlgorithm
 {
+
+    /**
+     * Set the backend to use for actual computations by this algorithm.
+     *
+     * @param EncryptionBackend $backend The encryption backend to use.
+     */
+    public function setBackend(EncryptionBackend $backend);
+
 
     /**
      * Encrypt a given plaintext with this cipher and the loaded key.

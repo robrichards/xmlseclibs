@@ -25,24 +25,41 @@ abstract class AbstractSigner implements SignatureAlgorithm
     /** @var string */
     protected $default_backend;
 
+    /** @var string */
+    protected $digest;
+
 
     /**
      * Build a signature algorithm.
      *
      * @param AbstractKey $key The signing key.
      * @param string $digest The identifier of the digest algorithm to use.
-     * @param SignatureBackend $backend The backend to use. Optional.
      */
-    public function __construct(AbstractKey $key, $digest, SignatureBackend $backend = null)
+    public function __construct(AbstractKey $key, $digest)
     {
         $this->key = $key;
-
-        if ($backend !== null) {
-            $this->backend = $backend;
-        } else {
-            $this->backend = new $this->default_backend();
-        }
+        $this->digest = $digest;
+        $this->backend = new $this->default_backend();
         $this->backend->setDigestAlg($digest);
+    }
+
+
+    /**
+     * @inheritdoc
+     */
+    public function getDigest()
+    {
+        return $this->digest;
+    }
+
+
+    /**
+     * @inheritdoc
+     */
+    public function setBackend(SignatureBackend $backend)
+    {
+        $this->backend = $backend;
+        $this->backend->setDigestAlg($this->digest);
     }
 
 

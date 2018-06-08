@@ -18,9 +18,6 @@ use SimpleSAML\XMLSec\Key\SymmetricKey;
 class SignatureAlgorithmFactory
 {
 
-    /** @var string */
-    protected $digest;
-
     /**
      * An array of blacklisted algorithms.
      *
@@ -48,19 +45,6 @@ class SignatureAlgorithmFactory
 
 
     /**
-     * Get the identifier of the digest associated with the last algorithm built.
-     *
-     * @return string The digest identifier.
-     *
-     * @see \SimpleSAML\XMLSec\Constants
-     */
-    public function getDigestAlgorithm()
-    {
-        return $this->digest;
-    }
-
-
-    /**
      * Get a new object implementing the given digital signature algorithm.
      *
      * @param string $algId The identifier of the algorithm desired.
@@ -81,27 +65,27 @@ class SignatureAlgorithmFactory
         switch ($algId) {
             case Constants::SIG_RSA_SHA1:
             case Constants::SIG_HMAC_SHA1:
-                $this->digest = Constants::DIGEST_SHA1;
+                $digest = Constants::DIGEST_SHA1;
                 break;
             case Constants::SIG_RSA_SHA224:
             case Constants::SIG_HMAC_SHA224:
-                $this->digest = Constants::DIGEST_SHA224;
+                $digest = Constants::DIGEST_SHA224;
                 break;
             case Constants::SIG_RSA_SHA256:
             case Constants::SIG_HMAC_SHA256:
-                $this->digest = Constants::DIGEST_SHA256;
+                $digest = Constants::DIGEST_SHA256;
                 break;
             case Constants::SIG_RSA_SHA384:
             case Constants::SIG_HMAC_SHA384:
-                $this->digest = Constants::DIGEST_SHA384;
+                $digest = Constants::DIGEST_SHA384;
                 break;
             case Constants::SIG_RSA_SHA512:
             case Constants::SIG_HMAC_SHA512:
-                $this->digest = Constants::DIGEST_SHA512;
+                $digest = Constants::DIGEST_SHA512;
                 break;
             case Constants::SIG_RSA_RIPEMD160:
             case Constants::SIG_HMAC_RIPEMD160:
-                $this->digest = Constants::DIGEST_RIPEMD160;
+                $digest = Constants::DIGEST_RIPEMD160;
                 break;
             default:
                 throw new RuntimeException('Unsupported signature algorithm');
@@ -116,7 +100,7 @@ class SignatureAlgorithmFactory
             case Constants::SIG_RSA_SHA512:
             case Constants::SIG_RSA_RIPEMD160:
                 if ($key instanceof AsymmetricKey) {
-                    return new RSA($key, $this->digest);
+                    return new RSA($key, $digest);
                 }
                 break;
             case Constants::SIG_HMAC_SHA1:
@@ -126,7 +110,7 @@ class SignatureAlgorithmFactory
             case Constants::SIG_HMAC_SHA512:
             case Constants::SIG_HMAC_RIPEMD160:
                 if ($key instanceof SymmetricKey) {
-                    return new HMAC($key, $this->digest);
+                    return new HMAC($key, $digest);
                 }
                 break;
         }

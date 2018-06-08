@@ -56,13 +56,13 @@ class SignatureAlgorithmFactoryTest extends \PHPUnit_Framework_TestCase
         ];
 
         foreach ($hmac as $signature => $digest) {
-            $factory->getAlgorithm($signature, $this->skey);
-            $this->assertEquals($digest, $factory->getDigestAlgorithm());
+            $alg = $factory->getAlgorithm($signature, $this->skey);
+            $this->assertEquals($digest, $alg->getDigest());
         }
 
         foreach ($rsa as $signature => $digest) {
-            $factory->getAlgorithm($signature, $this->pkey);
-            $this->assertEquals($digest, $factory->getDigestAlgorithm());
+            $alg = $factory->getAlgorithm($signature, $this->pkey);
+            $this->assertEquals($digest, $alg->getDigest());
         }
     }
 
