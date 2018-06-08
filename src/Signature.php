@@ -12,6 +12,7 @@ use SimpleSAML\XMLSec\Key\AbstractKey;
 use SimpleSAML\XMLSec\Key\X509Certificate;
 use SimpleSAML\XMLSec\Utils\DOMDocumentFactory;
 use SimpleSAML\XMLSec\Utils\Security as Sec;
+use SimpleSAML\XMLSec\Utils\XPath as XP;
 
 /**
  * Class implementing XML digital signatures.
@@ -687,7 +688,7 @@ class Signature
         }
         $this->sigNode = $element;
 
-        $xp = self::getXPath($this->sigNode->ownerDocument);
+        $xp = XP::getXPath($this->sigNode->ownerDocument);
 
         $signedInfoNodes = $xp->query('./ds:SignedInfo', $this->sigNode);
         if (count($signedInfoNodes) < 1) {
@@ -791,7 +792,7 @@ class Signature
      */
     public function verify(AbstractKey $key)
     {
-        $xp = self::getXPath($this->sigNode->ownerDocument);
+        $xp = XP::getXPath($this->sigNode->ownerDocument);
         $sigval = $xp->evaluate('string(./ds:SignatureValue)', $this->sigNode);
         if (empty($sigval)) {
             throw new RuntimeException('Unable to locate SignatureValue');
@@ -907,29 +908,13 @@ class Signature
             throw new RuntimeException('Cannot search for signatures, no DOM document available');
         }
 
-        $xp = self::getXPath($doc);
+        $xp = XP::getXPath($doc);
         $nodeset = $xp->query('./ds:Signature', $node);
 
         if ($nodeset->length === 0) {
             throw new NoSignatureFound();
         }
         return $nodeset->item(0);
-    }
-
-
-    /**
-     * Get a DOMXPath object that can be used to search for XMLDSIG elements.
-     *
-     * @param \DOMDocument $doc The document to associate to the DOMXPath object.
-     *
-     * @return \DOMXPath A DOMXPath object ready to use in the given document, with the XMLDSIG namespace already
-     * registered.
-     */
-    protected static function getXPath(\DOMDocument $doc)
-    {
-        $xp = new \DOMXPath($doc);
-        $xp->registerNamespace('ds', C::XMLDSIGNS);
-        return $xp;
     }
 
 
@@ -1013,7 +998,7 @@ class Signature
                      */
                     $includeCommentNodes = false;
 
-                    $xp = self::getXPath($ref->ownerDocument);
+                    $xp = XP::getXPath($ref->ownerDocument);
                     if ($this->idNS && is_array($this->idNS)) {
                         foreach ($this->idNS as $nspf => $ns) {
                             $xp->registerNamespace($nspf, $ns);
@@ -1077,7 +1062,7 @@ class Signature
             return $data;
         }
 
-        $xp = self::getXPath($ref->ownerDocument);
+        $xp = XP::getXPath($ref->ownerDocument);
         $transforms = $xp->query('./ds:Transforms/ds:Transform', $ref);
         $canonicalMethod = C::C14N_EXCLUSIVE_WITHOUT_COMMENTS;
         $arXPath = null;
@@ -1161,7 +1146,7 @@ class Signature
      */
     protected function validateDigest(\DOMElement $ref, $data)
     {
-        $xp = self::getXPath($ref->ownerDocument);
+        $xp = XP::getXPath($ref->ownerDocument);
         $alg = $xp->evaluate('string(./ds:DigestMethod/@Algorithm)', $ref);
         $computed = $this->hash($alg, $data, false);
         $evaluated = base64_decode($xp->evaluate('string(./ds:DigestValue)', $ref));
@@ -1186,7 +1171,7 @@ class Signature
             $this->sigNode->parentNode->removeChild($this->sigNode);
         }
 
-        $xp = self::getXPath($doc);
+        $xp = XP::getXPath($doc);
         $refNodes = $xp->query('./ds:SignedInfo/ds:Reference', $this->sigNode);
         if ($refNodes->length < 1) {
             throw new RuntimeException('There are no Reference nodes');
