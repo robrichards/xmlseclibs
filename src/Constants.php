@@ -77,6 +77,12 @@ class Constants
     ];
 
     /**
+     * Key transport algorithms
+     */
+    const KEY_TRANSPORT_RSA_1_5 = 'http://www.w3.org/2001/04/xmlenc#rsa-1_5';
+    const KEY_TRANSPORT_OAEP_MGF1P = 'http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p';
+
+    /**
      * Canonicalization algorithms
      */
     const C14N_INCLUSIVE_WITH_COMMENTS = 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315#WithComments';
@@ -106,5 +112,10 @@ class Constants
     const XMLDSIGNS = 'http://www.w3.org/2000/09/xmldsig#';
     const XMLDSIG11NS = 'http://www.w3.org/2009/xmldsig11#';
     const XMLDSIG_ENVELOPED = 'http://www.w3.org/2000/09/xmldsig#enveloped-signature';
+
+    const XMLENCNS = 'http://www.w3.org/2001/04/xmlenc#';
+    const XMLENC_ELEMENT = 'http://www.w3.org/2001/04/xmlenc#Element';
+    const XMLENC_CONTENT = 'http://www.w3.org/2001/04/xmlenc#Content';
+
     const XPATH_URI = 'http://www.w3.org/TR/1999/REC-xpath-19991116';
 }
