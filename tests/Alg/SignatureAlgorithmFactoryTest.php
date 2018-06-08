@@ -4,6 +4,7 @@ namespace SimpleSAML\XMLSec\Test\Alg;
 
 use SimpleSAML\XMLSec\Alg\Signature\SignatureAlgorithmFactory;
 use SimpleSAML\XMLSec\Constants;
+use SimpleSAML\XMLSec\Exception\InvalidArgumentException;
 use SimpleSAML\XMLSec\Exception\RuntimeException;
 use SimpleSAML\XMLSec\Key\PublicKey;
 use SimpleSAML\XMLSec\Key\SymmetricKey;
@@ -81,7 +82,7 @@ class SignatureAlgorithmFactoryTest extends \PHPUnit_Framework_TestCase
     /**
      * Test for blacklisted algorithms.
      *
-     * @expectedException RuntimeException
+     * @expectedException InvalidArgumentException
      */
     public function testBlacklistedAlgorithm()
     {

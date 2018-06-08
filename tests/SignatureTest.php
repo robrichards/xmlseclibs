@@ -3,6 +3,7 @@
 namespace SimpleSAML\XMLSec\Test;
 
 use SimpleSAML\XMLSec\Constants as C;
+use SimpleSAML\XMLSec\Exception\InvalidArgumentException;
 use SimpleSAML\XMLSec\Exception\RuntimeException;
 use SimpleSAML\XMLSec\Key\PrivateKey;
 use SimpleSAML\XMLSec\Key\X509Certificate;
@@ -310,7 +311,7 @@ class SignatureTest extends \PHPUnit_Framework_TestCase
     /**
      * Test that signing with a blacklisted algorithm fails.
      *
-     * @expectedException RuntimeException
+     * @expectedException InvalidArgumentException
      */
     public function testSignWithBlacklistedAlg()
     {
@@ -484,7 +485,7 @@ class SignatureTest extends \PHPUnit_Framework_TestCase
     /**
      * Test verifying a signature with the default blacklisted algorithms.
      *
-     * @expectedException RuntimeException
+     * @expectedException InvalidArgumentException
      */
     public function testVerifySigWithAlgBlacklistedByDefault()
     {
@@ -497,7 +498,7 @@ class SignatureTest extends \PHPUnit_Framework_TestCase
     /**
      * Test verifying a signature with a blacklisted algorithm.
      *
-     * @expectedException RuntimeException
+     * @expectedException InvalidArgumentException
      */
     public function testVerifySigWithCustomBlacklistedAlg()
     {

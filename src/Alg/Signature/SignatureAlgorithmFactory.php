@@ -4,6 +4,7 @@ namespace SimpleSAML\XMLSec\Alg\Signature;
 
 use SimpleSAML\XMLSec\Alg\SignatureAlgorithm;
 use SimpleSAML\XMLSec\Constants;
+use SimpleSAML\XMLSec\Exception\InvalidArgumentException;
 use SimpleSAML\XMLSec\Exception\RuntimeException;
 use SimpleSAML\XMLSec\Key\AbstractKey;
 use SimpleSAML\XMLSec\Key\AsymmetricKey;
@@ -67,13 +68,13 @@ class SignatureAlgorithmFactory
      *
      * @return SignatureAlgorithm An object implementing the given algorithm.
      *
-     * @throws RuntimeException If an error occurs, e.g. the given algorithm is blacklisted, unknown or the given key is
-     * not suitable for it.
+     * @throws InvalidArgumentException If an error occurs, e.g. the given algorithm is blacklisted, unknown or the
+     * given key is not suitable for it.
      */
     public function getAlgorithm($algId, AbstractKey $key)
     {
         if (in_array($algId, $this->blacklist)) {
-            throw new RuntimeException('Blacklisted signature algorithm');
+            throw new InvalidArgumentException('Blacklisted signature algorithm');
         }
 
         // determine digest
