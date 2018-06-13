@@ -15,7 +15,7 @@ use SimpleSAML\XMLSec\Utils\Random;
  *
  * @package SimpleSAML\XMLSec\Backend
  */
-class OpenSSL implements EncryptionBackend, SignatureBackend
+final class OpenSSL implements EncryptionBackend, SignatureBackend
 {
     // digital signature options
     /** @var string */

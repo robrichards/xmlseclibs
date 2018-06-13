@@ -12,7 +12,7 @@ use SimpleSAML\XMLSec\Utils\Security;
  *
  * @package SimpleSAML\XMLSec\Backend
  */
-class HMAC implements SignatureBackend
+final class HMAC implements SignatureBackend
 {
 
     /** @var string */
