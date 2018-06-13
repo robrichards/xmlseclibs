@@ -3,7 +3,6 @@
 namespace SimpleSAML\XMLSec\Key;
 
 use SimpleSAML\XMLSec\Exception\InvalidArgumentException;
-use SimpleSAML\XMLSec\Exception\RuntimeException;
 
 /**
  * A class representing an asymmetric key.

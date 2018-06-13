@@ -4,7 +4,6 @@ namespace SimpleSAML\XMLSec\Backend;
 
 use SimpleSAML\XMLSec\Constants;
 use SimpleSAML\XMLSec\Exception\InvalidArgumentException;
-use SimpleSAML\XMLSec\Exception\RuntimeException;
 use SimpleSAML\XMLSec\Key\AbstractKey;
 use SimpleSAML\XMLSec\Utils\Security;
 
