@@ -1,6 +1,7 @@
 <?php
 namespace SimpleSAML\XMLSec\Utils;
 
+use SimpleSAML\XMLSec\Exception\InvalidArgumentException;
 use SimpleSAML\XMLSec\Exception\RuntimeException;
 
 /**
@@ -18,19 +19,29 @@ class Random
      *
      * @return string A random string of $length length.
      *
+     * @throws InvalidArgumentException If $length is not an integer greater than zero.
      * @throws RuntimeException If no appropriate sources of cryptographically secure random generators are available.
      */
     public static function generateRandomBytes($length)
     {
+        if (!is_int($length) || $length < 1) {
+            throw new InvalidArgumentException('Invalid length received to generate random bytes.');
+        }
+
         if (function_exists('random_bytes')) {
-            return random_bytes($length);
+            try {
+                return random_bytes($length);
+            } catch (\Exception $e) {
+                throw new RuntimeException('Cannot generate random bytes, no cryptographically secure random '.
+                    'generator available.');
+            }
         } elseif (function_exists('openssl_random_pseudo_bytes')) {
             $bytes = openssl_random_pseudo_bytes($length, $secure);
-            if ($secure) {
+            if ($bytes !== false && $secure) {
                 return $bytes;
             }
-            throw new RuntimeException('Cannot generate random bytes, openssl_random_pseudo_bytes() does not have '.
-                'a cryptographically secure random generator available.');
+            throw new RuntimeException('Cannot generate random bytes, no cryptographically secure random '.
+                'generator available.');
         }
 
         throw new RuntimeException('Cannot generate random bytes, either random_bytes() or '.
