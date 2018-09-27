@@ -1,6 +1,17 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
-??, ??? 2017, 3.0.2-dev
+27, Sep 2018, 3.0.2
+Security Improvements:
+- OpenSSL is now a requirement rather than suggestion. (Slaven Bacelic)
+- Filter input to avoid XPath injection. (Jaime Pérez)
+
+Bug Fixes:
+- Fix missing parentheses (Tim van Dijen)
+
+Improvements:
+- Use strict comparison operator to compare digest values. (Jaime Pérez)
+- Remove call to file_get_contents that doesn't even work. (Jaime Pérez)
+- Document potentially dangerous return value behaviour. (Thijs Kinkhorst)
 
 31, Aug 2017, 3.0.1
 Bug Fixes:
