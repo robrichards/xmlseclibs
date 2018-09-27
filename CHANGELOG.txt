@@ -1,5 +1,7 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+??, ??? 2018, 3.0.3-dev
+
 27, Sep 2018, 3.0.2
 Security Improvements:
 - OpenSSL is now a requirement rather than suggestion. (Slaven Bacelic)
