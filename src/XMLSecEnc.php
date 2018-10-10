@@ -471,7 +471,7 @@ class XMLSecEnc
                     }
                     $id = substr($uri, 1);
 
-                    $query = '//xmlsecenc:EncryptedKey[@Id="'.XPath::filterAttrValue($id, XPAth::DOUBLE_QUOTE).'"]';
+                    $query = '//xmlsecenc:EncryptedKey[@Id="'.XPath::filterAttrValue($id, XPath::DOUBLE_QUOTE).'"]';
                     $keyElement = $xpath->query($query)->item(0);
                     if (!$keyElement) {
                         throw new Exception("Unable to locate EncryptedKey with @Id='$id'.");
