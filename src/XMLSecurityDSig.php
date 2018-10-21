@@ -494,7 +494,7 @@ class XMLSecurityDSig
                     if (is_array($this->idKeys)) {
                         foreach ($this->idKeys AS $idKey) {
                             $iDlist .= " or @".XPath::filterAttrName($idKey).'="'.
-                                XPATH::filterAttrValue($identifier, XPAth::DOUBLE_QUOTE).'"';
+                                XPath::filterAttrValue($identifier, XPath::DOUBLE_QUOTE).'"';
                         }
                     }
                     $query = '//*['.$iDlist.']';
