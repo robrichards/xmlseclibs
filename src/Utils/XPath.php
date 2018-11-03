@@ -7,7 +7,7 @@ class XPath
     const ALPHANUMERIC = '\w\d';
     const NUMERIC = '\d';
     const LETTERS = '\w';
-    const EXTENDED_ALPHANUMERIC = '\w\d\s-_:\.';
+    const EXTENDED_ALPHANUMERIC = '\w\d\s\-_:\.';
 
     const SINGLE_QUOTE = '\'';
     const DOUBLE_QUOTE = '"';
