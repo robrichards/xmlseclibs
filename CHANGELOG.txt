@@ -1,6 +1,13 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
-??, ??? 2018, 3.0.3-dev
+15, Nov 2018, 3.0.3
+Bug Fixes:
+- Fix casing of class name. (Willem Stuursma-Ruwen)
+- Fix Xpath casing. (Tim van Dijen)
+
+Improvements:
+- Make PCRE2 compliant. (Stefan Winter)
+- Add PHP 7.3 support. (Stefan Winter)
 
 27, Sep 2018, 3.0.2
 Security Improvements:
