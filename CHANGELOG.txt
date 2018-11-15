@@ -1,5 +1,21 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+15, Nov 2018, 2.1.0
+Security Improvements:
+- Filter input to avoid XPath injection. (Jaime Pérez)
+
+Bug Fixes:
+- Fix casing of class name. (Willem Stuursma-Ruwen)
+- Fix Xpath casing. (Tim van Dijen)
+
+Improvements:
+- Use strict comparison operator to compare digest values. (Jaime Pérez)
+- Remove call to file_get_contents that doesn't even work. (Jaime Pérez)
+- Travis: add PHP 7.1, move hhvm to allowed failures. (Thijs Kinkhorst)
+- Add comments to warn about return values of verify(). (Thijs Kinkhorst)
+- Fix tests to properly check return code of verify(). (Thijs Kinkhorst)
+- Add .gitattributes to remove unneeded files. (Filippo Tessarotto)
+
 08, Sep 2016, 2.0.1
 Bug Fixes:
 - Strip whitespace characters when parsing X509Certificate. fixes #84

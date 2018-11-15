@@ -2,6 +2,9 @@
 Encryption without modifying original data
 --FILE--
 <?php
+if (defined('PHP_MAJOR_VERSION') && PHP_MAJOR_VERSION >= 7) {
+	error_reporting(E_ALL ^ E_DEPRECATED);
+}
 require(dirname(__FILE__) . '/../xmlseclibs.php');
 use RobRichards\XMLSecLibs\XMLSecurityKey;
 use RobRichards\XMLSecLibs\XMLSecEnc;
