@@ -1,5 +1,7 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+??, ??? 2018, 3.0.4-dev
+
 15, Nov 2018, 3.0.3
 Bug Fixes:
 - Fix casing of class name. (Willem Stuursma-Ruwen)
