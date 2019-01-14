@@ -258,11 +258,11 @@ class XMLSecurityDSig
     /**
      * @param DOMNode $node
      * @param string|null $canonicalmethod
-     * @param array $arXPath
-     * @param array $prefixList
+     * @param array|null $arXPath
+     * @param array|null $prefixList
      * @return string
      */
-    private function canonicalizeData($node, $canonicalmethod = null, $arXPath=[], $prefixList=[])
+    private function canonicalizeData($node, $canonicalmethod = null, $arXPath=null, $prefixList=null)
     {
         $exclusive = false;
         $withComments = false;
@@ -395,8 +395,8 @@ class XMLSecurityDSig
         $query = './secdsig:Transforms/secdsig:Transform';
         $nodelist = $xpath->query($query, $refNode);
         $canonicalMethod = 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315';
-        $arXPath = [];
-        $prefixList = [];
+        $arXPath = null;
+        $prefixList = null;
         foreach ($nodelist AS $transform) {
             $algorithm = $transform->getAttribute("Algorithm");
             switch ($algorithm) {
@@ -449,8 +449,10 @@ class XMLSecurityDSig
                     $node = $transform->firstChild;
                     while ($node) {
                         if ($node->localName == 'XPath') {
-                            $arXPath['query'] = '(.//. | .//@* | .//namespace::*)['.$node->nodeValue.']';
-                            $arXPath['namespaces'] = array();
+                            $arXPath = [
+                                'query' => '(.//. | .//@* | .//namespace::*)['.$node->nodeValue.']',
+                                'namespaces' => [],
+                            ];
                             $nslist = $xpath->query('./namespace::*', $node);
                             foreach ($nslist AS $nsnode) {
                                 if ($nsnode->localName != "xml") {
