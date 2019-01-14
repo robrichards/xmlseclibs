@@ -62,8 +62,8 @@ class XMLSecurityKey
     /** @var array */
     private $cryptParams = array();
 
-    /** @var int|string */
-    public $type = 0;
+    /** @var string */
+    public $type;
 
     /** @var mixed|null */
     public $key = null;
@@ -252,6 +252,9 @@ class XMLSecurityKey
         $keysize = $this->cryptParams['keysize'];
         
         $key = openssl_random_pseudo_bytes($keysize);
+        if ($key === false) {
+            throw new Exception('Generating session key failed.');
+        }
         
         if ($this->type === self::TRIPLEDES_CBC) {
             /* Make sure that the generated key has the proper parity bits set.
@@ -601,12 +604,11 @@ class XMLSecurityKey
      */
     public function verifySignature($data, $signature)
     {
-        switch ($this->cryptParams['library']) {
-            case 'openssl':
-                return $this->verifyOpenSSL($data, $signature);
-            case (self::HMAC_SHA1):
-                $expectedSignature = hash_hmac("sha1", $data, $this->key, true);
-                return strcmp($signature, $expectedSignature) == 0;
+        if ($this->cryptParams['library'] === 'openssl') {
+            return $this->verifyOpenSSL($data, $signature);
+        } else { // self::HMAC_SHA1
+            $expectedSignature = hash_hmac("sha1", $data, $this->key, true);
+            return strcmp($signature, $expectedSignature) == 0;
         }
     }
 
@@ -632,7 +634,8 @@ class XMLSecurityKey
      *
      * @param int $type
      * @param string $string
-     * @return null|string
+     * @return string
+     * @throws \Exception If $string is 2^16 or more bytes long.
      */
     public static function makeAsnSegment($type, $string)
     {
@@ -655,7 +658,7 @@ class XMLSecurityKey
         } else if ($length < 0x010000) {
             $output = sprintf("%c%c%c%c%s", $type, 0x82, $length / 0x0100, $length % 0x0100, $string);
         } else {
-            $output = null;
+            throw new \Exception('Invalid length for $string.');
         }
         return $output;
     }
@@ -666,6 +669,7 @@ class XMLSecurityKey
      * @param string $modulus
      * @param string $exponent
      * @return string
+     * @throws \Exception
      */
     public static function convertRSA($modulus, $exponent)
     {
@@ -702,7 +706,7 @@ class XMLSecurityKey
      * Will return the X509 certificate in PEM-format if this key represents
      * an X509 certificate.
      *
-     * @return string The X509 certificate or null if this key doesn't represent an X509-certificate.
+     * @return string|null The X509 certificate or null if this key doesn't represent an X509-certificate.
      */
     public function getX509Certificate()
     {
