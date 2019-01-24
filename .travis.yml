@@ -17,9 +17,13 @@ matrix:
   allow_failures:
     - php: hhvm
     
+before_script:
+  - if [[ "$TRAVIS_PHP_VERSION" == "7.3" ]]; then composer require --dev vimeo/psalm; fi
+
 script:
   - if [[ $EXECUTE_COVERAGE == 'true' ]]; then phpunit --coverage-clover clover.xml tests; fi
   - if [[ $EXECUTE_COVERAGE != 'true' ]]; then phpunit tests; fi
+  - if [[ "$TRAVIS_PHP_VERSION" == "7.3" ]]; then vendor/bin/psalm; fi
   
 after_success:
   - if [[ $EXECUTE_COVERAGE == 'true' ]]; then bash <(curl -s https://codecov.io/bash); fi
