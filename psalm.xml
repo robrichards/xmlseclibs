@@ -1,9 +1,6 @@
 <?xml version="1.0"?>
 <psalm
     totallyTyped="false"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xmlns="https://getpsalm.org/schema/config"
-    xsi:schemaLocation="https://getpsalm.org/schema/config file:///Volumes/Devel/ssp-repos/proxy/vendor/simplesamlphp/saml2/vendor/vimeo/psalm/config.xsd"
 >
     <projectFiles>
         <directory name="src" />
@@ -15,7 +12,7 @@
     <issueHandlers>
         <LessSpecificReturnType errorLevel="info" />
 
-        <!-- level 3 issues - slightly lazy code writing, but provably low false-negatives -->
+        <!-- level 3 issues - slightly lazy code writing, but probably low false-negatives -->
 
         <DeprecatedMethod errorLevel="info" />
         <DeprecatedProperty errorLevel="info" />
