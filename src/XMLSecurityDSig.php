@@ -244,9 +244,10 @@ class XMLSecurityDSig
             $query = './'.$this->searchpfx.':SignedInfo';
             $nodeset = $xpath->query($query, $this->sigNode);
             if ($sinfo = $nodeset->item(0)) {
-                $query = './'.$this->searchpfx.'CanonicalizationMethod';
+                $query = './'.$this->searchpfx.':CanonicalizationMethod';
+                /** @var \DOMNodeList<\DOMElement> $nodeset */
                 $nodeset = $xpath->query($query, $sinfo);
-                if (! ($canonNode = $nodeset->item(0)) || !$canonNode instanceof DOMElement) {
+                if (! ($canonNode = $nodeset->item(0))) {
                     $canonNode = $this->createNewSignNode('CanonicalizationMethod');
                     $sinfo->insertBefore($canonNode, $sinfo->firstChild);
                 }
@@ -298,6 +299,7 @@ class XMLSecurityDSig
             }
         }
 
+        /** @psalm-suppress PossiblyNullArgument */
         return $node->C14N($exclusive, $withComments, $arXPath, $prefixList);
     }
 
