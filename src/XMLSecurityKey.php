@@ -424,9 +424,9 @@ class XMLSecurityKey
     private function encryptSymmetric($data)
     {
         $this->iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length($this->cryptParams['cipher']));
-        $msgTag = null;
+        $authTag = null;
         if(in_array($this->cryptParams, ['aes-128-gcm', 'aes-192-gcm', 'aes-256-gcm'])) {
-            $encrypted = openssl_encrypt($data, $this->cryptParams['cipher'], $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $this->iv, $msgTag);
+            $encrypted = openssl_encrypt($data, $this->cryptParams['cipher'], $this->key, OPENSSL_RAW_DATA, $this->iv, $authTag);
         } else {
             $data = $this->padISO10126($data, $this->cryptParams['blocksize']);
             $encrypted = openssl_encrypt($data, $this->cryptParams['cipher'], $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $this->iv);
@@ -435,7 +435,7 @@ class XMLSecurityKey
         if (false === $encrypted) {
             throw new Exception('Failure encrypting Data (openssl symmetric) - ' . openssl_error_string());
         }
-        return $this->iv . $encrypted . null !== $msgTag ? $msgTag : '';
+        return $this->iv . $encrypted . null !== $authTag ? $authTag : '';
     }
 
     /**
@@ -449,19 +449,19 @@ class XMLSecurityKey
         $iv_length = openssl_cipher_iv_length($this->cryptParams['cipher']);
         $this->iv = substr($data, 0, $iv_length);
         $data = substr($data, $iv_length);
-        $msgTag = null;
+        $authTag = null;
         if(in_array($this->cryptParams, ['aes-128-gcm', 'aes-192-gcm', 'aes-256-gcm'])) {
-            // obtain and remove the message tag
-            $msgTag = substr($data, -16);
+            // obtain and remove the authentication tag, always 128 bits
+            $authTag = substr($data, -16);
             $data = substr($data, 0, -16);
-            $decrypted = openssl_decrypt($data, $this->cryptParams['cipher'], $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $this->iv, $msgTag);
+            $decrypted = openssl_decrypt($data, $this->cryptParams['cipher'], $this->key, OPENSSL_RAW_DATA, $this->iv, $authTag);
         } else {
             $decrypted = openssl_decrypt($data, $this->cryptParams['cipher'], $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $this->iv);
         }
         if (false === $decrypted) {
             throw new Exception('Failure decrypting Data (openssl symmetric) - ' . openssl_error_string());
         }
-        return null !== $msgTag ? $decrypted : $this->unpadISO10126($decrypted);
+        return null !== $authTag ? $decrypted : $this->unpadISO10126($decrypted);
     }
 
     /**
