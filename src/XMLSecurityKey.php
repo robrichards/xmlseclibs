@@ -50,6 +50,9 @@ class XMLSecurityKey
     const AES128_CBC = 'http://www.w3.org/2001/04/xmlenc#aes128-cbc';
     const AES192_CBC = 'http://www.w3.org/2001/04/xmlenc#aes192-cbc';
     const AES256_CBC = 'http://www.w3.org/2001/04/xmlenc#aes256-cbc';
+    const AES128_GCM = 'http://www.w3.org/2009/xmlenc11#aes128-gcm';
+    const AES192_GCM = 'http://www.w3.org/2009/xmlenc11#aes192-gcm';
+    const AES256_GCM = 'http://www.w3.org/2009/xmlenc11#aes256-gcm';
     const RSA_1_5 = 'http://www.w3.org/2001/04/xmlenc#rsa-1_5';
     const RSA_OAEP_MGF1P = 'http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p';
     const DSA_SHA1 = 'http://www.w3.org/2000/09/xmldsig#dsa-sha1';
@@ -139,6 +142,30 @@ class XMLSecurityKey
                 $this->cryptParams['cipher'] = 'aes-256-cbc';
                 $this->cryptParams['type'] = 'symmetric';
                 $this->cryptParams['method'] = 'http://www.w3.org/2001/04/xmlenc#aes256-cbc';
+                $this->cryptParams['keysize'] = 32;
+                $this->cryptParams['blocksize'] = 16;
+                break;
+            case (self::AES128_GCM):
+                $this->cryptParams['library'] = 'openssl';
+                $this->cryptParams['cipher'] = 'aes-128-gcm';
+                $this->cryptParams['type'] = 'symmetric';
+                $this->cryptParams['method'] = 'http://www.w3.org/2009/xmlenc11#aes128-gcm';
+                $this->cryptParams['keysize'] = 32;
+                $this->cryptParams['blocksize'] = 16;
+                break;
+            case (self::AES192_GCM):
+                $this->cryptParams['library'] = 'openssl';
+                $this->cryptParams['cipher'] = 'aes-192-gcm';
+                $this->cryptParams['type'] = 'symmetric';
+                $this->cryptParams['method'] = 'http://www.w3.org/2009/xmlenc11#aes192-gcm';
+                $this->cryptParams['keysize'] = 32;
+                $this->cryptParams['blocksize'] = 16;
+                break;
+            case (self::AES256_GCM):
+                $this->cryptParams['library'] = 'openssl';
+                $this->cryptParams['cipher'] = 'aes-256-gcm';
+                $this->cryptParams['type'] = 'symmetric';
+                $this->cryptParams['method'] = 'http://www.w3.org/2009/xmlenc11#aes256-gcm';
                 $this->cryptParams['keysize'] = 32;
                 $this->cryptParams['blocksize'] = 16;
                 break;
@@ -397,12 +424,18 @@ class XMLSecurityKey
     private function encryptSymmetric($data)
     {
         $this->iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length($this->cryptParams['cipher']));
-        $data = $this->padISO10126($data, $this->cryptParams['blocksize']);
-        $encrypted = openssl_encrypt($data, $this->cryptParams['cipher'], $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $this->iv);
+        $msgTag = null;
+        if(in_array($this->cryptParams, ['aes-128-gcm', 'aes-192-gcm', 'aes-256-gcm'])) {
+            $encrypted = openssl_encrypt($data, $this->cryptParams['cipher'], $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $this->iv, $msgTag);
+        } else {
+            $data = $this->padISO10126($data, $this->cryptParams['blocksize']);
+            $encrypted = openssl_encrypt($data, $this->cryptParams['cipher'], $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $this->iv);
+        }
+
         if (false === $encrypted) {
             throw new Exception('Failure encrypting Data (openssl symmetric) - ' . openssl_error_string());
         }
-        return $this->iv . $encrypted;
+        return $this->iv . $encrypted . null !== $msgTag ? $msgTag : '';
     }
 
     /**
@@ -416,11 +449,19 @@ class XMLSecurityKey
         $iv_length = openssl_cipher_iv_length($this->cryptParams['cipher']);
         $this->iv = substr($data, 0, $iv_length);
         $data = substr($data, $iv_length);
-        $decrypted = openssl_decrypt($data, $this->cryptParams['cipher'], $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $this->iv);
+        $msgTag = null;
+        if(in_array($this->cryptParams, ['aes-128-gcm', 'aes-192-gcm', 'aes-256-gcm'])) {
+            // obtain and remove the message tag
+            $msgTag = substr($data, -16);
+            $data = substr($data, 0, -16);
+            $decrypted = openssl_decrypt($data, $this->cryptParams['cipher'], $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $this->iv, $msgTag);
+        } else {
+            $decrypted = openssl_decrypt($data, $this->cryptParams['cipher'], $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $this->iv);
+        }
         if (false === $decrypted) {
             throw new Exception('Failure decrypting Data (openssl symmetric) - ' . openssl_error_string());
         }
-        return $this->unpadISO10126($decrypted);
+        return null !== $msgTag ? $decrypted : $this->unpadISO10126($decrypted);
     }
 
     /**
