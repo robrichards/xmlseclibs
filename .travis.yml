@@ -13,15 +13,25 @@ matrix:
       env:
         - EXECUTE_COVERAGE=true
     - php: 7.0.27
+      env:
+        - LOCAL_PHPUNIT=false
     - php: 7.1
+      env:
+        - LOCAL_PHPUNIT=false
     - php: 7.2
     - php: 7.3
   allow_failures:
     - php: hhvm
 
 script:
-  - if [[ $EXECUTE_COVERAGE == 'true' ]]; then phpunit --coverage-clover clover.xml tests; fi
-  - if [[ $EXECUTE_COVERAGE != 'true' ]]; then phpunit tests; fi
+  - if [[ $LOCAL_PHPUNIT == 'false' ]]; then composer require --dev phpunit/phpunit; phpunitbin=./vendor/bin/phpunit; fi
+  - if [[ $LOCAL_PHPUNIT != 'false' ]]; then phpunitbin=phpunit; fi
+  - if [[ $EXECUTE_COVERAGE == 'true' ]]; then $phpunitbin --coverage-clover clover.xml tests; fi
+  - if [[ $EXECUTE_COVERAGE != 'true' ]]; then $phpunitbin tests; fi
 
 after_success:
   - if [[ $EXECUTE_COVERAGE == 'true' ]]; then bash <(curl -s https://codecov.io/bash); fi
+
+cache:
+  directories:
+    - $HOME/.composer/cache/files
