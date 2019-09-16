@@ -57,6 +57,10 @@ class XMLSecurityKey
     const RSA_SHA256 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256';
     const RSA_SHA384 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha384';
     const RSA_SHA512 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha512';
+    const SHA1_RSA_MGF1 = 'http://www.w3.org/2007/05/xmldsig-more#sha1-rsa-MGF1';
+    const SHA256_RSA_MGF1 = 'http://www.w3.org/2007/05/xmldsig-more#sha256-rsa-MGF1';
+    const SHA384_RSA_MGF1 = 'http://www.w3.org/2007/05/xmldsig-more#sha384-rsa-MGF1';
+    const SHA512_RSA_MGF1 = 'http://www.w3.org/2007/05/xmldsig-more#sha512-rsa-MGF1';
     const HMAC_SHA1 = 'http://www.w3.org/2000/09/xmldsig#hmac-sha1';
 
     /** @var array */
@@ -212,6 +216,54 @@ class XMLSecurityKey
                     }
                 }
                 throw new Exception('Certificate "type" (private/public) must be passed via parameters');
+            case (self::SHA1_RSA_MGF1):
+                $this->cryptParams['library'] = 'openssl';
+                $this->cryptParams['padding'] = OPENSSL_PKCS1_OAEP_PADDING;
+                $this->cryptParams['method'] = 'http://www.w3.org/2007/05/xmldsig-more#sha1-rsa-MGF1';
+                $this->cryptParams['digest'] = 'SHA1';
+                if (is_array($params) && ! empty($params['type'])) {
+                  if ($params['type'] == 'public' || $params['type'] == 'private') {
+                    $this->cryptParams['type'] = $params['type'];
+                    break;
+                  }
+                }
+                throw new Exception('Certificate "type" (private/public) must be passed via parameters');
+            case (self::SHA256_RSA_MGF1):
+                $this->cryptParams['library'] = 'openssl';
+                $this->cryptParams['padding'] = OPENSSL_PKCS1_OAEP_PADDING;
+                $this->cryptParams['method'] = 'http://www.w3.org/2007/05/xmldsig-more#sha256-rsa-MGF1';
+                $this->cryptParams['digest'] = 'SHA256';
+                if (is_array($params) && ! empty($params['type'])) {
+                  if ($params['type'] == 'public' || $params['type'] == 'private') {
+                    $this->cryptParams['type'] = $params['type'];
+                    break;
+                  }
+                }
+                throw new Exception('Certificate "type" (private/public) must be passed via parameters');
+            case (self::SHA384_RSA_MGF1):
+                $this->cryptParams['library'] = 'openssl';
+                $this->cryptParams['padding'] = OPENSSL_PKCS1_OAEP_PADDING;
+                $this->cryptParams['method'] = 'http://www.w3.org/2007/05/xmldsig-more#sha384-rsa-MGF1';
+                $this->cryptParams['digest'] = 'SHA384';
+                if (is_array($params) && ! empty($params['type'])) {
+                  if ($params['type'] == 'public' || $params['type'] == 'private') {
+                    $this->cryptParams['type'] = $params['type'];
+                    break;
+                  }
+                }
+                throw new Exception('Certificate "type" (private/public) must be passed via parameters');
+            case (self::SHA512_RSA_MGF1):
+                $this->cryptParams['library'] = 'openssl';
+                $this->cryptParams['padding'] = OPENSSL_PKCS1_OAEP_PADDING;
+                $this->cryptParams['method'] = 'http://www.w3.org/2007/05/xmldsig-more#sha512-rsa-MGF1';
+                $this->cryptParams['digest'] = 'SHA512';
+                if (is_array($params) && ! empty($params['type'])) {
+                  if ($params['type'] == 'public' || $params['type'] == 'private') {
+                    $this->cryptParams['type'] = $params['type'];
+                    break;
+                  }
+                }
+                throw new Exception('Certificate "type" (private/public) must be passed via parameters');
             case (self::HMAC_SHA1):
                 $this->cryptParams['library'] = $type;
                 $this->cryptParams['method'] = 'http://www.w3.org/2000/09/xmldsig#hmac-sha1';
@@ -250,9 +302,9 @@ class XMLSecurityKey
             throw new Exception('Unknown key size for type "' . $this->type . '".');
         }
         $keysize = $this->cryptParams['keysize'];
-        
+
         $key = openssl_random_pseudo_bytes($keysize);
-        
+
         if ($this->type === self::TRIPLEDES_CBC) {
             /* Make sure that the generated key has the proper parity bits set.
              * Mcrypt doesn't care about the parity bits, but others may care.
@@ -267,7 +319,7 @@ class XMLSecurityKey
                 $key[$i] = chr($byte);
             }
         }
-        
+
         $this->key = $key;
         return $key;
     }
