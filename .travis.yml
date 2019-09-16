@@ -24,10 +24,20 @@ matrix:
     - php: hhvm
 
 script:
-  - if [[ $LOCAL_PHPUNIT == 'false' ]]; then composer require --dev phpunit/phpunit; phpunitbin=./vendor/bin/phpunit; fi
-  - if [[ $LOCAL_PHPUNIT != 'false' ]]; then phpunitbin=phpunit; fi
-  - if [[ $EXECUTE_COVERAGE == 'true' ]]; then $phpunitbin --coverage-clover clover.xml tests; fi
-  - if [[ $EXECUTE_COVERAGE != 'true' ]]; then $phpunitbin tests; fi
+  - |
+    if [[ $LOCAL_PHPUNIT == 'false' ]]; then
+      composer require --dev phpunit/phpunit
+      export phpunitbin="./vendor/bin/phpunit"
+    else
+      export phpunitbin="phpunit"
+      fi
+  - |
+    if [[ $EXECUTE_COVERAGE == 'true' ]]; then
+      export phpunitparms="--coverage-clover clover.xml tests"
+    else
+      export phpunitparms="tests"
+      fi
+  - echo $phpunitbin $phpunitparms && $phpunitbin $phpunitparms
 
 after_success:
   - if [[ $EXECUTE_COVERAGE == 'true' ]]; then bash <(curl -s https://codecov.io/bash); fi
