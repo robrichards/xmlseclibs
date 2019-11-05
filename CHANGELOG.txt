@@ -1,6 +1,11 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
-??, ??? 2018, 3.0.4-dev
+06, Nov 2019, 3.0.4
+Security Improvements:
+- Insure only a single SignedInfo element exists within a signature during 
+  verification. Refs CVE-2019-3465.
+Bug Fixes:
+- Fix variable casing.
 
 15, Nov 2018, 3.0.3
 Bug Fixes:
