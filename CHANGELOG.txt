@@ -1,5 +1,7 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+??, ??? 2018, 3.0.5-dev
+
 06, Nov 2019, 3.0.4
 Security Improvements:
 - Insure only a single SignedInfo element exists within a signature during 
