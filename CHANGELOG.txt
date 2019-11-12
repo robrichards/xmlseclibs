@@ -1,5 +1,10 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+12, Nov 2019, 1.4.3
+Security Improvements:
+- Insure only a single SignedInfo element exists within a signature during 
+  verification. Refs CVE-2019-3465.
+
 08, Sep 2016, 1.4.2
 Bug Fixes:
 - Strip whitespace characters when parsing X509Certificate. fixes #84
