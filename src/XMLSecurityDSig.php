@@ -324,7 +324,7 @@ class XMLSecurityDSig
                                 $arpfx = array_filter(explode(' ', $pfx));
                                 if (count($arpfx) > 0) {
                                     $prefixList = array_merge($prefixList ? $prefixList : array(), $arpfx);
-                				}
+                                }
                             }
                         }
                     }
