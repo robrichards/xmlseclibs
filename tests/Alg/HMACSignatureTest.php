@@ -178,7 +178,7 @@ class HMACSignatureTest extends TestCase
         $key = PublicKey::fromFile('tests/pubkey.pem');
         if (version_compare(phpversion(), '7.0', '>=')) {
             // test type errors when possible
-            $this->expectException(TypeError::class);
+            $this->expectException(\TypeError::class);
             new HMAC($key);
         } else {
             // test via factory
@@ -196,7 +196,7 @@ class HMACSignatureTest extends TestCase
         $key = PrivateKey::fromFile('tests/privkey.pem');
         if (version_compare(phpversion(), '7.0', '>=')) {
             // test type errors when possible
-            $this->expectException(TypeError::class);
+            $this->expectException(\TypeError::class);
             new HMAC($key);
         } else {
             // test via factory
