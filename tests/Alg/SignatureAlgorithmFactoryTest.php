@@ -25,7 +25,7 @@ class SignatureAlgorithmFactoryTest extends TestCase
     protected $pkey;
 
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->skey = SymmetricKey::generate(16);
         $this->pkey = PublicKey::fromFile('tests/pubkey.pem');
