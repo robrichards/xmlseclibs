@@ -2,6 +2,7 @@
 
 namespace SimpleSAML\XMLSec\Test\Key;
 
+use PHPUnit\Framework\TestCase;
 use SimpleSAML\XMLSec\Exception\InvalidArgumentException;
 use SimpleSAML\XMLSec\Key\PublicKey;
 
@@ -10,7 +11,7 @@ use SimpleSAML\XMLSec\Key\PublicKey;
  *
  * @package SimpleSAML\XMLSec\Test\Key
  */
-class PublicKeyTest extends \PHPUnit_Framework_TestCase
+class PublicKeyTest extends TestCase
 {
 
     /** @var resource */
@@ -23,7 +24,7 @@ class PublicKeyTest extends \PHPUnit_Framework_TestCase
     /**
      * Initialize the test by loading the file ourselves.
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->f = file_get_contents('tests/pubkey.pem');
         $this->pubKey = openssl_pkey_get_details(openssl_pkey_get_public($this->f));
@@ -53,11 +54,10 @@ class PublicKeyTest extends \PHPUnit_Framework_TestCase
 
     /**
      * Test failure to create key from missing file.
-     *
-     * @expectedException InvalidArgumentException
      */
     public function testFromMissingFile()
     {
+        $this->expectException(InvalidArgumentException::class);
         @PublicKey::fromFile('foo/bar');
     }
 

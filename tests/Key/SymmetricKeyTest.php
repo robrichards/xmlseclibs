@@ -2,6 +2,7 @@
 
 namespace SimpleSAML\XMLSec\Test\Key;
 
+use PHPUnit\Framework\TestCase;
 use SimpleSAML\XMLSec\Key\SymmetricKey;
 
 /**
@@ -9,7 +10,7 @@ use SimpleSAML\XMLSec\Key\SymmetricKey;
  *
  * @package SimpleSAML\XMLSec\Test\Key
  */
-class SymmetricKeyTest extends \PHPUnit_Framework_TestCase
+class SymmetricKeyTest extends TestCase
 {
 
     /**

@@ -2,9 +2,11 @@
 
 namespace SimpleSAML\XMLSec\Test\Alg;
 
+use PHPUnit\Framework\TestCase;
 use SimpleSAML\XMLSec\Alg\Signature\HMAC;
 use SimpleSAML\XMLSec\Alg\Signature\SignatureAlgorithmFactory;
 use SimpleSAML\XMLSec\Constants;
+use SimpleSAML\XMLSec\Exception\InvalidArgumentException;
 use SimpleSAML\XMLSec\Key\PrivateKey;
 use SimpleSAML\XMLSec\Key\PublicKey;
 use SimpleSAML\XMLSec\Key\SymmetricKey;
@@ -15,7 +17,7 @@ use SimpleSAML\XMLSec\Key\X509Certificate;
  *
  * @package SimpleSAML\Test\Signature
  */
-class HMACSignatureTest extends \PHPUnit_Framework_TestCase
+class HMACSignatureTest extends TestCase
 {
 
     /** @var string */
@@ -28,7 +30,7 @@ class HMACSignatureTest extends \PHPUnit_Framework_TestCase
     protected $factory;
 
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->factory = new SignatureAlgorithmFactory([]);
     }

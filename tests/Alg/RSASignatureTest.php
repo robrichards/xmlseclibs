@@ -2,6 +2,8 @@
 
 namespace SimpleSAML\XMLSec\Test\Alg;
 
+use PHPUnit\Framework\Error\Error;
+use PHPUnit\Framework\TestCase;
 use SimpleSAML\XMLSec\Alg\Signature\RSA;
 use SimpleSAML\XMLSec\Alg\Signature\SignatureAlgorithmFactory;
 use SimpleSAML\XMLSec\Constants;
@@ -15,7 +17,7 @@ use SimpleSAML\XMLSec\Key\X509Certificate;
  *
  * @package SimpleSAML\XMLSec\Test\Alg
  */
-class RSASignatureTest extends \PHPUnit_Framework_TestCase
+class RSASignatureTest extends TestCase
 {
 
     /** @var PrivateKey */
@@ -31,7 +33,7 @@ class RSASignatureTest extends \PHPUnit_Framework_TestCase
     protected $factory;
 
 
-    public function setUp()
+    public function setUp(): void
     {
         $this->publicKey = PublicKey::fromFile('tests/pubkey.pem');
         $this->privateKey = PrivateKey::fromFile('tests/privkey.pem');

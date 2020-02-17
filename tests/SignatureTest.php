@@ -2,6 +2,7 @@
 
 namespace SimpleSAML\XMLSec\Test;
 
+use PHPUnit\Framework\TestCase;
 use SimpleSAML\XMLSec\Constants as C;
 use SimpleSAML\XMLSec\Exception\InvalidArgumentException;
 use SimpleSAML\XMLSec\Key\PrivateKey;
@@ -14,7 +15,7 @@ use SimpleSAML\XMLSec\Utils\DOMDocumentFactory;
  *
  * @package SimpleSAML\XMLSec\Test
  */
-class SignatureTest extends \PHPUnit_Framework_TestCase
+class SignatureTest extends TestCase
 {
 
     /** @var \DOMDocument */
@@ -41,7 +42,7 @@ class SignatureTest extends \PHPUnit_Framework_TestCase
     /**
      * Initialization for all tests.
      */
-    public function setUp()
+    public function setUp(): void
     {
         $this->basicDoc = DOMDocumentFactory::fromFile('tests/xml/basic-doc.xml');
     }
@@ -309,13 +310,12 @@ class SignatureTest extends \PHPUnit_Framework_TestCase
 
     /**
      * Test that signing with a blacklisted algorithm fails.
-     *
-     * @expectedException InvalidArgumentException
      */
     public function testSignWithBlacklistedAlg()
     {
         $signature = new Signature($this->basicDoc->documentElement);
         $signature->addReference($this->basicDoc, C::DIGEST_SHA1, [C::XMLDSIG_ENVELOPED]);
+        $this->expectException(InvalidArgumentException::class);
         $signature->sign($this->privKey, C::SIG_RSA_SHA1);
     }
 
@@ -483,27 +483,25 @@ class SignatureTest extends \PHPUnit_Framework_TestCase
 
     /**
      * Test verifying a signature with the default blacklisted algorithms.
-     *
-     * @expectedException InvalidArgumentException
      */
     public function testVerifySigWithAlgBlacklistedByDefault()
     {
         $xml = DOMDocumentFactory::fromFile('tests/xml/sign-basic-test.xml');
         $signature = Signature::fromXML($xml->documentElement);
+        $this->expectException(InvalidArgumentException::class);
         $signature->verify($this->cert);
     }
 
 
     /**
      * Test verifying a signature with a blacklisted algorithm.
-     *
-     * @expectedException InvalidArgumentException
      */
     public function testVerifySigWithCustomBlacklistedAlg()
     {
         $xml = DOMDocumentFactory::fromFile('tests/xml/sign-sha256-rsa-sha256-test.xml');
         $signature = Signature::fromXML($xml->documentElement);
         $signature->setBlacklistedAlgorithms([C::SIG_RSA_SHA256]);
+        $this->expectException(InvalidArgumentException::class);
         $signature->verify($this->cert);
     }
 

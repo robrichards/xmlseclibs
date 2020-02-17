@@ -2,6 +2,7 @@
 
 namespace SimpleSAML\XMLSec\Test\Key;
 
+use PHPUnit\Framework\TestCase;
 use SimpleSAML\XMLSec\Constants;
 use SimpleSAML\XMLSec\Exception\InvalidArgumentException;
 use SimpleSAML\XMLSec\Key\X509Certificate;
@@ -11,7 +12,7 @@ use SimpleSAML\XMLSec\Key\X509Certificate;
  *
  * @package SimpleSAML\XMLSec\Test\Key
  */
-class X509CertificateTest extends \PHPUnit_Framework_TestCase
+class X509CertificateTest extends TestCase
 {
 
     /** @var resource */
@@ -27,7 +28,7 @@ class X509CertificateTest extends \PHPUnit_Framework_TestCase
     /**
      * Initialize the test by loading the file ourselves.
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->f = file_get_contents('tests/mycert.pem');
         $this->cert = openssl_pkey_get_details(openssl_pkey_get_public(openssl_x509_read($this->f)));
@@ -83,11 +84,10 @@ class X509CertificateTest extends \PHPUnit_Framework_TestCase
 
     /**
      * Test thumbprint generation with an invalid digest algorithm.
-     *
-     * @expectedException InvalidArgumentException
      */
     public function testGetRawThumbprintWithWrongAlg()
     {
+        $this->expectException(InvalidArgumentException::class);
         $this->c->getRawThumbprint('invalid');
     }
 

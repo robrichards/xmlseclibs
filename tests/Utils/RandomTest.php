@@ -2,6 +2,7 @@
 
 namespace SimpleSAML\XMLSec\Test\Utils;
 
+use PHPUnit\Framework\TestCase;
 use SimpleSAML\XMLSec\Utils\Random;
 
 /**
@@ -9,7 +10,7 @@ use SimpleSAML\XMLSec\Utils\Random;
  *
  * @package SimpleSAML\XMLSec\Test\Utils
  */
-class RandomTest extends \PHPUnit_Framework_TestCase
+class RandomTest extends TestCase
 {
 
     /**

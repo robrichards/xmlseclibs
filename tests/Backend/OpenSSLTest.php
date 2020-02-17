@@ -3,6 +3,8 @@
 namespace SimpleSAML\Test\Backend;
 
 use SimpleSAML\XMLSec\Backend\OpenSSL;
+use PHPUnit\Framework\Error\Error;
+use PHPUnit\Framework\TestCase;
 use SimpleSAML\XMLSec\Constants;
 use SimpleSAML\XMLSec\Exception\InvalidArgumentException;
 use SimpleSAML\XMLSec\Exception\RuntimeException;
@@ -15,7 +17,7 @@ use SimpleSAML\XMLSec\Key\SymmetricKey;
  *
  * @package SimpleSAML\Test\Backend
  */
-class OpenSSLTest extends \PHPUnit_Framework_TestCase
+class OpenSSLTest extends TestCase
 {
 
     /** @var PrivateKey */
@@ -33,7 +35,7 @@ class OpenSSLTest extends \PHPUnit_Framework_TestCase
     /** @var SymmetricKey */
     protected $sharedKey;
 
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->privKey = PrivateKey::fromFile('tests/privkey.pem');
         $this->pubKey = PublicKey::fromFile('tests/pubkey.pem');

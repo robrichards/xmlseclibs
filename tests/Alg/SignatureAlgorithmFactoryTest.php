@@ -2,6 +2,7 @@
 
 namespace SimpleSAML\XMLSec\Test\Alg;
 
+use PHPUnit\Framework\TestCase;
 use SimpleSAML\XMLSec\Alg\Signature\SignatureAlgorithmFactory;
 use SimpleSAML\XMLSec\Constants;
 use SimpleSAML\XMLSec\Exception\InvalidArgumentException;
@@ -14,7 +15,7 @@ use SimpleSAML\XMLSec\Key\SymmetricKey;
  *
  * @package SimpleSAML\XMLSec\Test\Alg
  */
-class SignatureAlgorithmFactoryTest extends \PHPUnit_Framework_TestCase
+class SignatureAlgorithmFactoryTest extends TestCase
 {
 
     /** @var SymmetricKey */

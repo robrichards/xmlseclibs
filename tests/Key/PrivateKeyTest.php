@@ -2,6 +2,7 @@
 
 namespace SimpleSAML\XMLSec\Test\Key;
 
+use PHPUnit\Framework\TestCase;
 use SimpleSAML\XMLSec\Key\PrivateKey;
 
 /**
@@ -9,7 +10,7 @@ use SimpleSAML\XMLSec\Key\PrivateKey;
  *
  * @package SimpleSAML\XMLSec\Test\Key
  */
-class PrivateKeyTest extends \PHPUnit_Framework_TestCase
+class PrivateKeyTest extends TestCase
 {
 
     /** @var resource */
@@ -22,7 +23,7 @@ class PrivateKeyTest extends \PHPUnit_Framework_TestCase
     /**
      * Initialize the test by loading the file ourselves.
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->f = file_get_contents('tests/privkey.pem');
         $this->privKey = openssl_pkey_get_details(openssl_pkey_get_private($this->f));

@@ -1,6 +1,7 @@
 <?php
 namespace SimpleSAML\XMLSec\Test\Utils;
 
+use PHPUnit\Framework\TestCase;
 use SimpleSAML\XMLSec\Utils\Security;
 
 /**
@@ -8,7 +9,7 @@ use SimpleSAML\XMLSec\Utils\Security;
  *
  * @package SimpleSAML\XMLSec\Test\Utils
  */
-class SecurityTest extends \PHPUnit_Framework_TestCase
+class SecurityTest extends TestCase
 {
 
     /**

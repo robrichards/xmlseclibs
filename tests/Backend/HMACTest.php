@@ -2,6 +2,7 @@
 
 namespace SimpleSAML\Test\Backend;
 
+use PHPUnit\Framework\TestCase;
 use SimpleSAML\XMLSec\Backend\HMAC;
 use SimpleSAML\XMLSec\Constants;
 use SimpleSAML\XMLSec\Exception\InvalidArgumentException;
@@ -12,7 +13,7 @@ use SimpleSAML\XMLSec\Key\SymmetricKey;
  *
  * @package SimpleSAML\Test\Backend
  */
-class HMACTest extends \PHPUnit_Framework_TestCase
+class HMACTest extends TestCase
 {
 
     const PLAINTEXT = "plaintext";
@@ -26,7 +27,7 @@ class HMACTest extends \PHPUnit_Framework_TestCase
     /**
      * Initialize shared key.
      */
-    protected function setUp()
+    protected function setUp(): void
     {
         $this->key = new SymmetricKey(self::SECRET);
     }

@@ -2,6 +2,10 @@
 
 namespace SimpleSAML\XMLSec\Test\Utils;
 
+use PHPUnit\Framework\TestCase;
+use SimpleSAML\XMLSec\Exception\InvalidArgumentException;
+use SimpleSAML\XMLSec\Exception\RuntimeException;
+use SimpleSAML\XMLSec\Exception\UnparseableXmlException;
 use SimpleSAML\XMLSec\Utils\DOMDocumentFactory;
 
 /**
@@ -9,7 +13,7 @@ use SimpleSAML\XMLSec\Utils\DOMDocumentFactory;
  *
  * @package SimpleSAML\XMLSec\Test\Utils
  */
-class DOMDocumentFactoryTest extends \PHPUnit_Framework_TestCase
+class DOMDocumentFactoryTest extends TestCase
 {
 
     /**
@@ -32,22 +36,20 @@ class DOMDocumentFactoryTest extends \PHPUnit_Framework_TestCase
 
     /**
      * Test wrong argument type passed to fromFile().
-     *
-     * @expectedException \SimpleSAML\XMLSec\Exception\InvalidArgumentException
      */
     public function testFromFileWrongArgument()
     {
+        $this->expectException(InvalidArgumentException::class);
         DOMDocumentFactory::fromFile([]);
     }
 
 
     /**
      * Test missing file.
-     *
-     * @expectedException \SimpleSAML\XMLSec\Exception\InvalidArgumentException
      */
     public function testFromInvalidFile()
     {
+        $this->expectException(InvalidArgumentException::class);
         DOMDocumentFactory::fromFile('/foo/bar');
     }
 
@@ -63,33 +65,30 @@ class DOMDocumentFactoryTest extends \PHPUnit_Framework_TestCase
 
     /**
      * Test creation from an empty string.
-     *
-     * @expectedException \SimpleSAML\XMLSec\Exception\InvalidArgumentException
      */
     public function testFromEmptyString()
     {
+        $this->expectException(InvalidArgumentException::class);
         DOMDocumentFactory::fromString('');
     }
 
 
     /**
      * Test creation from a string that doesn't contain valid XML.
-     *
-     * @expectedException \SimpleSAML\XMLSec\Exception\UnparseableXmlException
      */
     public function testFromUnparseableString()
     {
+        $this->expectException(UnparseableXmlException::class);
         DOMDocumentFactory::fromString('>this is not valid XML<');
     }
 
 
     /**
      * Test creation from a string containing potentially dangerous XML.
-     *
-     * @expectedException \SimpleSAML\XMLSec\Exception\RuntimeException
      */
     public function testFromStringDangerousXML()
     {
+        $this->expectException(RuntimeException::class);
         DOMDocumentFactory::fromString('<!DOCTYPE test [<!ENTITY foo "bar">]>');
     }
 }
