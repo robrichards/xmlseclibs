@@ -7,6 +7,7 @@ use PHPUnit\Framework\TestCase;
 use SimpleSAML\XMLSec\Alg\Signature\RSA;
 use SimpleSAML\XMLSec\Alg\Signature\SignatureAlgorithmFactory;
 use SimpleSAML\XMLSec\Constants;
+use SimpleSAML\XMLSec\Exception\RuntimeException;
 use SimpleSAML\XMLSec\Key\PrivateKey;
 use SimpleSAML\XMLSec\Key\PublicKey;
 use SimpleSAML\XMLSec\Key\SymmetricKey;
@@ -268,11 +269,11 @@ class RSASignatureTest extends TestCase
     {
         $key = SymmetricKey::generate(16);
         if (version_compare(phpversion(), '7.0', '>=')) {
-            $this->setExpectedException('TypeError');
+            $this->expectException(TypeError::class);
             new RSA($key);
         } else {
             // test via factory
-            $this->setExpectedException('RuntimeException');
+            $this->expectException(RuntimeException::class);
             $this->factory->getAlgorithm(Constants::SIG_RSA_SHA1, $key);
         }
     }
