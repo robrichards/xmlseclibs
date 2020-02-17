@@ -269,7 +269,7 @@ class RSASignatureTest extends TestCase
     {
         $key = SymmetricKey::generate(16);
         if (version_compare(phpversion(), '7.0', '>=')) {
-            $this->expectException(TypeError::class);
+            $this->expectException(\TypeError::class);
             new RSA($key);
         } else {
             // test via factory
