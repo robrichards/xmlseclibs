@@ -1,40 +1,41 @@
 {
-  "name": "simplesamlphp/xmlsec",
-  "description": "A PHP library for XML Security",
-  "license": "BSD-3-Clause",
-  "keywords": [
-    "xml",
-    "xmldsig",
-    "signature",
-    "security"
-  ],
-  "homepage": "https://github.com/simplesamlphp/xmlsec",
-  "authors": [
-    {
-        "name": "Rob Richards",
-        "email": "rrichards@cdatazone.org",
-        "homepage": "https://www.cdatazone.org/",
-        "role": "Developer"
+    "name": "simplesamlphp/xmlsec",
+    "description": "A PHP library for XML Security",
+    "license": "BSD-3-Clause",
+    "keywords": [
+        "xml",
+        "xmldsig",
+        "signature",
+        "security"
+    ],
+    "homepage": "https://github.com/simplesamlphp/xmlsec",
+    "authors": [
+        {
+            "name": "Rob Richards",
+            "email": "rrichards@cdatazone.org",
+            "homepage": "https://www.cdatazone.org/",
+            "role": "Developer"
+        },
+        {
+            "name": "Jaime Perez Crespo",
+            "email": "jaime.perez@uninett.no",
+            "role": "Maintainer"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "SimpleSAML\\XMLSec\\": "src"
+        }
     },
-    {
-        "name": "Jaime Perez Crespo",
-        "email": "jaime.perez@uninett.no",
-        "role": "Maintainer"
+    "require": {
+        "php": ">= 7.2",
+        "ext-openssl": "*",
+        "ext-dom": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "~8.5.2"
+    },
+    "suggest": {
+        "paragonie/random_compat": "When running PHP versions older than 7, this polyfill allows to generate cryptographically secure random data"
     }
-  ],
-  "autoload": {
-    "psr-4": {
-      "SimpleSAML\\XMLSec\\": "src"
-    }
-  },
-  "require": {
-    "php": ">= 5.4",
-    "ext-openssl": "*"
-  },
-  "require-dev": {
-    "phpunit/phpunit": "~4.8"
-  },
-  "suggest": {
-    "paragonie/random_compat": "When running PHP versions older than 7, this polyfill allows to generate cryptographically secure random data"
-  }
 }
