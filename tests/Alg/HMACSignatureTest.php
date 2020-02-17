@@ -7,6 +7,7 @@ use SimpleSAML\XMLSec\Alg\Signature\HMAC;
 use SimpleSAML\XMLSec\Alg\Signature\SignatureAlgorithmFactory;
 use SimpleSAML\XMLSec\Constants;
 use SimpleSAML\XMLSec\Exception\InvalidArgumentException;
+use SimpleSAML\XMLSec\Exception\RuntimeException;
 use SimpleSAML\XMLSec\Key\PrivateKey;
 use SimpleSAML\XMLSec\Key\PublicKey;
 use SimpleSAML\XMLSec\Key\SymmetricKey;
@@ -159,11 +160,11 @@ class HMACSignatureTest extends TestCase
         $cert = X509Certificate::fromFile('tests/mycert.pem');
         if (version_compare(phpversion(), '7.0', '>=')) {
             // test type errors when possible
-            $this->setExpectedException('TypeError');
+            $this->expectException(\TypeError::class);
             new HMAC($cert);
         } else {
             // test via factory
-            $this->setExpectedException('RuntimeException');
+            $this->expectException(\RuntimeException::class);
             $this->factory->getAlgorithm(Constants::SIG_HMAC_SHA1, $cert);
         }
     }
@@ -177,11 +178,11 @@ class HMACSignatureTest extends TestCase
         $key = PublicKey::fromFile('tests/pubkey.pem');
         if (version_compare(phpversion(), '7.0', '>=')) {
             // test type errors when possible
-            $this->setExpectedException('TypeError');
+            $this->expectException(TypeError::class);
             new HMAC($key);
         } else {
             // test via factory
-            $this->setExpectedException('RuntimeException');
+            $this->expectException(RuntimeException::class);
             $this->factory->getAlgorithm(Constants::SIG_HMAC_SHA1, $key);
         }
     }
@@ -195,11 +196,11 @@ class HMACSignatureTest extends TestCase
         $key = PrivateKey::fromFile('tests/privkey.pem');
         if (version_compare(phpversion(), '7.0', '>=')) {
             // test type errors when possible
-            $this->setExpectedException('TypeError');
+            $this->expectException(TypeError::class);
             new HMAC($key);
         } else {
             // test via factory
-            $this->setExpectedException('RuntimeException');
+            $this->expectException(RuntimeException::class);
             $this->factory->getAlgorithm(Constants::SIG_HMAC_SHA1, $key);
         }
     }
