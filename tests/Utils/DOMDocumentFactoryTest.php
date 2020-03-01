@@ -35,16 +35,6 @@ class DOMDocumentFactoryTest extends TestCase
 
 
     /**
-     * Test wrong argument type passed to fromFile().
-     */
-    public function testFromFileWrongArgument()
-    {
-        $this->expectException(InvalidArgumentException::class);
-        DOMDocumentFactory::fromFile([]);
-    }
-
-
-    /**
      * Test missing file.
      */
     public function testFromInvalidFile()

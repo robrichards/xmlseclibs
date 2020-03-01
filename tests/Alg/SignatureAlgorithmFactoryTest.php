@@ -3,6 +3,7 @@
 namespace SimpleSAML\XMLSec\Test\Alg;
 
 use PHPUnit\Framework\TestCase;
+use SimpleSAML\XMLSec\Alg\Signature\HMAC;
 use SimpleSAML\XMLSec\Alg\Signature\SignatureAlgorithmFactory;
 use SimpleSAML\XMLSec\Constants;
 use SimpleSAML\XMLSec\Exception\InvalidArgumentException;
@@ -17,7 +18,6 @@ use SimpleSAML\XMLSec\Key\SymmetricKey;
  */
 class SignatureAlgorithmFactoryTest extends TestCase
 {
-
     /** @var SymmetricKey */
     protected $skey;
 
@@ -70,12 +70,11 @@ class SignatureAlgorithmFactoryTest extends TestCase
 
     /**
      * Test for unsupported algorithms.
-     *
-     * @expectedException RuntimeException
      */
     public function testGetUnknownAlgorithm()
     {
         $factory = new SignatureAlgorithmFactory([]);
+        $this->expectException(RuntimeException::class);
         $factory->getAlgorithm('Unknown alg', $this->skey);
     }
 
@@ -89,9 +88,11 @@ class SignatureAlgorithmFactoryTest extends TestCase
     {
         $factory = new SignatureAlgorithmFactory([Constants::SIG_RSA_SHA1]);
         $this->assertInstanceOf(
-            '\SimpleSAML\XMLSec\Alg\Signature\HMAC',
+            HMAC::class,
             $factory->getAlgorithm(Constants::SIG_HMAC_SHA1, $this->skey)
         );
+
+        $this->expectException(InvalidArgumentException::class);
         $factory->getAlgorithm(Constants::SIG_RSA_SHA1, $this->pkey);
     }
 }

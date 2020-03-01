@@ -46,12 +46,11 @@ class HMACTest extends TestCase
 
     /**
      * Test for wrong digests.
-     *
-     * @expectedException InvalidArgumentException
      */
     public function testSetUnknownDigest()
     {
         $backend = new HMAC();
+        $this->expectException(InvalidArgumentException::class);
         $backend->setDigestAlg('foo');
     }
 

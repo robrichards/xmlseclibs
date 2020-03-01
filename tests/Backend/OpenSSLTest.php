@@ -64,12 +64,11 @@ class OpenSSLTest extends TestCase
 
     /**
      * Test signing with something that's not a private key.
-     *
-     * @expectedException RuntimeException
      */
     public function testSignFailure()
     {
         $k = SymmetricKey::generate(10);
+        $this->expectException(RuntimeException::class);
         @$this->backend->sign($k, 'Signed text');
     }
 
@@ -159,12 +158,11 @@ class OpenSSLTest extends TestCase
 
     /**
      * Test for wrong digests.
-     *
-     * @expectedException InvalidArgumentException
      */
     public function testSetUnknownDigest()
     {
         $backend = new OpenSSL();
+        $this->expectException(InvalidArgumentException::class);
         $backend->setDigestAlg('foo');
     }
 
@@ -198,12 +196,11 @@ class OpenSSLTest extends TestCase
 
     /**
      * Test for wrong ciphers.
-     *
-     * @expectedException InvalidArgumentException
      */
     public function testSetUnknownCipher()
     {
         $backend = new OpenSSL();
+        $this->expectException(InvalidArgumentException::class);
         $backend->setCipher('foo');
     }
 }
