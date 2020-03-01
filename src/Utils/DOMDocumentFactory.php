@@ -2,6 +2,7 @@
 
 namespace SimpleSAML\XMLSec\Utils;
 
+use DOMDocument;
 use SimpleSAML\XMLSec\Exception\InvalidArgumentException;
 use SimpleSAML\XMLSec\Exception\RuntimeException;
 use SimpleSAML\XMLSec\Exception\UnparseableXmlException;
@@ -17,6 +18,7 @@ final class DOMDocumentFactory
     {
     }
 
+
     /**
      * Create a new DOM document from a string.
      *
@@ -24,9 +26,9 @@ final class DOMDocumentFactory
      *
      * @return \DOMDocument The DOM document containing the given XML contents.
      */
-    public static function fromString($xml)
+    public static function fromString(string $xml): DOMDocument
     {
-        if (!is_string($xml) || trim($xml) === '') {
+        if (trim($xml) === '') {
             throw InvalidArgumentException::invalidType('non-empty string', $xml);
         }
 
@@ -65,6 +67,7 @@ final class DOMDocumentFactory
         return $domDocument;
     }
 
+
     /**
      * Create a new DOM document from a file.
      *
@@ -72,7 +75,7 @@ final class DOMDocumentFactory
      *
      * @return \DOMDocument The DOM document with the XML contents of the file.
      */
-    public static function fromFile($file)
+    public static function fromFile(string $file): DOMDocument
     {
         if (!is_string($file)) {
             throw InvalidArgumentException::invalidType('string', $file);
@@ -103,13 +106,14 @@ final class DOMDocumentFactory
         return static::fromString($xml);
     }
 
+
     /**
      * Create a new DOM document.
      *
      * @return \DOMDocument The new document.
      */
-    public static function create()
+    public static function create(): DOMDocument
     {
-        return new \DOMDocument();
+        return new DOMDocument();
     }
 }

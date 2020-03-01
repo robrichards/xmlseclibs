@@ -11,6 +11,5 @@ namespace SimpleSAML\XMLSec\Exception;
  */
 class NoSignatureFound extends RuntimeException
 {
-
     protected $message = "There is no signature in the document or element.";
 }

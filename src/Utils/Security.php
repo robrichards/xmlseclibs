@@ -9,32 +9,6 @@ namespace SimpleSAML\XMLSec\Utils;
  */
 class Security
 {
-
-    /**
-     * Manually compare two strings in constant time.
-     *
-     * @param string $known The reference string.
-     * @param string $user The user-provided string to test.
-     *
-     * @return bool True if both strings are equal, false otherwise.
-     */
-    protected static function manuallyCompareStrings($known, $user)
-    {
-        $len = mb_strlen($known, '8bit');
-        if ($len !== mb_strlen($user, '8bit')) {
-            return false; // length differs
-        }
-
-        $diff = 0;
-        for ($i = 0; $i < $len; $i++) {
-            $diff |= ord($known[$i]) ^ ord($user[$i]);
-        }
-
-        // if all the bytes in $known and $user are identical, $diff should be equal to 0
-        return $diff === 0;
-    }
-
-
     /**
      * Compare two strings in constant time.
      *
@@ -46,14 +20,8 @@ class Security
      *
      * @return bool True if both strings are equal, false otherwise.
      */
-    public static function compareStrings($known, $user)
+    public static function compareStrings(string $known, string $user): bool
     {
-        if (function_exists('hash_equals')) {
-            // use hash_equals() if available (PHP >= 5.6)
-            return hash_equals($known, $user);
-        }
-
-        // compare manually in constant time
-        return self::manuallyCompareStrings($known, $user);
+        return hash_equals($known, $user);
     }
 }

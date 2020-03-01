@@ -17,7 +17,6 @@ use SimpleSAML\XMLSec\Key\SymmetricKey;
  */
 class SignatureAlgorithmFactory
 {
-
     /**
      * An array of blacklisted algorithms.
      *
@@ -36,7 +35,7 @@ class SignatureAlgorithmFactory
      *
      * @param string[]|null $blacklist
      */
-    public function __construct($blacklist = null)
+    public function __construct(array $blacklist = null)
     {
         if ($blacklist !== null) {
             $this->blacklist = $blacklist;
@@ -48,14 +47,14 @@ class SignatureAlgorithmFactory
      * Get a new object implementing the given digital signature algorithm.
      *
      * @param string $algId The identifier of the algorithm desired.
-     * @param AbstractKey $key The key to use with the given algorithm.
+     * @param \SimpleSAML\XMLSec\Key\AbstractKey $key The key to use with the given algorithm.
      *
-     * @return SignatureAlgorithm An object implementing the given algorithm.
+     * @return \SimpleSAML\XMLSec\Alg\SignatureAlgorithm An object implementing the given algorithm.
      *
      * @throws InvalidArgumentException If an error occurs, e.g. the given algorithm is blacklisted, unknown or the
      * given key is not suitable for it.
      */
-    public function getAlgorithm($algId, AbstractKey $key)
+    public function getAlgorithm(string $algId, AbstractKey $key): SignatureAlgorithm
     {
         if (in_array($algId, $this->blacklist)) {
             throw new InvalidArgumentException('Blacklisted signature algorithm');

@@ -11,13 +11,14 @@ use SimpleSAML\XMLSec\Backend\EncryptionBackend;
  */
 interface EncryptionAlgorithm
 {
-
     /**
      * Set the backend to use for actual computations by this algorithm.
      *
      * @param EncryptionBackend $backend The encryption backend to use.
+     *
+     * @return void
      */
-    public function setBackend(EncryptionBackend $backend);
+    public function setBackend(EncryptionBackend $backend): void;
 
 
     /**
@@ -27,7 +28,7 @@ interface EncryptionAlgorithm
      *
      * @return string The encrypted plaintext (ciphertext).
      */
-    public function encrypt($plaintext);
+    public function encrypt(string $plaintext): string;
 
 
     /**
@@ -37,5 +38,5 @@ interface EncryptionAlgorithm
      *
      * @return string The decrypted ciphertext (plaintext).
      */
-    public function decrypt($ciphertext);
+    public function decrypt(string $ciphertext): string;
 }

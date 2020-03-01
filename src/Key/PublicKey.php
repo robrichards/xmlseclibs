@@ -11,11 +11,10 @@ use SimpleSAML\XMLSec\Exception\InvalidArgumentException;
  */
 class PublicKey extends AsymmetricKey
 {
-
     /**
      * Create a new public key from the PEM-encoded key material.
      *
-     * @param string $key The PEM-encoded key material.
+     * @param resource|string $key The PEM-encoded key material.
      */
     public function __construct($key)
     {
@@ -28,11 +27,11 @@ class PublicKey extends AsymmetricKey
      *
      * @param string $file The file where the PEM-encoded public key is stored.
      *
-     * @return PublicKey A new public key.
+     * @return \SimpleSAML\XMLSec\Key\PublicKey A new public key.
      *
-     * @throws InvalidArgumentException If the file cannot be read.
+     * @throws \SimpleSAML\XMLSec\Exception\InvalidArgumentException If the file cannot be read.
      */
-    public static function fromFile($file)
+    public static function fromFile(string $file): PublicKey
     {
         return new static(static::readFile($file));
     }
@@ -46,16 +45,16 @@ class PublicKey extends AsymmetricKey
      *
      * @return null|string The encoded data, or null if it was too long.
      */
-    protected static function makeASN1Segment($type, $string)
+    protected static function makeASN1Segment(int $type, string $string): ?string
     {
         switch ($type) {
             case 0x02:
                 if (ord($string) > 0x7f) {
-                    $string = chr(0).$string;
+                    $string = chr(0) . $string;
                 }
                 break;
             case 0x03:
-                $string = chr(0).$string;
+                $string = chr(0) . $string;
                 break;
         }
 
@@ -82,20 +81,20 @@ class PublicKey extends AsymmetricKey
      *
      * @return PublicKey A new public key with the given modulus and exponent.
      */
-    public static function fromDetails($modulus, $exponent)
+    public static function fromDetails(string $modulus, string $exponent): PublicKey
     {
         return new static(
-            "-----BEGIN PUBLIC KEY-----\n".
+            "-----BEGIN PUBLIC KEY-----\n" .
             chunk_split(
                 base64_encode(
                     self::makeASN1Segment(
                         0x30,
-                        pack("H*", "300D06092A864886F70D0101010500"). // RSA alg id
+                        pack("H*", "300D06092A864886F70D0101010500") . // RSA alg id
                         self::makeASN1Segment( // bitstring
                             0x03,
                             self::makeASN1Segment( // sequence
                                 0x30,
-                                self::makeASN1Segment(0x02, $modulus).
+                                self::makeASN1Segment(0x02, $modulus) .
                                 self::makeASN1Segment(0x02, $exponent)
                             )
                         )
@@ -103,7 +102,7 @@ class PublicKey extends AsymmetricKey
                 ),
                 64,
                 "\n"
-            ).
+            ) .
             "-----END PUBLIC KEY-----\n"
         );
     }

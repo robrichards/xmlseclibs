@@ -11,14 +11,13 @@ use SimpleSAML\XMLSec\Exception\InvalidArgumentException;
  */
 class PrivateKey extends AsymmetricKey
 {
-
     /**
      * Create a new private key from the PEM-encoded key material.
      *
      * @param string $key The PEM-encoded key material.
      * @param string $passphrase An optional passphrase used to decrypt the given key material.
      */
-    public function __construct($key, $passphrase = "")
+    public function __construct(string $key, string $passphrase = "")
     {
         parent::__construct(openssl_pkey_get_private($key, $passphrase));
     }
@@ -30,11 +29,11 @@ class PrivateKey extends AsymmetricKey
      * @param string $file The file where the PEM-encoded private key is stored.
      * @param string $passphrase An optional passphrase used to decrypt the given key material.
      *
-     * @return PrivateKey A new private key.
+     * @return \SimpleSAML\XMLSec\Key\PrivateKey A new private key.
      *
-     * @throws InvalidArgumentException If the file cannot be read.
+     * @throws \SimpleSAML\XMLSec\Exception\InvalidArgumentException If the file cannot be read.
      */
-    public static function fromFile($file, $passphrase = "")
+    public static function fromFile(string $file, string $passphrase = ""): PrivateKey
     {
         return new static(self::readFile($file), $passphrase);
     }

@@ -14,7 +14,6 @@ use SimpleSAML\XMLSec\Utils\Security;
  */
 final class HMAC implements SignatureBackend
 {
-
     /** @var string */
     protected $digest;
 
@@ -33,9 +32,9 @@ final class HMAC implements SignatureBackend
      *
      * @param string $digest The identifier of the digest algorithm.
      *
-     * @throws InvalidArgumentException If the given digest is not valid.
+     * @throws \SimpleSAML\XMLSec\Exception\InvalidArgumentException If the given digest is not valid.
      */
-    public function setDigestAlg($digest)
+    public function setDigestAlg(string $digest): void
     {
         if (!isset(Constants::$DIGEST_ALGORITHMS[$digest])) {
             throw new InvalidArgumentException('Unknown digest or non-cryptographic hash function.');
@@ -47,12 +46,12 @@ final class HMAC implements SignatureBackend
     /**
      * Sign a given plaintext with this cipher and a given key.
      *
-     * @param AbstractKey $key The key to use to sign.
+     * @param \SimpleSAML\XMLSec\Key\AbstractKey $key The key to use to sign.
      * @param string $plaintext The original text to sign.
      *
      * @return string The (binary) signature corresponding to the given plaintext.
      */
-    public function sign(AbstractKey $key, $plaintext)
+    public function sign(AbstractKey $key, string $plaintext): string
     {
         return hash_hmac($this->digest, $plaintext, $key->get(), true);
     }
@@ -61,13 +60,13 @@ final class HMAC implements SignatureBackend
     /**
      * Verify a signature with this cipher and a given key.
      *
-     * @param AbstractKey $key The key to use to.
+     * @param \SimpleSAML\XMLSec\Key\AbstractKey $key The key to use to.
      * @param string $plaintext The original signed text.
      * @param string $signature The (binary) signature to verify.
      *
      * @return boolean True if the signature can be verified, false otherwise.
      */
-    public function verify(AbstractKey $key, $plaintext, $signature)
+    public function verify(AbstractKey $key, string $plaintext, string $signature): bool
     {
         return Security::compareStrings(hash_hmac($this->digest, $plaintext, $key->get(), true), $signature);
     }

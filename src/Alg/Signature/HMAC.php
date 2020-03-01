@@ -20,10 +20,10 @@ class HMAC extends AbstractSigner implements SignatureAlgorithm
     /**
      * HMAC constructor.
      *
-     * @param SymmetricKey $key The symmetric key to use.
+     * @param \SimpleSAML\XMLSec\Key\SymmetricKey $key The symmetric key to use.
      * @param string $digest The identifier of the digest algorithm to use.
      */
-    public function __construct(SymmetricKey $key, $digest = Constants::DIGEST_SHA1)
+    public function __construct(SymmetricKey $key, string $digest = Constants::DIGEST_SHA1)
     {
         parent::__construct($key, $digest);
     }

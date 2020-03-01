@@ -13,7 +13,6 @@ use SimpleSAML\XMLSec\Key\AbstractKey;
  */
 interface EncryptionBackend
 {
-
     /**
      * Set the cipher to be used by the backend.
      *
@@ -23,31 +22,31 @@ interface EncryptionBackend
      *
      * @see \SimpleSAML\XMLSec\Constants
      */
-    public function setCipher($cipher);
+    public function setCipher(string $cipher): void;
 
 
     /**
      * Encrypt a given plaintext with this cipher and a given key.
      *
-     * @param AbstractKey $key The key to use to encrypt.
+     * @param \SimpleSAML\XMLSec\Key\AbstractKey $key The key to use to encrypt.
      * @param string $plaintext The original text to encrypt.
      *
      * @return string The encrypted plaintext (ciphertext).
      *
-     * @throws RuntimeException If there is an error while encrypting the plaintext.
+     * @throws \SimpleSAML\XMLSec\Exception\RuntimeException If there is an error while encrypting the plaintext.
      */
-    public function encrypt(AbstractKey $key, $plaintext);
+    public function encrypt(AbstractKey $key, string $plaintext): string;
 
 
     /**
      * Decrypt a given ciphertext with this cipher and a given key.
      *
-     * @param AbstractKey $key The key to use to decrypt.
+     * @param \SimpleSAML\XMLSec\Key\AbstractKey $key The key to use to decrypt.
      * @param string $ciphertext The encrypted text to decrypt.
      *
      * @return string The decrypted ciphertext (plaintext).
      *
-     * @throws RuntimeException If there is an error while decrypting the ciphertext.
+     * @throws \SimpleSAML\XMLSec\Exception\RuntimeException If there is an error while decrypting the ciphertext.
      */
-    public function decrypt(AbstractKey $key, $ciphertext);
+    public function decrypt(AbstractKey $key, string $ciphertext): string;
 }

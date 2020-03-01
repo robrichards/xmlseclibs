@@ -20,10 +20,10 @@ class RSA extends AbstractSigner implements SignatureAlgorithm
     /**
      * RSA constructor.
      *
-     * @param AsymmetricKey $key The asymmetric key (either public or private) to use.
+     * @param \SimpleSAML\XMLSec\Key\AsymmetricKey $key The asymmetric key (either public or private) to use.
      * @param string $digest The identifier of the digest algorithm to use.
      */
-    public function __construct(AsymmetricKey $key, $digest = Constants::DIGEST_SHA1)
+    public function __construct(AsymmetricKey $key, string $digest = Constants::DIGEST_SHA1)
     {
         parent::__construct($key, $digest);
     }

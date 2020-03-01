@@ -2,6 +2,9 @@
 
 namespace SimpleSAML\XMLSec;
 
+use DOMDocument;
+use DOMElement;
+use DOMNode;
 use SimpleSAML\XMLSec\Alg\Signature\SignatureAlgorithmFactory;
 use SimpleSAML\XMLSec\Backend\SignatureBackend;
 use SimpleSAML\XMLSec\Constants as C;
@@ -80,8 +83,8 @@ class Signature
      * Signature constructor.
      *
      * @param \DOMElement|string $root The DOM element or a string of data we want to sign.
-     * @param SignatureBackend $backend The backend to use to generate or verify signatures. See individual algorithms
-     * for defaults.
+     * @param \SimpleSAML\XMLSec\Backend\SignatureBackend|null $backend The backend to use to
+     *   generate or verify signatures. See individual algorithms for defaults.
      */
     public function __construct($root, SignatureBackend $backend = null)
     {
@@ -109,7 +112,7 @@ class Signature
      *
      * @return \DOMElement The resulting object element added to the signature.
      */
-    public function addObject($data, $mimetype = null, $encoding = null)
+    public function addObject($data, string $mimetype = null, string $encoding = null): DOMElement
     {
         if ($this->objectNode === null) {
             $this->objectNode = $this->createElement('Object');
@@ -124,7 +127,7 @@ class Signature
             $this->objectNode->setAttribute('Encoding', $encoding);
         }
 
-        if ($data instanceof \DOMElement) {
+        if ($data instanceof DOMElement) {
             $this->objectNode->appendChild($this->sigNode->ownerDocument->importNode($data, true));
         } else {
             $this->objectNode->appendChild($this->sigNode->ownerDocument->createTextNode($data));
@@ -155,9 +158,10 @@ class Signature
      *   - overwrite (boolean): Whether to overwrite the identifier existing in the element referenced with a new,
      *     random one, or not. Defaults to true.
      *
-     * @throws InvalidArgumentException If $node is not an instance of DOMDocument or DOMElement.
+     * @throws \SimpleSAML\XMLSec\Exception\InvalidArgumentException If $node is not
+     *   an instance of DOMDocument or DOMElement.
      */
-    public function addReference(\DOMNode $node, $alg, array $transforms = [], array $options = [])
+    public function addReference(DOMNode $node, string $alg, array $transforms = [], array $options = []): void
     {
         if (!in_array(get_class($node), ['DOMDocument', 'DOMElement'])) {
             throw new InvalidArgumentException('Only references to the DOM document or elements are allowed.');
@@ -166,7 +170,7 @@ class Signature
         $prefix = @$options['prefix'] ?: null;
         $prefixNS = @$options['prefix_ns'] ?: null;
         $idName = @$options['id_name'] ?: 'Id';
-        $attrName = $prefix ? $prefix.':'.$idName : $idName;
+        $attrName = $prefix ? $prefix . ':' . $idName : $idName;
         $forceURI = true;
         if (isset($options['force_uri'])) {
             $forceURI = $options['force_uri'];
@@ -181,7 +185,7 @@ class Signature
 
         // register reference
         $includeCommentNodes = false;
-        if ($node instanceof \DOMElement) {
+        if ($node instanceof DOMElement) {
             $uri = null;
             /** @var \DOMElement $node */
             if (!$overwrite) {
@@ -192,13 +196,14 @@ class Signature
                 $node->setAttributeNS($prefixNS, $attrName, $uri);
             }
 
-            if (in_array(C::C14N_EXCLUSIVE_WITH_COMMENTS, $transforms) ||
-                in_array(C::C14N_INCLUSIVE_WITH_COMMENTS, $transforms)
+            if (
+                in_array(C::C14N_EXCLUSIVE_WITH_COMMENTS, $transforms)
+                || in_array(C::C14N_INCLUSIVE_WITH_COMMENTS, $transforms)
             ) {
                 $includeCommentNodes = true;
                 $reference->setAttribute('URI', "#xpointer($attrName('$uri'))");
             } else {
-                $reference->setAttribute('URI', '#'.$uri);
+                $reference->setAttribute('URI', '#' . $uri);
             }
         } elseif ($forceURI) {
             // $node is a \DOMDocument, should add a reference to the root element (enveloped signature)
@@ -258,12 +263,12 @@ class Signature
      * @param array $transforms An array of transforms to apply to each reference.
      * @param array $options An array of options.
      *
-     * @throws InvalidArgumentException If any of the nodes in the $nodes array is not an instance of DOMDocument or
-     * DOMElement.
+     * @throws \SimpleSAML\XMLSec\Exception\InvalidArgumentException If any of the nodes in the $nodes
+     *   array is not an instance of DOMDocument or DOMElement.
      *
      * @see addReference()
      */
-    public function addReferences($nodes, $alg, array $transforms = [], $options = [])
+    public function addReferences(array $nodes, string $alg, array $transforms = [], $options = []): void
     {
         foreach ($nodes as $node) {
             $this->addReference($node, $alg, $transforms, $options);
@@ -280,11 +285,16 @@ class Signature
      * otherwise.
      * @param boolean $addIssuerSerial Whether to add the serial number of the issuer or not.
      *
-     * @throws InvalidArgumentException If $certs is not a X509Certificate object or an array of them.
+     * @throws \SimpleSAML\XMLSec\Exception\InvalidArgumentException If $certs is not a
+     *   X509Certificate object or an array of them.
      */
-    public function addX509Certificates($certs, $addSubject = false, $digest = false, $addIssuerSerial = false)
-    {
-        if (is_array($certs) && !$certs instanceof X509Certificate) {
+    public function addX509Certificates(
+        $certs,
+        bool $addSubject = false,
+        $digest = false,
+        bool $addIssuerSerial = false
+    ): void {
+        if (is_array($certs) && !($certs instanceof X509Certificate)) {
             throw new InvalidArgumentException(
                 'Passed certificates must be either an X509Certificate or a list of them'
             );
@@ -319,10 +329,10 @@ class Signature
                     foreach ($details['subject'] as $key => $value) {
                         if (is_array($value)) {
                             foreach ($value as $valueElement) {
-                                array_unshift($parts, $key.'='.$valueElement);
+                                array_unshift($parts, $key . '=' . $valueElement);
                             }
                         } else {
-                            array_unshift($parts, $key.'='.$value);
+                            array_unshift($parts, $key . '=' . $value);
                         }
                     }
                     $subjectNameValue = implode(',', $parts);
@@ -343,7 +353,7 @@ class Signature
                 if (is_array($details['issuer'])) {
                     $parts = [];
                     foreach ($details['issuer'] as $key => $value) {
-                        array_unshift($parts, $key.'='.$value);
+                        array_unshift($parts, $key . '=' . $value);
                     }
                     $issuerName = implode(',', $parts);
                 } else {
@@ -375,7 +385,7 @@ class Signature
      *
      * @return \DOMNode The appended signature.
      */
-    public function append()
+    public function append(): DOMNode
     {
         return $this->insert();
     }
@@ -387,7 +397,7 @@ class Signature
      * @param string|null $mimetype The mime type corresponding to the signed data.
      * @param string|null $encoding The encoding corresponding to the signed data.
      */
-    public function envelop($mimetype = null, $encoding = null)
+    public function envelop(string $mimetype = null, string $encoding = null): void
     {
         $this->root = $this->addObject($this->root, $mimetype, $encoding);
     }
@@ -400,17 +410,18 @@ class Signature
      *
      * @return Signature A Signature object corresponding to the signature present in the given DOM document or element.
      *
-     * @throws InvalidArgumentException If $node is not an instance of DOMDocument or DOMElement.
-     * @throws NoSignatureFound If there is no signature in the $node.
+     * @throws \SimpleSAML\XMLSec\Exception\InvalidArgumentException If $node is not
+     *   an instance of DOMDocument or DOMElement.
+     * @throws \SimpleSAML\XMLSec\Exception\NoSignatureFound If there is no signature in the $node.
      */
-    public static function fromXML(\DOMNode $node)
+    public static function fromXML(DOMNode $node): Signature
     {
         if (!in_array(get_class($node), ['DOMElement', 'DOMDocument'])) {
             throw new InvalidArgumentException('Signatures can only be created from DOM documents or elements');
         }
 
         $signature = self::findSignature($node);
-        if ($node instanceof \DOMDocument) {
+        if ($node instanceof DOMDocument) {
             $node = $node->documentElement;
         }
         $dsig = new self($node);
@@ -426,7 +437,7 @@ class Signature
      *
      * @return array An array containing the identifiers of the algorithms blacklisted currently.
      */
-    public function getBlacklistedAlgorithms()
+    public function getBlacklistedAlgorithms(): array
     {
         return $this->algBlacklist;
     }
@@ -437,7 +448,7 @@ class Signature
      *
      * @return array An array of strings with the namespaces used in ID attributes.
      */
-    public function getIdNamespaces()
+    public function getIdNamespaces(): array
     {
         return $this->idNS;
     }
@@ -448,7 +459,7 @@ class Signature
      *
      * @return string The prefix used in this signature.
      */
-    public function getPrefix()
+    public function getPrefix(): string
     {
         return rtrim($this->nsPrefix, ':');
     }
@@ -459,7 +470,7 @@ class Signature
      *
      * @return array An array of strings with the attributes used as an ID.
      */
-    public function getIdAttributes()
+    public function getIdAttributes(): array
     {
         return $this->idKeys;
     }
@@ -473,7 +484,7 @@ class Signature
      *
      * @return \DOMElement The root element for this signature.
      */
-    public function getRoot()
+    public function getRoot(): DOMElement
     {
         return $this->root;
     }
@@ -484,7 +495,7 @@ class Signature
      *
      * @return string The identifier of the algorithm used in this signature.
      */
-    public function getSignatureMethod()
+    public function getSignatureMethod(): string
     {
         return $this->sigAlg;
     }
@@ -501,7 +512,7 @@ class Signature
      * @return \DOMElement[] A list of elements correctly referenced by this signature. An empty list of verify() has
      * not been called yet, or if the references couldn't be verified.
      */
-    public function getVerifiedElements()
+    public function getVerifiedElements(): array
     {
         return $this->verifiedElements;
     }
@@ -514,9 +525,9 @@ class Signature
      *
      * @return \DOMNode The inserted signature.
      *
-     * @throws RuntimeException If this signature is in enveloping mode.
+     * @throws \SimpleSAML\XMLSec\Exception\RuntimeException If this signature is in enveloping mode.
      */
-    public function insert($before = false)
+    public function insert($before = false): DOMNode
     {
         if ($this->enveloping) {
             throw new RuntimeException('Cannot insert the signature in the object it is enveloping.');
@@ -524,7 +535,7 @@ class Signature
 
         $signature = $this->root->ownerDocument->importNode($this->sigNode, true);
 
-        if ($before instanceof \DOMElement) {
+        if ($before instanceof DOMElement) {
             return $this->root->insertBefore($signature, $before);
         }
         return $this->root->insertBefore($signature);
@@ -536,7 +547,7 @@ class Signature
      *
      * @return \DOMNode The prepended signature.
      */
-    public function prepend()
+    public function prepend(): DOMNode
     {
         foreach ($this->root->childNodes as $child) {
             // look for the first child element, if any
@@ -554,7 +565,7 @@ class Signature
      * @param SignatureBackend $backend The SignatureBackend implementation to use. See individual algorithms for
      * details about the default backends used.
      */
-    public function setBackend(SignatureBackend $backend)
+    public function setBackend(SignatureBackend $backend): void
     {
         $this->backend = $backend;
     }
@@ -567,7 +578,7 @@ class Signature
      *
      * @param array $algs An array containing the identifiers of the algorithms to blacklist.
      */
-    public function setBlacklistedAlgorithms($algs)
+    public function setBlacklistedAlgorithms(array $algs): void
     {
         $this->algBlacklist = $algs;
     }
@@ -581,16 +592,19 @@ class Signature
      *
      * @param string $method The identifier of the canonicalization method to use.
      *
-     * @throws InvalidArgumentException If $method is not a valid identifier of a supported canonicalization method.
+     * @throws \SimpleSAML\XMLSec\Exception\InvalidArgumentException If $method is not a valid
+     *   identifier of a supported canonicalization method.
      */
-    public function setCanonicalizationMethod($method)
+    public function setCanonicalizationMethod(string $method): void
     {
-        if (!in_array($method, [
-            C::C14N_EXCLUSIVE_WITH_COMMENTS,
-            C::C14N_EXCLUSIVE_WITHOUT_COMMENTS,
-            C::C14N_INCLUSIVE_WITH_COMMENTS,
-            C::C14N_INCLUSIVE_WITHOUT_COMMENTS
-        ])) {
+        if (
+            !in_array($method, [
+                C::C14N_EXCLUSIVE_WITH_COMMENTS,
+                C::C14N_EXCLUSIVE_WITHOUT_COMMENTS,
+                C::C14N_INCLUSIVE_WITH_COMMENTS,
+                C::C14N_INCLUSIVE_WITHOUT_COMMENTS
+            ])
+        ) {
             throw new InvalidArgumentException('Invalid canonicalization method');
         }
         $this->c14nMethod = $method;
@@ -603,9 +617,9 @@ class Signature
      *
      * @param string $encoding The encoding used in the signed contents.
      *
-     * @throws RuntimeException If this is not an enveloping signature.
+     * @throws \SimpleSAML\XMLSec\Exception\RuntimeException If this is not an enveloping signature.
      */
-    public function setEncoding($encoding)
+    public function setEncoding(string $encoding): void
     {
         if (!$this->$this->enveloping) {
             throw new RuntimeException('Cannot set the encoding for non-enveloping signatures.');
@@ -630,7 +644,7 @@ class Signature
      *
      * @param array $namespaces An array of strings with the namespaces used in ID attributes.
      */
-    public function setIdNamespaces(array $namespaces)
+    public function setIdNamespaces(array $namespaces): void
     {
         $this->idNS = $namespaces;
     }
@@ -641,9 +655,9 @@ class Signature
      *
      * @param string $mimetype The mime type of the signed contents.
      *
-     * @throws RuntimeException If this is not an enveloping signature.
+     * @throws \SimpleSAML\XMLSec\Exception\RuntimeException If this is not an enveloping signature.
      */
-    public function setMimeType($mimetype)
+    public function setMimeType(string $mimetype): void
     {
         if (!$this->enveloping) {
             throw new RuntimeException('Cannot set the mime type for non-enveloping signatures.');
@@ -657,15 +671,15 @@ class Signature
      *
      * @param string|false $prefix The prefix to use in this signature, or false to not use any prefix.
      */
-    public function setPrefix($prefix)
+    public function setPrefix($prefix): void
     {
         if (!is_string($prefix) || empty($prefix)) {
             $this->nsPrefix = '';
         } else {
-            if ($this->nsPrefix === $prefix.':') {
+            if ($this->nsPrefix === $prefix . ':') {
                 return;
             }
-            $this->nsPrefix = $prefix.':';
+            $this->nsPrefix = $prefix . ':';
         }
 
         $this->sigNode->ownerDocument->removeChild($this->sigNode);
@@ -678,10 +692,10 @@ class Signature
      *
      * @param \DOMElement $element A DOM element containing an XML signature.
      *
-     * @throws RuntimeException If the element does not correspond to an XML signature or it is malformed (e.g. there
-     * are missing mandatory elements or attributes).
+     * @throws \SimpleSAML\XMLSec\Exception\RuntimeException If the element does not correspond to an XML
+     *   signature or it is malformed (e.g. there are missing mandatory elements or attributes).
      */
-    public function setSignatureElement(\DOMElement $element)
+    public function setSignatureElement(DOMElement $element): void
     {
         if ($element->localName !== 'Signature' || $element->namespaceURI !== C::XMLDSIGNS) {
             throw new RuntimeException('Node is not an XML signature');
@@ -723,14 +737,15 @@ class Signature
      * to calling sign() (there are no references in the signature), the $root passed during construction of the
      * Signature object will be referenced automatically.
      *
-     * @param AbstractKey $key The key to use for signing. Bear in mind that the type of this key must be compatible
-     * with the types of key accepted by the algorithm specified in $alg.
+     * @param \SimpleSAML\XMLSec\Key\AbstractKey $key The key to use for signing. Bear in mind that the type of
+     *   this key must be compatible with the types of key accepted by the algorithm specified in $alg.
      * @param string $alg The identifier of the signature algorithm to use. See \SimpleSAML\XMLSec\Constants.
      * @param bool $appendToNode Whether to append the signature as the last child of the root element or not.
      *
-     * @throws InvalidArgumentException If $appendToNode is true and this is an enveloping signature.
+     * @throws \SimpleSAML\XMLSec\Exception\InvalidArgumentException If $appendToNode is true and
+     *   this is an enveloping signature.
      */
-    public function sign(AbstractKey $key, $alg, $appendToNode = false)
+    public function sign(AbstractKey $key, string $alg, bool $appendToNode = false): void
     {
         if ($this->enveloping && $appendToNode) {
             throw new InvalidArgumentException(
@@ -765,7 +780,8 @@ class Signature
         $sigValue = base64_encode($signer->sign($this->canonicalizeData($this->sigInfoNode, $this->c14nMethod)));
 
         // remove Signature from node if we added it for c14n
-        if (!$appendToNode &&
+        if (
+            !$appendToNode &&
             in_array($this->c14nMethod, [C::C14N_INCLUSIVE_WITHOUT_COMMENTS, C::C14N_INCLUSIVE_WITH_COMMENTS])
         ) { // remove from root in case we added it for inclusive canonicalization
             $this->root->removeChild($this->root->lastChild);
@@ -785,14 +801,14 @@ class Signature
     /**
      * Verify this signature with a given key.
      *
-     * @param AbstractKey $key The key to use to verify this signature.
+     * @param \SimpleSAML\XMLSec\Key\AbstractKey $key The key to use to verify this signature.
      *
      * @return bool True if the signature can be verified with $key, false otherwise.
      *
-     * @throws RuntimeException If there is no SignatureValue in the signature, or we couldn't verify all the
-     * references.
+     * @throws \SimpleSAML\XMLSec\Exception\RuntimeException If there is no SignatureValue in
+     *   the signature, or we couldn't verify all the references.
      */
-    public function verify(AbstractKey $key)
+    public function verify(AbstractKey $key): bool
     {
         $xp = XP::getXPath($this->sigNode->ownerDocument);
         $sigval = $xp->evaluate('string(./ds:SignatureValue)', $this->sigNode);
@@ -825,8 +841,12 @@ class Signature
      *
      * @return string The canonical representation of the given DOM node, according to the algorithm requested.
      */
-    protected function canonicalizeData(\DOMNode $node, $c14nMethod, $xpaths = null, $prefixes = null)
-    {
+    protected function canonicalizeData(
+        DOMNode $node,
+        string $c14nMethod,
+        array $xpaths = null,
+        array $prefixes = null
+    ): string {
         $exclusive = false;
         $withComments = false;
         switch ($c14nMethod) {
@@ -840,14 +860,17 @@ class Signature
                 $exclusive = true;
         }
 
-        if (is_null($xpaths) && ($node->ownerDocument !== null) &&
-            $node->isSameNode($node->ownerDocument->documentElement)
+        if (
+            is_null($xpaths)
+            && ($node->ownerDocument !== null)
+            && $node->isSameNode($node->ownerDocument->documentElement)
         ) {
             // check for any PI or comments as they would have been excluded
             $element = $node;
             while ($refNode = $element->previousSibling) {
-                if ((($refNode->nodeType === XML_COMMENT_NODE) && $withComments) ||
-                    $refNode->nodeType === XML_PI_NODE
+                if (
+                    (($refNode->nodeType === XML_COMMENT_NODE) && $withComments)
+                    || $refNode->nodeType === XML_PI_NODE
                 ) {
                     break;
                 }
@@ -874,8 +897,12 @@ class Signature
      *
      * @return \DOMElement A new DOM element with the given name.
      */
-    protected function createElement($name, $content = null, $ns = C::XMLDSIGNS, $nsPrefix = null)
-    {
+    protected function createElement(
+        string $name,
+        string $content = null,
+        string $ns = C::XMLDSIGNS,
+        string $nsPrefix = null
+    ): DOMElement {
         if ($this->sigNode === null) {
             // initialize signature
             $doc = DOMDocumentFactory::create();
@@ -888,10 +915,10 @@ class Signature
         }
 
         if ($content !== null) {
-            return $doc->createElementNS($ns, $nsPrefix.$name, $content);
+            return $doc->createElementNS($ns, $nsPrefix . $name, $content);
         }
 
-        return $doc->createElementNS($ns, $nsPrefix.$name);
+        return $doc->createElementNS($ns, $nsPrefix . $name);
     }
 
 
@@ -903,12 +930,12 @@ class Signature
      *
      * @return \DOMElement The signature element.
      *
-     * @throws RuntimeException If there is no DOMDocument element available.
-     * @throws NoSignatureFound If no signature is found.
+     * @throws \SimpleSAML\XMLSec\Exception\RuntimeException If there is no DOMDocument element available.
+     * @throws \SimpleSAML\XMLSec\Exception\NoSignatureFound If no signature is found.
      */
-    protected static function findSignature(\DOMNode $node)
+    protected static function findSignature(DOMNode $node): DOMElement
     {
-        $doc = $node instanceof \DOMDocument ? $node : $node->ownerDocument;
+        $doc = $node instanceof DOMDocument ? $node : $node->ownerDocument;
 
         if ($doc === null) {
             throw new RuntimeException('Cannot search for signatures, no DOM document available');
@@ -933,12 +960,13 @@ class Signature
      *
      * @return string The (binary or base64-encoded) digest corresponding to the given data.
      *
-     * @throws InvalidArgumentException If $alg is not a valid identifier of a supported digest algorithm.
+     * @throws \SimpleSAML\XMLSec\Exception\InvalidArgumentException If $alg is not a valid
+     *   identifier of a supported digest algorithm.
      */
-    protected function hash($alg, $data, $encode = true)
+    protected function hash(string $alg, string $data, bool $encode = true): string
     {
         if (!array_key_exists($alg, C::$DIGEST_ALGORITHMS)) {
-            throw new InvalidArgumentException('Unsupported digest method "'.$alg.'"');
+            throw new InvalidArgumentException('Unsupported digest method "' . $alg . '"');
         }
 
         $digest = hash(C::$DIGEST_ALGORITHMS[$alg], $data, true);
@@ -952,7 +980,7 @@ class Signature
     /**
      * Initialize the basic structure of a signature from scratch.
      */
-    protected function initSignature()
+    protected function initSignature(): void
     {
         $this->sigNode = $this->createElement('Signature');
         $this->sigInfoNode = $this->createElement('SignedInfo');
@@ -977,11 +1005,12 @@ class Signature
      *
      * @return bool True if the digest of the processed reference matches the one given, false otherwise.
      *
-     * @throws RuntimeException If the referenced element is missing or the reference points to an external document.
+     * @throws \SimpleSAML\XMLSec\Exception\RuntimeException If the referenced element is missing or
+     *   the reference points to an external document.
      *
      * @see http://www.w3.org/TR/xmldsig-core/#sec-ReferenceProcessingModel
      */
-    protected function processReference(\DOMElement $ref)
+    protected function processReference(DOMElement $ref): bool
     {
         /*
          * Depending on the URI, we may need to remove comments during canonicalization.
@@ -1010,13 +1039,13 @@ class Signature
                             $xp->registerNamespace($nspf, $ns);
                         }
                     }
-                    $iDlist = '@Id="'.$identifier.'"';
+                    $iDlist = '@Id="' . $identifier . '"';
                     if (is_array($this->idKeys)) {
                         foreach ($this->idKeys as $idKey) {
                             $iDlist .= " or @$idKey='$identifier'";
                         }
                     }
-                    $query = '//*['.$iDlist.']';
+                    $query = '//*[' . $iDlist . ']';
                     $dataObject = $xp->query($query)->item(0);
                     if ($dataObject === null) {
                         throw new RuntimeException('Reference not found');
@@ -1062,9 +1091,9 @@ class Signature
      *
      * @see http://www.w3.org/TR/xmldsig-core/#sec-ReferenceProcessingModel
      */
-    protected function processTransforms(\DOMElement $ref, $data, $includeCommentNodes = false)
+    protected function processTransforms(DOMElement $ref, $data, bool $includeCommentNodes = false): string
     {
-        if (!$data instanceof \DOMNode) {
+        if (!($data instanceof DOMNode)) {
             return $data;
         }
 
@@ -1122,7 +1151,7 @@ class Signature
                     while ($node) {
                         if ($node->localName == 'XPath') {
                             $arXPath = [];
-                            $arXPath['query'] = '(.//. | .//@* | .//namespace::*)['.$node->nodeValue.']';
+                            $arXPath['query'] = '(.//. | .//@* | .//namespace::*)[' . $node->nodeValue . ']';
                             $arXpath['namespaces'] = [];
                             $nslist = $xp->query('./namespace::*', $node);
                             foreach ($nslist as $nsnode) {
@@ -1150,7 +1179,7 @@ class Signature
      *
      * @return bool True if the resulting digest matches the one in the reference, false otherwise.
      */
-    protected function validateDigest(\DOMElement $ref, $data)
+    protected function validateDigest(DOMElement $ref, string $data): bool
     {
         $xp = XP::getXPath($ref->ownerDocument);
         $alg = $xp->evaluate('string(./ds:DigestMethod/@Algorithm)', $ref);
@@ -1166,9 +1195,9 @@ class Signature
      *
      * @return boolean True if all references could be verified, false otherwise.
      *
-     * @throws RuntimeException If there are no references.
+     * @throws \SimpleSAML\XMLSec\Exception\RuntimeException If there are no references.
      */
-    protected function validateReferences()
+    protected function validateReferences(): bool
     {
         $doc = $this->sigNode->ownerDocument;
 

@@ -49,13 +49,13 @@ final class OpenSSL implements EncryptionBackend, SignatureBackend
     /**
      * Encrypt a given plaintext with this cipher and a given key.
      *
-     * @param AbstractKey $key The key to use to encrypt.
+     * @param \SimpleSAML\XMLSec\Key\AbstractKey $key The key to use to encrypt.
      * @param string $plaintext The original text to encrypt.
      *
      * @return string The encrypted plaintext (ciphertext).
-     * @throws RuntimeException If there is an error while encrypting the plaintext.
+     * @throws \SimpleSAML\XMLSec\Exception\RuntimeException If there is an error while encrypting the plaintext.
      */
-    public function encrypt(AbstractKey $key, $plaintext)
+    public function encrypt(AbstractKey $key, string $plaintext): string
     {
         if ($key instanceof AsymmetricKey) {
             // asymmetric encryption
@@ -66,7 +66,7 @@ final class OpenSSL implements EncryptionBackend, SignatureBackend
 
             $ciphertext = null;
             if (!$fn($plaintext, $ciphertext, $key->get(), $this->padding)) {
-                throw new RuntimeException('Cannot encrypt data: '.openssl_error_string());
+                throw new RuntimeException('Cannot encrypt data: ' . openssl_error_string());
             }
             return $ciphertext;
         }
@@ -82,24 +82,25 @@ final class OpenSSL implements EncryptionBackend, SignatureBackend
             OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING,
             $iv
         );
+
         if (!$ciphertext) {
-            throw new RuntimeException('Cannot encrypt data: '.openssl_error_string());
+            throw new RuntimeException('Cannot encrypt data: ' . openssl_error_string());
         }
-        return $iv.$ciphertext;
+        return $iv . $ciphertext;
     }
 
 
     /**
      * Decrypt a given ciphertext with this cipher and a given key.
      *
-     * @param AbstractKey $key The key to use to decrypt.
+     * @param \SimpleSAML\XMLSec\Key\AbstractKey $key The key to use to decrypt.
      * @param string $ciphertext The encrypted text to decrypt.
      *
      * @return string The decrypted ciphertext (plaintext).
      *
-     * @throws RuntimeException If there is an error while decrypting the ciphertext.
+     * @throws \SimpleSAML\XMLSec\Exception\RuntimeException If there is an error while decrypting the ciphertext.
      */
-    public function decrypt(AbstractKey $key, $ciphertext)
+    public function decrypt(AbstractKey $key, string $ciphertext): string
     {
         if ($key instanceof AsymmetricKey) {
             // asymmetric encryption
@@ -110,7 +111,7 @@ final class OpenSSL implements EncryptionBackend, SignatureBackend
 
             $plaintext = null;
             if (!$fn($ciphertext, $plaintext, $key->get(), $this->padding)) {
-                throw new RuntimeException('Cannot decrypt data: '.openssl_error_string());
+                throw new RuntimeException('Cannot decrypt data: ' . openssl_error_string());
             }
             return $plaintext;
         }
@@ -127,8 +128,9 @@ final class OpenSSL implements EncryptionBackend, SignatureBackend
             OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING,
             $iv
         );
+
         if ($plaintext === false) {
-            throw new RuntimeException('Cannot decrypt data: '.openssl_error_string());
+            throw new RuntimeException('Cannot decrypt data: ' . openssl_error_string());
         }
         return $this->unpad($plaintext);
     }
@@ -137,17 +139,17 @@ final class OpenSSL implements EncryptionBackend, SignatureBackend
     /**
      * Sign a given plaintext with this cipher and a given key.
      *
-     * @param AbstractKey $key The key to use to sign.
+     * @param \SimpleSAML\XMLSec\Key\AbstractKey $key The key to use to sign.
      * @param string $plaintext The original text to sign.
      *
      * @return string The (binary) signature corresponding to the given plaintext.
      *
-     * @throws RuntimeException If there is an error while signing the plaintext.
+     * @throws \SimpleSAML\XMLSec\Exception\RuntimeException If there is an error while signing the plaintext.
      */
-    public function sign(AbstractKey $key, $plaintext)
+    public function sign(AbstractKey $key, string $plaintext): string
     {
         if (!openssl_sign($plaintext, $signature, $key->get(), $this->digest)) {
-            throw new RuntimeException('Cannot sign data: '.openssl_error_string());
+            throw new RuntimeException('Cannot sign data: ' . openssl_error_string());
         }
         return $signature;
     }
@@ -156,13 +158,13 @@ final class OpenSSL implements EncryptionBackend, SignatureBackend
     /**
      * Verify a signature with this cipher and a given key.
      *
-     * @param AbstractKey $key The key to use to verify.
+     * @param \SimpleSAML\XMLSec\Key\AbstractKey $key The key to use to verify.
      * @param string $plaintext The original signed text.
      * @param string $signature The (binary) signature to verify.
      *
      * @return boolean True if the signature can be verified, false otherwise.
      */
-    public function verify(AbstractKey $key, $plaintext, $signature)
+    public function verify(AbstractKey $key, string $plaintext, string $signature): bool
     {
         return openssl_verify($plaintext, $signature, $key->get(), $this->digest) === 1;
     }
@@ -172,10 +174,11 @@ final class OpenSSL implements EncryptionBackend, SignatureBackend
      * Set the cipher to be used by the backend.
      *
      * @param string $cipher The identifier of the cipher.
+     * @return void
      *
-     * @throws InvalidArgumentException If the cipher is unknown or not supported.
+     * @throws \SimpleSAML\XMLSec\Exception\InvalidArgumentException If the cipher is unknown or not supported.
      */
-    public function setCipher($cipher)
+    public function setCipher(string $cipher): void
     {
         if (!isset(Constants::$BLOCK_CIPHER_ALGORITHMS[$cipher])) {
             throw new InvalidArgumentException('Invalid or unknown cipher');
@@ -190,10 +193,11 @@ final class OpenSSL implements EncryptionBackend, SignatureBackend
      * Set the digest algorithm to be used by this backend.
      *
      * @param string $digest The identifier of the digest algorithm.
+     * @return void
      *
-     * @throws InvalidArgumentException If the given digest is not valid.
+     * @throws \SimpleSAML\XMLSec\Exception\InvalidArgumentException If the given digest is not valid.
      */
-    public function setDigestAlg($digest)
+    public function setDigestAlg(string $digest): void
     {
         if (!isset(Constants::$DIGEST_ALGORITHMS[$digest])) {
             throw new InvalidArgumentException('Unknown digest or non-cryptographic hash function.');
@@ -209,11 +213,11 @@ final class OpenSSL implements EncryptionBackend, SignatureBackend
      *
      * @return string The padded plaintext.
      */
-    public function pad($plaintext)
+    public function pad(string $plaintext): string
     {
         $padchr = $this->blocksize - (mb_strlen($plaintext) % $this->blocksize);
         $pattern = chr($padchr);
-        return $plaintext.str_repeat($pattern, $padchr);
+        return $plaintext . str_repeat($pattern, $padchr);
     }
 
 
@@ -224,7 +228,7 @@ final class OpenSSL implements EncryptionBackend, SignatureBackend
      *
      * @return string The plaintext without the padding.
      */
-    public function unpad($plaintext)
+    public function unpad(string $plaintext): string
     {
         return substr($plaintext, 0, -ord(substr($plaintext, -1)));
     }

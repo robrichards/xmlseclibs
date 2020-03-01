@@ -17,7 +17,7 @@ class InvalidArgumentException extends \InvalidArgumentException implements Thro
      *
      * @return \SimpleSAML\XMLSec\Exception\InvalidArgumentException
      */
-    public static function invalidType($expected, $parameter)
+    public static function invalidType(string $expected, $parameter): InvalidArgumentException
     {
         $message = sprintf(
             'Invalid Argument type: "%s" expected, "%s" given',

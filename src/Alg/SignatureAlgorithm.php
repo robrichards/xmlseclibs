@@ -11,21 +11,22 @@ use SimpleSAML\XMLSec\Backend\SignatureBackend;
  */
 interface SignatureAlgorithm
 {
-
     /**
      * Get the digest used by this signature algorithm.
      *
      * @return string The identifier of the digest algorithm used.
      */
-    public function getDigest();
+    public function getDigest(): string;
 
 
     /**
      * Set the backend to use for actual computations by this algorithm.
      *
      * @param SignatureBackend $backend The backend to use.
+     *
+     * @return void
      */
-    public function setBackend(SignatureBackend $backend);
+    public function setBackend(SignatureBackend $backend): void;
 
 
     /**
@@ -35,7 +36,7 @@ interface SignatureAlgorithm
      *
      * @return string|false The (binary) signature corresponding to the given plaintext.
      */
-    public function sign($plaintext);
+    public function sign(string $plaintext);
 
 
     /**
@@ -46,5 +47,5 @@ interface SignatureAlgorithm
      *
      * @return boolean True if the signature can be verified, false otherwise.
      */
-    public function verify($plaintext, $signature);
+    public function verify(string $plaintext, string $signature): bool;
 }

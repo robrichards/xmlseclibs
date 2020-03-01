@@ -13,10 +13,7 @@ use SimpleSAML\XMLSec\Key\AbstractKey;
  */
 abstract class AbstractSigner implements SignatureAlgorithm
 {
-
-    /**
-     * @var AbstractKey
-     */
+    /** @var AbstractKey */
     protected $key;
 
     /** @var SignatureBackend */
@@ -32,10 +29,10 @@ abstract class AbstractSigner implements SignatureAlgorithm
     /**
      * Build a signature algorithm.
      *
-     * @param AbstractKey $key The signing key.
+     * @param \SimpleSAML\XMLSec\Key\AbstractKey $key The signing key.
      * @param string $digest The identifier of the digest algorithm to use.
      */
-    public function __construct(AbstractKey $key, $digest)
+    public function __construct(AbstractKey $key, string $digest)
     {
         $this->key = $key;
         $this->digest = $digest;
@@ -45,18 +42,20 @@ abstract class AbstractSigner implements SignatureAlgorithm
 
 
     /**
-     * @inheritdoc
+     * @return string
      */
-    public function getDigest()
+    public function getDigest(): string
     {
         return $this->digest;
     }
 
 
     /**
-     * @inheritdoc
+     * @param \SimpleSAML\XMLSec\Backend\SignatureBackend
+     *
+     * @return void
      */
-    public function setBackend(SignatureBackend $backend)
+    public function setBackend(SignatureBackend $backend): void
     {
         $this->backend = $backend;
         $this->backend->setDigestAlg($this->digest);
@@ -70,7 +69,7 @@ abstract class AbstractSigner implements SignatureAlgorithm
      *
      * @return string The (binary) signature corresponding to the given plaintext.
      */
-    public function sign($plaintext)
+    public function sign(string $plaintext): string
     {
         return $this->backend->sign($this->key, $plaintext);
     }
@@ -84,7 +83,7 @@ abstract class AbstractSigner implements SignatureAlgorithm
      *
      * @return boolean True if the signature can be verified, false otherwise.
      */
-    public function verify($plaintext, $signature)
+    public function verify(string $plaintext, string $signature): bool
     {
         return $this->backend->verify($this->key, $plaintext, $signature);
     }

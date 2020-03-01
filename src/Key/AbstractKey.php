@@ -11,7 +11,6 @@ namespace SimpleSAML\XMLSec\Key;
  */
 abstract class AbstractKey
 {
-
     /** @var mixed */
     protected $key_material;
 

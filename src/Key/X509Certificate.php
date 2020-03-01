@@ -28,18 +28,18 @@ class X509Certificate extends PublicKey
      *
      * @param string $cert The PEM-encoded certificate or the path to a file containing it.
      *
-     * @throws InvalidArgumentException If the certificate cannot be read from $cert.
-     * @throws RuntimeException If the certificate cannot be exported to PEM format.
+     * @throws \SimpleSAML\XMLSec\Exception\InvalidArgumentException If the certificate cannot be read from $cert.
+     * @throws \SimpleSAML\XMLSec\Exception\RuntimeException If the certificate cannot be exported to PEM format.
      */
-    public function __construct($cert)
+    public function __construct(string $cert)
     {
         $resource = openssl_x509_read($cert);
         if ($resource === false) {
-            throw new InvalidArgumentException('Cannot read certificate: '.openssl_error_string());
+            throw new InvalidArgumentException('Cannot read certificate: ' . openssl_error_string());
         }
 
         if (!openssl_x509_export($resource, $this->certificate)) {
-            throw new RuntimeException('Cannot export certificate to PEM: '.openssl_error_string());
+            throw new RuntimeException('Cannot export certificate to PEM: ' . openssl_error_string());
         }
         parent::__construct(openssl_pkey_get_public($this->certificate));
         $this->thumbprint[Constants::DIGEST_SHA1] = $this->getRawThumbprint();
@@ -55,7 +55,7 @@ class X509Certificate extends PublicKey
      *
      * @return string The thumbprint associated with the given certificate.
      */
-    protected function manuallyComputeThumbprint($alg)
+    protected function manuallyComputeThumbprint(string $alg): string
     {
         // remove beginning and end delimiters
         $lines = explode("\n", trim($this->certificate));
@@ -82,9 +82,9 @@ class X509Certificate extends PublicKey
      *
      * @return string The thumbprint associated with the given certificate.
      *
-     * @throws InvalidArgumentException If $alg is not a valid digest identifier.
+     * @throws \SimpleSAML\XMLSec\Exception\InvalidArgumentException If $alg is not a valid digest identifier.
      */
-    public function getRawThumbprint($alg = Constants::DIGEST_SHA1)
+    public function getRawThumbprint(string $alg = Constants::DIGEST_SHA1): string
     {
         if (isset($this->thumbprint[$alg])) {
             return $this->thumbprint[$alg];
@@ -111,7 +111,7 @@ class X509Certificate extends PublicKey
      *
      * @return string The certificate.
      */
-    public function getCertificate()
+    public function getCertificate(): string
     {
         return $this->certificate;
     }
@@ -124,7 +124,7 @@ class X509Certificate extends PublicKey
      *
      * @see openssl_x509_parse()
      */
-    public function getCertificateDetails()
+    public function getCertificateDetails(): array
     {
         return $this->parsed;
     }
@@ -135,10 +135,10 @@ class X509Certificate extends PublicKey
      *
      * @param string $file The file where the PEM-encoded certificate is stored.
      *
-     * @return X509Certificate A new X509Certificate key.
-     * @throws InvalidArgumentException If the file cannot be read.
+     * @return \SimpleSAML\XMLSec\Key\PublicKey A new X509Certificate key.
+     * @throws \SimpleSAML\XMLSec\Exception\InvalidArgumentException If the file cannot be read.
      */
-    public static function fromFile($file)
+    public static function fromFile(string $file): PublicKey
     {
         return new static(static::readFile($file));
     }

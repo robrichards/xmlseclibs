@@ -17,7 +17,6 @@ use SimpleSAML\XMLSec\Utils\Random;
  */
 class SymmetricKey extends AbstractKey
 {
-
     /**
      * Generate a random, binary secret key of a given length.
      *
@@ -26,11 +25,12 @@ class SymmetricKey extends AbstractKey
      * @param int $length The length of the secret we want, in bytes.
      * @param bool $parityBits Whether the key should be suitable for its use in 3DES in CBC mode or not.
      *
-     * @return SymmetricKey A cryptographically-secure random symmetric key.
+     * @return \SimpleSAML\XMLSec\Key\SymmetricKey A cryptographically-secure random symmetric key.
      *
-     * @throws RuntimeException If no appropriate sources of cryptographically-secure random material are available.
+     * @throws \SimpleSAML\XMLSec\Exception\RuntimeException If no appropriate sources of cryptographically-secure
+     *   random material are available.
      */
-    public static function generate($length, $parityBits = false)
+    public static function generate(int $length, bool $parityBits = false): SymmetricKey
     {
         $key = Random::generateRandomBytes($length);
 
@@ -59,7 +59,7 @@ class SymmetricKey extends AbstractKey
      *
      * @return int The length of the key.
      */
-    public function getLength()
+    public function getLength(): int
     {
         return strlen($this->key_material);
     }

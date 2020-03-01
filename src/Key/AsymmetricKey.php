@@ -24,13 +24,13 @@ abstract class AsymmetricKey extends AbstractKey
      *
      * @return string The key material.
      *
-     * @throws InvalidArgumentException If the given file cannot be read.
+     * @throws \SimpleSAML\XMLSec\Exception\InvalidArgumentException If the given file cannot be read.
      */
-    protected static function readFile($file)
+    protected static function readFile(string $file): string
     {
         $key = file_get_contents($file);
         if ($key === false) {
-            throw new InvalidArgumentException('Cannot read key from file "'.$file.'"');
+            throw new InvalidArgumentException('Cannot read key from file "' . $file . '"');
         }
         return $key;
     }

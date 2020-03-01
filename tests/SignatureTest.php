@@ -17,7 +17,6 @@ use SimpleSAML\XMLSec\Utils\DOMDocumentFactory;
  */
 class SignatureTest extends TestCase
 {
-
     /** @var \DOMDocument */
     protected $basicDoc;
 
