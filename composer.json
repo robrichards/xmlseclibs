@@ -31,7 +31,6 @@
         "php": ">= 7.2",
         "ext-openssl": "*",
         "ext-dom": "*",
-
         "webmozart/assert": "^1.7"
     },
     "require-dev": {
