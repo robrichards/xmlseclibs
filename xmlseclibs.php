@@ -3,7 +3,7 @@
 /**
  * xmlseclibs.php
  *
- * Copyright (c) 2007-2016, Robert Richards <rrichards@cdatazone.org>.
+ * Copyright (c) 2007-2019, Robert Richards <rrichards@cdatazone.org>.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -36,9 +36,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  * @author    Robert Richards <rrichards@cdatazone.org>
- * @copyright 2007-2017 Robert Richards <rrichards@cdatazone.org>
+ * @copyright 2007-2019 Robert Richards <rrichards@cdatazone.org>
  * @license   http://www.opensource.org/licenses/bsd-license.php  BSD License
- * @version   3.0.1
+ * @version   3.0.5-dev
  */
 
 $xmlseclibs_srcdir = dirname(__FILE__) . '/src/';

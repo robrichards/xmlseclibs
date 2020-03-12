@@ -20,7 +20,6 @@ class XPath
     public const NUMERIC = '\d';
     public const LETTERS = '\w';
     public const EXTENDED_ALPHANUMERIC = '\w\d\s-_:\.';
-
     public const SINGLE_QUOTE = '\'';
     public const DOUBLE_QUOTE = '"';
     public const ALL_QUOTES = '[\'"]';

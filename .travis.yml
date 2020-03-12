@@ -1,128 +1,19 @@
+sudo: false
+
 language: php
 
-stages:
-    - pre-conditions
-    - test
-    - quality
-
-################
-#  Test stage  #
-################
-
-php:
-    - 7.2
-    - 7.3
-    - 7.4snapshot
-
-env:
-    - COMMAND="composer install"
-    - COMMAND="composer update"
-
-before_script:
-    - ${COMMAND}
+matrix:
+  fast_finish: true
+  include:
+    - php: 7.2
+    - php: 7.3
+    - php: 7.4
+      env:
+        - EXECUTE_COVERAGE=true
 
 script:
-    - php vendor/bin/phpunit --no-coverage
-
-jobs:
-    fast_finish: true
-
-    allow_failures:
-        - php: 7.3
-          env: Security check (composer install)
-        - php: 7.3
-          env: Security check (composer update)
-        - php: 7.3
-          env: Psalm
-        - php: 7.3
-          env: PHP Codesniffer
-
-    include:
-
-        ##########################
-        #  Pre-conditions stage  #
-        ##########################
-
-        - stage: pre-conditions
-          env: Syntax check PHP
-          php: 7.2
-          before_script:
-              - composer install
-          script:
-              - vendor/bin/check-syntax-php.sh
-
-        - stage: pre-conditions
-          env: Syntax check PHP
-          php: 7.3
-          before_script:
-              - composer install
-          script:
-              - vendor/bin/check-syntax-php.sh
-
-        - stage: pre-conditions
-          env: Syntax check PHP
-          php: 7.4snapshot
-          before_script:
-              - composer install
-          script:
-              - vendor/bin/check-syntax-php.sh
-
-        - stage: pre-conditions
-          env: Syntax check YAML / XML / JSON
-          before_script:
-              - composer require simplesamlphp/simplesamlphp-test-framework --dev
-          script:
-              - vendor/simplesamlphp/simplesamlphp-test-framework/bin/check-syntax-json.sh
-              - vendor/simplesamlphp/simplesamlphp-test-framework/bin/check-syntax-xml.sh
-              - vendor/simplesamlphp/simplesamlphp-test-framework/bin/check-syntax-yaml.sh
-
-        ###################
-        #  Quality stage  #
-        ###################
-
-        - stage: quality
-          php: 7.3
-          env: Security check (composer install)
-          before_script:
-              - composer install
-          script:
-              - vendor/bin/security-checker security:check
-
-        - stage: quality
-          php: 7.3
-          env: Security check (composer update)
-          before_script:
-              - composer update
-          script:
-              - vendor/bin/security-checker security:check
-
-        - stage: quality
-          php: 7.3
-          env: Codecov
-          before_script:
-              - composer update
-              - php vendor/bin/phpunit
-          script:
-              # Codecov, need to edit bash uploader for incorrect TRAVIS_PYTHON_VERSION environment variable matching, at least until codecov/codecov-bash#133 is resolved
-              - curl -s https://codecov.io/bash > .codecov
-              - sed -i -e 's/TRAVIS_.*_VERSION/^TRAVIS_.*_VERSION=/' .codecov
-              - chmod +x .codecov
-              - ./.codecov -X gcov
-              # - <(curl -s https://codecov.io/bash)
-
-        - stage: quality
-          php: 7.3
-          env: Psalm
-          before_script:
-              - composer update
-          script:
-              - vendor/bin/psalm
-              - vendor/bin/psalter --issues=UnnecessaryVarAnnotation --dry-run
-
-        - stage: quality
-          php: 7.3
-          env: PHP Codesniffer
-          before_script:
-              - composer update
-          script:
-              - vendor/bin/phpcs src/
+  - if [[ $EXECUTE_COVERAGE == 'true' ]]; then phpunit --coverage-clover clover.xml tests; fi
+  - if [[ $EXECUTE_COVERAGE != 'true' ]]; then phpunit tests; fi
+  
+after_success:
+  - if [[ $EXECUTE_COVERAGE == 'true' ]]; then bash <(curl -s https://codecov.io/bash); fi
