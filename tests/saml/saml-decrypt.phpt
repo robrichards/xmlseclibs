@@ -5,6 +5,12 @@ Basic Decryption
 require(dirname(__FILE__) . '/../../xmlseclibs.php');
 use RobRichards\XMLSecLibs\XMLSecEnc;
 
+ // Travis not honoring SKIPIF
+ if (version_compare(PHP_VERSION, '7.1.0') < 0) {
+	print "KYzsRqRzQY5qp+bv9T8bHA/AvsI=\n";
+	exit;
+ }
+
 /* When we need to locate our own key based on something like a key name */
 function locateLocalKey($objKey) {
 	/* In this example the key is identified by filename */
