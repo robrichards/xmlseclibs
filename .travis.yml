@@ -16,6 +16,7 @@ matrix:
       dist: trusty
     - php: 7.2
     - php: 7.3
+    - php: 7.4
       env:
         - EXECUTE_COVERAGE=true
   allow_failures:
