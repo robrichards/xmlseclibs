@@ -796,5 +796,55 @@ class XMLSecurityKey
         XMLSecEnc::staticLocateKeyInfo($objKey, $element);
         return $objKey;
     }
+    
+    /**
+     * Verifies Key.
+     *
+     * Returns:
+     *  True if the key is validated against the supplied CA, otherwise false.
+     *
+     *  @param string|array $caInfo
+     *  
+     *  @return bool 
+     */
+    public function verify($caInfo)
+    {
+        if (empty($caInfo)) {
+            throw new Exception("A CA file, directory name containing CA files, or an array of any combination of the two is required.");
+        }
+        
+        if (! is_array($caInfo)) {
+            $caInfo = array($caInfo);
+        }
+        
+        if (! empty($this->x509Certificate)) {
+        
+            $certData = $this->x509Certificate;
+            
+            $purposeCheck = 0;
+            $keyInfo = openssl_x509_parse($certData);
+            if ($keyInfo === false) {
+                throw new Exception('Error parsing key - ' . openssl_error_string());
+            }
+            $purposes = $keyInfo['purposes'];
+            foreach ($purposes as $purpose=>$validitity) {
+                if ($validitity[0]) {
+                    $purposeCheck = $purpose;
+                    break;
+                }
+            }
+            
+            if ($purposeCheck > 0) {
+                $retVal = openssl_x509_checkpurpose($certData, $purposeCheck, $caInfo);
+                if ($retVal === -1) {
+                    throw new Exception('Error verifying key - ' . openssl_error_string());
+                }
+                
+                return $retVal;
+            }
+        }
+        
+        throw new Exception('Error - Uable to determine key validity');
+    }
 
 }
