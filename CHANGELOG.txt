@@ -2,7 +2,7 @@ xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 ??, ??? 2020, 3.1.1-dev
 Features:
-- AddXMLSecurityKey::verify() method to validate key against CA
+- Add XMLSecurityKey::verify() method to validate key against CA
 
 22, Apr 2020, 3.1.0
 Features:
