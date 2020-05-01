@@ -800,6 +800,9 @@ class XMLSecurityKey
     /**
      * Verifies Key.
      *
+     *  Method accepts either a string containing a CA file, directory name 
+     *  containing CA files, or an array of any combination of the two.
+     *  
      * Returns:
      *  True if the key is validated against the supplied CA, otherwise false.
      *

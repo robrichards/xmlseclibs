@@ -2,7 +2,7 @@
 Check that generated triple-des keys have the correct parity.
 --FILE--
 <?php
-require(dirname(__FILE__) . '/../xmlseclibs.php');
+require(dirname(__FILE__) . '/../../xmlseclibs.php');
 use RobRichards\XMLSecLibs\XMLSecurityKey;
 
 /* Run the test several times, to increase the chance of detecting an error. */
