@@ -19,11 +19,6 @@ foreach ($arTests AS $testName=>$testParams) {
 	}
 	
 	print "$testName: ";
-	// Travis not honoring SKIPIF
-	if (version_compare(PHP_VERSION, '7.1.0') < 0) {
-		print "EncryptedData\n";
-		continue;
-	}
 	
 	$dom = new DOMDocument();
 	$dom->load(dirname(__FILE__) . '/basic-doc.xml');
@@ -32,13 +27,13 @@ foreach ($arTests AS $testName=>$testParams) {
 	$objKey->generateSessionKey();
 	
 	$siteKey = new XMLSecurityKey(XMLSecurityKey::RSA_OAEP_MGF1P, array('type'=>'public'));
-	$siteKey->loadKey(dirname(__FILE__) . '/mycert.pem', TRUE, TRUE);
+	$siteKey->loadKey(dirname(__FILE__) . '/mycert.pem', true, true);
 	
 	$enc = new XMLSecEnc();
 	$enc->setNode($dom->documentElement);
 	$enc->encryptKey($siteKey, $objKey);
 	
-	$enc->type = XMLSecEnc::Element;
+	$enc->type = XMLSecEnc::ELEMENT;
 	$encNode = $enc->encryptNode($objKey);
 	
 	$dom->save(dirname(__FILE__) . "/$testFile");

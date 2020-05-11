@@ -14,7 +14,7 @@ $doc = new \DOMDocument();
 $doc->load(__DIR__.'/sign-hhvm-id-wout-ns-regenerated.xml');
 
 $objKey = new XMLSecurityKey(XMLSecurityKey::RSA_SHA1, array('type'=>'private'));
-$objKey->loadKey(dirname(__FILE__) . '/privkey.pem', TRUE);
+$objKey->loadKey(dirname(__FILE__) . '/privkey.pem', true);
 
 /** @var \DOMElement $assertion */
 $assertion = $doc->getElementsByTagName('Assertion')->item(0);

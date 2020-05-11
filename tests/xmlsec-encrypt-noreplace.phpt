@@ -14,15 +14,15 @@ $origData = $dom->saveXML();
 $objKey = new XMLSecurityKey(XMLSecurityKey::AES256_CBC);
 $objKey->generateSessionKey();
 
-$siteKey = new XMLSecurityKey(XMLSecurityKey::RSA_OAEP_MGF1P, array('type'=>'public'));
-$siteKey->loadKey(dirname(__FILE__) . '/mycert.pem', TRUE, TRUE);
+$siteKey = new XMLSecurityKey(XMLSecurityKey::RSA_OAEP_MGF1P, array('type' => 'public'));
+$siteKey->loadKey(dirname(__FILE__) . '/mycert.pem', true, true);
 
 $enc = new XMLSecEnc();
 $enc->setNode($dom->documentElement);
 $enc->encryptKey($siteKey, $objKey);
 
-$enc->type = XMLSecEnc::Element;
-$encNode = $enc->encryptNode($objKey, FALSE);
+$enc->type = XMLSecEnc::ELEMENT;
+$encNode = $enc->encryptNode($objKey, false);
 
 $newData = $dom->saveXML();
 if ($newData !== $origData) {

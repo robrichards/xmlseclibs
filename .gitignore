@@ -1,3 +1,4 @@
+.phpunit.result.cache
 composer.lock
 tests/sign-c14-comments.xml
 tests/sign-empty-uri.xml

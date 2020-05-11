@@ -13,12 +13,12 @@ $doc->load(dirname(__FILE__) . '/withcomment-empty-uri.xml');
 $objXMLSecDSig = new XMLSecurityDSig();
 
 $objDSig = $objXMLSecDSig->locateSignature($doc);
-if (! $objDSig) {
+if (!$objDSig) {
 	throw new Exception("Cannot locate Signature Node");
 }
 
 $retVal = $objXMLSecDSig->validateReference();
-if (! $retVal) {
+if (!$retVal) {
 	throw new Exception("Reference Validation Failed");
 }
 

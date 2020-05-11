@@ -1,7 +1,5 @@
 --TEST--
 Signature RSA SHA256
---SKIPIF--
-<?php if (version_compare(PHP_VERSION, '5.3.0', '<')) die('SKIP Requires PHP version 5.3.0 or newer.'); ?>
 --FILE--
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');
@@ -23,7 +21,7 @@ $objDSig->addReference($doc, XMLSecurityDSig::SHA256, array('http://www.w3.org/2
 
 $objKey = new XMLSecurityKey(XMLSecurityKey::RSA_SHA256, array('type'=>'private'));
 /* load private key */
-$objKey->loadKey(dirname(__FILE__) . '/privkey.pem', TRUE);
+$objKey->loadKey(dirname(__FILE__) . '/privkey.pem', true);
 
 /* if key has Passphrase, set it using $objKey->passphrase = <passphrase> " */
 

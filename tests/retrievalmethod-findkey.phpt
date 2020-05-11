@@ -10,7 +10,7 @@ $doc->load(dirname(__FILE__) . "/retrievalmethod-findkey.xml");
 
 $objenc = new XMLSecEnc();
 $encData = $objenc->locateEncryptedData($doc);
-if (! $encData) {
+if (!$encData) {
 	throw new Exception("Cannot locate Encrypted Data");
 }
 $objenc->setNode($encData);

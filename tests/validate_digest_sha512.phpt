@@ -17,7 +17,7 @@ $objDSig->addReference($doc, XMLSecurityDSig::SHA512, array('http://www.w3.org/2
 
 $objKey = new XMLSecurityKey(XMLSecurityKey::RSA_SHA1, array('type'=>'private'));
 /* load private key */
-$objKey->loadKey(dirname(__FILE__) . '/privkey.pem', TRUE);
+$objKey->loadKey(dirname(__FILE__) . '/privkey.pem', true);
 
 $objDSig->sign($objKey);
 
@@ -43,7 +43,7 @@ $digestValue->insertData(63, "\n");
 $objXMLSecDSig = new XMLSecurityDSig();
 
 $objDSig = $objXMLSecDSig->locateSignature($dom);
-if (! $objDSig) {
+if (!$objDSig) {
 	throw new Exception("Cannot locate Signature Node");
 }
 $objXMLSecDSig->canonicalizeSignedInfo();

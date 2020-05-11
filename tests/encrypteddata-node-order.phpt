@@ -15,14 +15,14 @@ $dom->load(dirname(__FILE__) . '/basic-doc.xml');
 $objKey = new XMLSecurityKey(XMLSecurityKey::AES256_CBC);
 $objKey->generateSessionKey();
 
-$siteKey = new XMLSecurityKey(XMLSecurityKey::RSA_OAEP_MGF1P, array('type'=>'public'));
-$siteKey->loadKey(dirname(__FILE__) . '/mycert.pem', TRUE, TRUE);
+$siteKey = new XMLSecurityKey(XMLSecurityKey::RSA_OAEP_MGF1P, array('type' => 'public'));
+$siteKey->loadKey(dirname(__FILE__) . '/mycert.pem', true, true);
 
 $enc = new XMLSecEnc();
 $enc->setNode($dom->documentElement);
 $enc->encryptKey($siteKey, $objKey);
 
-$enc->type = XMLSecEnc::Content;
+$enc->type = XMLSecEnc::CONTENT;
 $encNode = $enc->encryptNode($objKey);
 
 $nodeOrder = array(
@@ -33,16 +33,16 @@ $nodeOrder = array(
 );
 
 $prevNode = 0;
-for ($node = $encNode->firstChild; $node !== NULL; $node = $node->nextSibling) {
-	if (! ($node instanceof DOMElement)) {
+for ($node = $encNode->firstChild; $node !== null; $node = $node->nextSibling) {
+	if (!($node instanceof DOMElement)) {
 		/* Skip comment and text nodes. */
 		continue;
 	}
 
 	$name = $node->localName;
 
-	$cIndex = array_search($name, $nodeOrder, TRUE);
-	if ($cIndex === FALSE) {
+	$cIndex = array_search($name, $nodeOrder, true);
+	if ($cIndex === false) {
 		die("Unknown node: $name");
 	}
 

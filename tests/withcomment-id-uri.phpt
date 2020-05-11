@@ -13,12 +13,12 @@ $objXMLSecDSig = new XMLSecurityDSig();
 $objXMLSecDSig->idKeys = array('xml:id');
 
 $objDSig = $objXMLSecDSig->locateSignature($doc);
-if (! $objDSig) {
+if (!$objDSig) {
 	throw new Exception("Cannot locate Signature Node");
 }
 
 $retVal = $objXMLSecDSig->validateReference();
-if (! $retVal) {
+if (!$retVal) {
 	throw new Exception("Reference Validation Failed");
 }
 
