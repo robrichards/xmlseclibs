@@ -22,7 +22,7 @@ $enc = new XMLSecEnc();
 $enc->setNode($dom->documentElement);
 $enc->encryptKey($siteKey, $objKey);
 
-$enc->type = XMLSecEnc::Content;
+$enc->type = XMLSecEnc::CONTENT;
 $encNode = $enc->encryptNode($objKey);
 
 $nodeOrder = array(

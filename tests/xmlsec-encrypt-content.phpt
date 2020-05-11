@@ -23,7 +23,7 @@ $enc = new XMLSecEnc();
 $enc->setNode($dom->documentElement);
 $enc->encryptKey($siteKey, $objKey);
 
-$enc->type = XMLSecEnc::Content;
+$enc->type = XMLSecEnc::CONTENT;
 $encNode = $enc->encryptNode($objKey);
 
 $dom->save(dirname(__FILE__) . '/oaep_sha1.xml');

@@ -51,14 +51,14 @@ use RobRichards\XMLSecLibs\Utils\XPath as XPath;
 
 class XMLSecEnc
 {
-    private const template = "<xenc:EncryptedData xmlns:xenc='http://www.w3.org/2001/04/xmlenc#'>
+    private const TEMPLATE = "<xenc:EncryptedData xmlns:xenc='http://www.w3.org/2001/04/xmlenc#'>
    <xenc:CipherData>
       <xenc:CipherValue></xenc:CipherValue>
    </xenc:CipherData>
 </xenc:EncryptedData>";
 
-    public const Element = 'http://www.w3.org/2001/04/xmlenc#Element';
-    public const Content = 'http://www.w3.org/2001/04/xmlenc#Content';
+    public const ELEMENT = 'http://www.w3.org/2001/04/xmlenc#Element';
+    public const CONTENT = 'http://www.w3.org/2001/04/xmlenc#Content';
     public const URI = 3;
     public const XMLENCNS = 'http://www.w3.org/2001/04/xmlenc#';
 
@@ -79,13 +79,13 @@ class XMLSecEnc
 
     public function __construct()
     {
-        $this->_resetTemplate();
+        $this->resetTemplate();
     }
 
-    private function _resetTemplate()
+    private function resetTemplate()
     {
         $this->encdoc = new DOMDocument();
-        $this->encdoc->loadXML(self::template);
+        $this->encdoc->loadXML(self::TEMPLATE);
     }
 
     /**
@@ -100,7 +100,7 @@ class XMLSecEnc
             throw new Exception('$node is not of type DOMNode');
         }
         $curencdoc = $this->encdoc;
-        $this->_resetTemplate();
+        $this->resetTemplate();
         $encdoc = $this->encdoc;
         $this->encdoc = $curencdoc;
         $refuri = XMLSecurityDSig::generateGUID();
@@ -143,16 +143,16 @@ class XMLSecEnc
             throw new Exception('Error locating CipherValue element within template');
         }
         switch ($this->type) {
-            case (self::Element):
+            case (self::ELEMENT):
                 $data = $doc->saveXML($this->rawNode);
-                $this->encdoc->documentElement->setAttribute('Type', self::Element);
+                $this->encdoc->documentElement->setAttribute('Type', self::ELEMENT);
                 break;
-            case (self::Content):
+            case (self::CONTENT):
                 $children = $this->rawNode->childNodes;
                 foreach ($children as $child) {
                     $data .= $doc->saveXML($child);
                 }
-                $this->encdoc->documentElement->setAttribute('Type', self::Content);
+                $this->encdoc->documentElement->setAttribute('Type', self::CONTENT);
                 break;
             default:
                 throw new Exception('Type is currently not supported');
@@ -173,14 +173,14 @@ class XMLSecEnc
 
         if ($replace) {
             switch ($this->type) {
-                case (self::Element):
+                case (self::ELEMENT):
                     if ($this->rawNode->nodeType == XML_DOCUMENT_NODE) {
                         return $this->encdoc;
                     }
                     $importEnc = $this->rawNode->ownerDocument->importNode($this->encdoc->documentElement, true);
                     $this->rawNode->parentNode->replaceChild($importEnc, $this->rawNode);
                     return $importEnc;
-                case (self::Content):
+                case (self::CONTENT):
                     $importEnc = $this->rawNode->ownerDocument->importNode($this->encdoc->documentElement, true);
                     while ($this->rawNode->firstChild) {
                         $this->rawNode->removeChild($this->rawNode->firstChild);
@@ -270,7 +270,7 @@ class XMLSecEnc
             $decrypted = $objKey->decryptData($encryptedData);
             if ($replace) {
                 switch ($this->type) {
-                    case (self::Element):
+                    case (self::ELEMENT):
                         $newdoc = new DOMDocument();
                         $newdoc->loadXML($decrypted);
                         if ($this->rawNode->nodeType == XML_DOCUMENT_NODE) {
@@ -279,7 +279,7 @@ class XMLSecEnc
                         $importEnc = $this->rawNode->ownerDocument->importNode($newdoc->documentElement, true);
                         $this->rawNode->parentNode->replaceChild($importEnc, $this->rawNode);
                         return $importEnc;
-                    case (self::Content):
+                    case (self::CONTENT):
                         if ($this->rawNode->nodeType == XML_DOCUMENT_NODE) {
                             $doc = $this->rawNode;
                         } else {

@@ -33,7 +33,7 @@ foreach ($arTests AS $testName=>$testParams) {
 	$enc->setNode($dom->documentElement);
 	$enc->encryptKey($siteKey, $objKey);
 	
-	$enc->type = XMLSecEnc::Element;
+	$enc->type = XMLSecEnc::ELEMENT;
 	$encNode = $enc->encryptNode($objKey);
 	
 	$dom->save(dirname(__FILE__) . "/$testFile");
