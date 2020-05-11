@@ -24,7 +24,7 @@ class XPath
      */
     public static function filterAttrValue($value, $quotes = self::ALL_QUOTES)
     {
-        return preg_replace('#'.$quotes.'#', '', $value);
+        return preg_replace('#' . $quotes . '#', '', $value);
     }
 
 
@@ -39,6 +39,6 @@ class XPath
      */
     public static function filterAttrName($name, $allow = self::EXTENDED_ALPHANUMERIC)
     {
-        return preg_replace('#[^'.$allow.']#', '', $name);
+        return preg_replace('#[^' . $allow . ']#', '', $name);
     }
 }

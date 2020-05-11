@@ -16,8 +16,8 @@ $dom->load(dirname(__FILE__) . '/basic-doc.xml');
 $objKey = new XMLSecurityKey(XMLSecurityKey::AES256_CBC);
 $objKey->generateSessionKey();
 
-$siteKey = new XMLSecurityKey(XMLSecurityKey::RSA_OAEP_MGF1P, array('type'=>'public'));
-$siteKey->loadKey(dirname(__FILE__) . '/mycert.pem', TRUE, TRUE);
+$siteKey = new XMLSecurityKey(XMLSecurityKey::RSA_OAEP_MGF1P, array('type' => 'public'));
+$siteKey->loadKey(dirname(__FILE__) . '/mycert.pem', true, true);
 
 $enc = new XMLSecEnc();
 $enc->setNode($dom->documentElement);

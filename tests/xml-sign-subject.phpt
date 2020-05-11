@@ -21,7 +21,7 @@ $objDSig->addReference($doc, XMLSecurityDSig::SHA1, array('http://www.w3.org/200
 
 $objKey = new XMLSecurityKey(XMLSecurityKey::RSA_SHA1, array('type'=>'private'));
 /* load private key */
-$objKey->loadKey(dirname(__FILE__) . '/privkey.pem', TRUE);
+$objKey->loadKey(dirname(__FILE__) . '/privkey.pem', true);
 
 /* if key has Passphrase, set it using $objKey->passphrase = <passphrase> " */
 
@@ -29,7 +29,7 @@ $objKey->loadKey(dirname(__FILE__) . '/privkey.pem', TRUE);
 $objDSig->sign($objKey);
 
 /* Add associated public key */
-$objDSig->add509Cert(file_get_contents(dirname(__FILE__) . '/mycert.pem'), TRUE, FALSE, array('subjectName'=>TRUE));
+$objDSig->add509Cert(file_get_contents(dirname(__FILE__) . '/mycert.pem'), true, false, array('subjectName' => true));
 
 $objDSig->appendSignature($doc->documentElement);
 $doc->save(dirname(__FILE__) . '/sign-subject.xml');

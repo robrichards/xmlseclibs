@@ -1,4 +1,5 @@
 <?php
+
 namespace RobRichards\XMLSecLibs;
 
 use DOMElement;
@@ -111,7 +112,7 @@ class XMLSecurityKey
      * @param null|array $params
      * @throws Exception
      */
-    public function __construct($type, $params=null)
+    public function __construct($type, $params = null)
     {
         switch ($type) {
             case (self::TRIPLEDES_CBC):
@@ -278,9 +279,9 @@ class XMLSecurityKey
             throw new Exception('Unknown key size for type "' . $this->type . '".');
         }
         $keysize = $this->cryptParams['keysize'];
-        
+
         $key = openssl_random_pseudo_bytes($keysize);
-        
+
         if ($this->type === self::TRIPLEDES_CBC) {
             /* Make sure that the generated key has the proper parity bits set.
              * Mcrypt doesn't care about the parity bits, but others may care.
@@ -295,7 +296,7 @@ class XMLSecurityKey
                 $key[$i] = chr($byte);
             }
         }
-        
+
         $this->key = $key;
         return $key;
     }
@@ -313,7 +314,7 @@ class XMLSecurityKey
         $data = '';
         $inData = false;
 
-        foreach ($arCert AS $curData) {
+        foreach ($arCert as $curData) {
             if (! $inData) {
                 if (strncmp($curData, '-----BEGIN CERTIFICATE', 22) == 0) {
                     $inData = true;
@@ -341,7 +342,7 @@ class XMLSecurityKey
      * @param bool $isCert
      * @throws Exception
      */
-    public function loadKey($key, $isFile=false, $isCert = false)
+    public function loadKey($key, $isFile = false, $isCert = false)
     {
         if ($isFile) {
             $this->key = file_get_contents($key);
@@ -359,21 +360,22 @@ class XMLSecurityKey
         if ($this->cryptParams['library'] == 'openssl') {
             switch ($this->cryptParams['type']) {
                 case 'public':
-	                if ($isCert) {
-	                    /* Load the thumbprint if this is an X509 certificate. */
-	                    $this->X509Thumbprint = self::getRawThumbprint($this->key);
-	                }
-	                $this->key = openssl_get_publickey($this->key);
-	                if (! $this->key) {
-	                    throw new Exception('Unable to extract public key');
-	                }
-	                break;
+                    if ($isCert) {
+                        /* Load the thumbprint if this is an X509 certificate. */
+                        $this->X509Thumbprint = self::getRawThumbprint($this->key);
+                    }
+                    $this->key = openssl_get_publickey($this->key);
 
-	            case 'private':
+                    if (!($this->key)) {
+                        throw new Exception('Unable to extract public key');
+                    }
+                    break;
+
+                case 'private':
                     $this->key = openssl_get_privatekey($this->key, $this->passphrase);
                     break;
 
-                case'symmetric':
+                case 'symmetric':
                     if (strlen($this->key) < $this->cryptParams['keysize']) {
                         throw new Exception('Key must contain at least 25 characters for this cipher');
                     }
@@ -426,17 +428,30 @@ class XMLSecurityKey
     {
         $this->iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length($this->cryptParams['cipher']));
         $authTag = null;
-        if(in_array($this->cryptParams['cipher'], ['aes-128-gcm', 'aes-192-gcm', 'aes-256-gcm'])) {
+        if (in_array($this->cryptParams['cipher'], ['aes-128-gcm', 'aes-192-gcm', 'aes-256-gcm'])) {
             if (version_compare(PHP_VERSION, '7.1.0') < 0) {
                 throw new Exception('PHP 7.1.0 is required to use AES GCM algorithms');
             }
             $authTag = openssl_random_pseudo_bytes(self::AUTHTAG_LENGTH);
-            $encrypted = openssl_encrypt($data, $this->cryptParams['cipher'], $this->key, OPENSSL_RAW_DATA, $this->iv, $authTag);
+            $encrypted = openssl_encrypt(
+                $data,
+                $this->cryptParams['cipher'],
+                $this->key,
+                OPENSSL_RAW_DATA,
+                $this->iv,
+                $authTag
+            );
         } else {
             $data = $this->padISO10126($data, $this->cryptParams['blocksize']);
-            $encrypted = openssl_encrypt($data, $this->cryptParams['cipher'], $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $this->iv);
+            $encrypted = openssl_encrypt(
+                $data,
+                $this->cryptParams['cipher'],
+                $this->key,
+                OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING,
+                $this->iv
+            );
         }
-        
+
         if (false === $encrypted) {
             throw new Exception('Failure encrypting Data (openssl symmetric) - ' . openssl_error_string());
         }
@@ -455,7 +470,7 @@ class XMLSecurityKey
         $this->iv = substr($data, 0, $iv_length);
         $data = substr($data, $iv_length);
         $authTag = null;
-        if(in_array($this->cryptParams['cipher'], ['aes-128-gcm', 'aes-192-gcm', 'aes-256-gcm'])) {
+        if (in_array($this->cryptParams['cipher'], ['aes-128-gcm', 'aes-192-gcm', 'aes-256-gcm'])) {
             if (version_compare(PHP_VERSION, '7.1.0') < 0) {
                 throw new Exception('PHP 7.1.0 is required to use AES GCM algorithms');
             }
@@ -463,11 +478,24 @@ class XMLSecurityKey
             $offset = 0 - self::AUTHTAG_LENGTH;
             $authTag = substr($data, $offset);
             $data = substr($data, 0, $offset);
-            $decrypted = openssl_decrypt($data, $this->cryptParams['cipher'], $this->key, OPENSSL_RAW_DATA, $this->iv, $authTag);
+            $decrypted = openssl_decrypt(
+                $data,
+                $this->cryptParams['cipher'],
+                $this->key,
+                OPENSSL_RAW_DATA,
+                $this->iv,
+                $authTag
+            );
         } else {
-            $decrypted = openssl_decrypt($data, $this->cryptParams['cipher'], $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $this->iv);
+            $decrypted = openssl_decrypt(
+                $data,
+                $this->cryptParams['cipher'],
+                $this->key,
+                OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING,
+                $this->iv
+            );
         }
-        
+
         if (false === $decrypted) {
             throw new Exception('Failure decrypting Data (openssl symmetric) - ' . openssl_error_string());
         }
@@ -483,7 +511,7 @@ class XMLSecurityKey
      */
     private function encryptPublic($data)
     {
-        if (! openssl_public_encrypt($data, $encrypted, $this->key, $this->cryptParams['padding'])) {
+        if (!openssl_public_encrypt($data, $encrypted, $this->key, $this->cryptParams['padding'])) {
             throw new Exception('Failure encrypting Data (openssl public) - ' . openssl_error_string());
         }
         return $encrypted;
@@ -498,7 +526,7 @@ class XMLSecurityKey
      */
     private function decryptPublic($data)
     {
-        if (! openssl_public_decrypt($data, $decrypted, $this->key, $this->cryptParams['padding'])) {
+        if (!openssl_public_decrypt($data, $decrypted, $this->key, $this->cryptParams['padding'])) {
             throw new Exception('Failure decrypting Data (openssl public) - ' . openssl_error_string());
         }
         return $decrypted;
@@ -513,7 +541,7 @@ class XMLSecurityKey
      */
     private function encryptPrivate($data)
     {
-        if (! openssl_private_encrypt($data, $encrypted, $this->key, $this->cryptParams['padding'])) {
+        if (!openssl_private_encrypt($data, $encrypted, $this->key, $this->cryptParams['padding'])) {
             throw new Exception('Failure encrypting Data (openssl private) - ' . openssl_error_string());
         }
         return $encrypted;
@@ -528,7 +556,7 @@ class XMLSecurityKey
      */
     private function decryptPrivate($data)
     {
-        if (! openssl_private_decrypt($data, $decrypted, $this->key, $this->cryptParams['padding'])) {
+        if (!openssl_private_decrypt($data, $decrypted, $this->key, $this->cryptParams['padding'])) {
             throw new Exception('Failure decrypting Data (openssl private) - ' . openssl_error_string());
         }
         return $decrypted;
@@ -544,10 +572,10 @@ class XMLSecurityKey
     private function signOpenSSL($data)
     {
         $algo = OPENSSL_ALGO_SHA1;
-        if (! empty($this->cryptParams['digest'])) {
+        if (!empty($this->cryptParams['digest'])) {
             $algo = $this->cryptParams['digest'];
         }
-        if (! openssl_sign($data, $signature, $this->key, $algo)) {
+        if (!openssl_sign($data, $signature, $this->key, $algo)) {
             throw new Exception('Failure Signing Data: ' . openssl_error_string() . ' - ' . $algo);
         }
         return $signature;
@@ -572,14 +600,15 @@ class XMLSecurityKey
     private function verifyOpenSSL($data, $signature)
     {
         $algo = OPENSSL_ALGO_SHA1;
-        if (! empty($this->cryptParams['digest'])) {
+        if (!empty($this->cryptParams['digest'])) {
             $algo = $this->cryptParams['digest'];
         }
         return openssl_verify($data, $signature, $this->key, $algo);
     }
 
     /**
-     * Encrypts the given data (string) using the regarding php-extension, depending on the library assigned to algorithm in the contructor.
+     * Encrypts the given data (string) using the regarding php-extension,
+     *   depending on the library assigned to algorithm in the contructor.
      *
      * @param string $data
      * @return mixed|string
@@ -599,7 +628,8 @@ class XMLSecurityKey
     }
 
     /**
-     * Decrypts the given data (string) using the regarding php-extension, depending on the library assigned to algorithm in the contructor.
+     * Decrypts the given data (string) using the regarding php-extension,
+     *   depending on the library assigned to algorithm in the contructor.
      *
      * @param string $data
      * @return mixed|string
@@ -635,7 +665,8 @@ class XMLSecurityKey
     }
 
     /**
-     * Verifies the data (string) against the given signature using the extension assigned to the type in the constructor.
+     * Verifies the data (string) against the given signature using
+     *   the extension assigned to the type in the constructor.
      *
      * Returns in case of openSSL:
      *  1 on succesful signature verification,
@@ -689,11 +720,12 @@ class XMLSecurityKey
     {
         switch ($type) {
             case 0x02:
-                if (ord($string) > 0x7f)
-                    $string = chr(0).$string;
+                if (ord($string) > 0x7f) {
+                    $string = chr(0) . $string;
+                }
                 break;
             case 0x03:
-                $string = chr(0).$string;
+                $string = chr(0) . $string;
                 break;
         }
 
@@ -701,9 +733,9 @@ class XMLSecurityKey
 
         if ($length < 128) {
             $output = sprintf("%c%c%s", $type, $length, $string);
-        } else if ($length < 0x0100) {
+        } elseif ($length < 0x0100) {
             $output = sprintf("%c%c%c%s", $type, 0x81, $length, $string);
-        } else if ($length < 0x010000) {
+        } elseif ($length < 0x010000) {
             $output = sprintf("%c%c%c%c%s", $type, 0x82, $length / 0x0100, $length % 0x0100, $string);
         } else {
             $output = null;
@@ -723,20 +755,20 @@ class XMLSecurityKey
         /* make an ASN publicKeyInfo */
         $exponentEncoding = self::makeAsnSegment(0x02, $exponent);
         $modulusEncoding = self::makeAsnSegment(0x02, $modulus);
-        $sequenceEncoding = self::makeAsnSegment(0x30, $modulusEncoding.$exponentEncoding);
+        $sequenceEncoding = self::makeAsnSegment(0x30, $modulusEncoding . $exponentEncoding);
         $bitstringEncoding = self::makeAsnSegment(0x03, $sequenceEncoding);
         $rsaAlgorithmIdentifier = pack("H*", "300D06092A864886F70D0101010500");
-        $publicKeyInfo = self::makeAsnSegment(0x30, $rsaAlgorithmIdentifier.$bitstringEncoding);
+        $publicKeyInfo = self::makeAsnSegment(0x30, $rsaAlgorithmIdentifier . $bitstringEncoding);
 
         /* encode the publicKeyInfo in base64 and add PEM brackets */
         $publicKeyInfoBase64 = base64_encode($publicKeyInfo);
         $encoding = "-----BEGIN PUBLIC KEY-----\n";
         $offset = 0;
         while ($segment = substr($publicKeyInfoBase64, $offset, 64)) {
-            $encoding = $encoding.$segment."\n";
+            $encoding = $encoding . $segment . "\n";
             $offset += 64;
         }
-        return $encoding."-----END PUBLIC KEY-----\n";
+        return $encoding . "-----END PUBLIC KEY-----\n";
     }
 
     /**
@@ -744,7 +776,6 @@ class XMLSecurityKey
      */
     public function serializeKey($parent)
     {
-
     }
 
     /**
@@ -788,7 +819,7 @@ class XMLSecurityKey
 
         $objenc = new XMLSecEnc();
         $objenc->setNode($element);
-        if (! $objKey = $objenc->locateKey()) {
+        if (!($objKey = $objenc->locateKey())) {
             throw new Exception("Unable to locate algorithm for this Encrypted Key");
         }
         $objKey->isEncrypted = true;
@@ -796,5 +827,4 @@ class XMLSecurityKey
         XMLSecEnc::staticLocateKeyInfo($objKey, $element);
         return $objKey;
     }
-
 }

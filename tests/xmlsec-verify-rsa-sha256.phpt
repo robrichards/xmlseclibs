@@ -11,12 +11,12 @@ use RobRichards\XMLSecLibs\XMLSecEnc;
 $doc = new DOMDocument();
 $arTests = array('SIGN_TEST_RSA_SHA256'=>'sign-sha256-rsa-sha256-test.xml');
 
-foreach ($arTests AS $testName=>$testFile) {
+foreach ($arTests as $testName=>$testFile) {
 	$doc->load(dirname(__FILE__) . "/$testFile");
 	$objXMLSecDSig = new XMLSecurityDSig();
 	
 	$objDSig = $objXMLSecDSig->locateSignature($doc);
-	if (! $objDSig) {
+	if (!$objDSig) {
 		throw new Exception("Cannot locate Signature Node");
 	}
 	$objXMLSecDSig->canonicalizeSignedInfo();
@@ -25,20 +25,20 @@ foreach ($arTests AS $testName=>$testFile) {
 	
 	$retVal = $objXMLSecDSig->validateReference();
 
-	if (! $retVal) {
+	if (!$retVal) {
 		throw new Exception("Reference Validation Failed");
 	}
 	
 	$objKey = $objXMLSecDSig->locateKey();
-	if (! $objKey ) {
+	if (!$objKey ) {
 		throw new Exception("We have no idea about the key");
 	}
-	$key = NULL;
+	$key = null;
 	
 	$objKeyInfo = XMLSecEnc::staticLocateKeyInfo($objKey, $objDSig);
 
-	if (! $objKeyInfo->key && empty($key)) {
-		$objKey->loadKey(dirname(__FILE__) . '/mycert.pem', TRUE);
+	if (!$objKeyInfo->key && empty($key)) {
+		$objKey->loadKey(dirname(__FILE__) . '/mycert.pem', true);
 	}
 
 	print $testName.": ";

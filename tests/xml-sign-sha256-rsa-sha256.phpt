@@ -23,7 +23,7 @@ $objDSig->addReference($doc, XMLSecurityDSig::SHA256, array('http://www.w3.org/2
 
 $objKey = new XMLSecurityKey(XMLSecurityKey::RSA_SHA256, array('type'=>'private'));
 /* load private key */
-$objKey->loadKey(dirname(__FILE__) . '/privkey.pem', TRUE);
+$objKey->loadKey(dirname(__FILE__) . '/privkey.pem', true);
 
 /* if key has Passphrase, set it using $objKey->passphrase = <passphrase> " */
 

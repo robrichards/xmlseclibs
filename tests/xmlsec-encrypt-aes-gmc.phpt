@@ -32,7 +32,7 @@ foreach ($arTests AS $testName=>$testParams) {
 	$objKey->generateSessionKey();
 	
 	$siteKey = new XMLSecurityKey(XMLSecurityKey::RSA_OAEP_MGF1P, array('type'=>'public'));
-	$siteKey->loadKey(dirname(__FILE__) . '/mycert.pem', TRUE, TRUE);
+	$siteKey->loadKey(dirname(__FILE__) . '/mycert.pem', true, true);
 	
 	$enc = new XMLSecEnc();
 	$enc->setNode($dom->documentElement);

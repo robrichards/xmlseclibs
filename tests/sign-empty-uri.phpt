@@ -19,9 +19,9 @@ $objDSig->setCanonicalMethod(XMLSecurityDSig::EXC_C14N);
 
 $objDSig->addReference($doc, XMLSecurityDSig::SHA1, array('http://www.w3.org/2000/09/xmldsig#enveloped-signature'), array('force_uri' => true));
 
-$objKey = new XMLSecurityKey(XMLSecurityKey::RSA_SHA1, array('type'=>'private'));
+$objKey = new XMLSecurityKey(XMLSecurityKey::RSA_SHA1, array('type' => 'private'));
 /* load private key */
-$objKey->loadKey(dirname(__FILE__) . '/privkey.pem', TRUE);
+$objKey->loadKey(dirname(__FILE__) . '/privkey.pem', true);
 
 /* if key has Passphrase, set it using $objKey->passphrase = <passphrase> " */
 

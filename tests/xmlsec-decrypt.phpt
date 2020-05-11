@@ -9,10 +9,10 @@ use RobRichards\XMLSecLibs\XMLSecEnc;
 function locateLocalKey($objKey) {
 	/* In this example the key is identified by filename */
 	$filename = $objKey->name;
-	if (! empty($filename)) {
-		$objKey->loadKey(dirname(__FILE__) . "/$filename", TRUE);
+	if (!empty($filename)) {
+            $objKey->loadKey(dirname(__FILE__) . "/$filename", true);
 	} else {
-	    $objKey->loadKey(dirname(__FILE__) . "/privkey.pem", TRUE);
+	    $objKey->loadKey(dirname(__FILE__) . "/privkey.pem", true);
 	}
 }
 
@@ -21,8 +21,8 @@ $arTests = array('AOESP_SHA1'=>'oaep_sha1-res.xml', 'AES128-GCM'=>'aes128-gcm-re
 
 $doc = new DOMDocument();
 
-foreach ($arTests AS $testName=>$testFile) {
-	$output = NULL;
+foreach ($arTests as $testName=>$testFile) {
+	$output = null;
 	print "$testName: ";
 
 	// Skip AES tests is PHP < 7.1.0
@@ -36,15 +36,15 @@ foreach ($arTests AS $testName=>$testFile) {
 	try {
 		$objenc = new XMLSecEnc();
 		$encData = $objenc->locateEncryptedData($doc);
-		if (! $encData) {
+		if (!$encData) {
 			throw new Exception("Cannot locate Encrypted Data");
 		}
 		$objenc->setNode($encData);
 		$objenc->type = $encData->getAttribute("Type");
-		if (! $objKey = $objenc->locateKey()) {
+		if (!($objKey = $objenc->locateKey())) {
 			throw new Exception("We know the secret key, but not the algorithm");
 		}
-		$key = NULL;
+		$key = null;
 		
 		if ($objKeyInfo = $objenc->locateKeyInfo($objKey)) {
 			if ($objKeyInfo->isEncrypted) {
@@ -54,17 +54,17 @@ foreach ($arTests AS $testName=>$testFile) {
 			}
 		}
 		
-		if (! $objKey->key && empty($key)) {
+		if (!$objKey->key && empty($key)) {
 			locateLocalKey($objKey);
 		}
 		if (empty($objKey->key)) {
 			$objKey->loadKey($key);
 		}
 		
-		$token = NULL;
+		$token = null;
 
-		if ($decrypt = $objenc->decryptNode($objKey, TRUE)) {
-			$output = NULL;
+		if ($decrypt = $objenc->decryptNode($objKey, true)) {
+			$output = null;
 			if ($decrypt instanceof DOMNode) {
 				if ($decrypt instanceof DOMDocument) {	
 					$output = $decrypt->saveXML();
@@ -80,7 +80,7 @@ foreach ($arTests AS $testName=>$testFile) {
 	}
 
 	$outfile = dirname(__FILE__) . "/basic-doc.xml";
-	$res = NULL;
+	$res = null;
 	if (file_exists($outfile)) {
 	    $resDoc = new DOMDocument();
 	    $resDoc->load($outfile);
