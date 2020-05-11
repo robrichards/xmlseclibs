@@ -842,9 +842,9 @@ class XMLSecurityKey
      * Will return the X509 certificate in PEM-format if this key represents
      * an X509 certificate.
      *
-     * @return string The X509 certificate or null if this key doesn't represent an X509-certificate.
+     * @return string|null The X509 certificate or null if this key doesn't represent an X509-certificate.
      */
-    public function getX509Certificate(): string
+    public function getX509Certificate(): ?string
     {
         return $this->x509Certificate;
     }
@@ -857,9 +857,9 @@ class XMLSecurityKey
      *  The thumbprint as a lowercase 40-character hexadecimal number, or null
      *  if this isn't a X509 certificate.
      *
-     *  @return string Lowercase 40-character hexadecimal number of thumbprint
+     *  @return string|null Lowercase 40-character hexadecimal number of thumbprint
      */
-    public function getX509Thumbprint(): string
+    public function getX509Thumbprint(): ?string
     {
         return $this->X509Thumbprint;
     }

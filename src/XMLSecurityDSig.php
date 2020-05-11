@@ -305,7 +305,6 @@ class XMLSecurityDSig
 
         if (
             is_null($arXPath)
-            && ($node instanceof DOMNode)
             && ($node->ownerDocument !== null)
             && $node->isSameNode($node->ownerDocument->documentElement)
         ) {
@@ -432,9 +431,9 @@ class XMLSecurityDSig
      * @param \DOMNode $refNode
      * @param \DOMNode $objData
      * @param bool $includeCommentNodes
-     * @return string
+     * @return \DOMNode|string
      */
-    public function processTransforms(DOMNode $refNode, DOMNode $objData, bool $includeCommentNodes = true): string
+    public function processTransforms(DOMNode $refNode, DOMNode $objData, bool $includeCommentNodes = true)
     {
         $data = $objData;
         $xpath = new DOMXPath($refNode->ownerDocument);
@@ -822,7 +821,7 @@ class XMLSecurityDSig
 
 
     /**
-     * @param \DOMElement|string $data
+     * @param \DOMElement $data
      * @param string|null $mimetype
      * @param string|null $encoding
      * @return \DOMElement

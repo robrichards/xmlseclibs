@@ -70,16 +70,16 @@ class XMLSecEnc
     /** @var string */
     public const XMLENCNS = 'http://www.w3.org/2001/04/xmlenc#';
 
-    /** @var null|\DOMDocument */
+    /** @var \DOMDocument|null */
     private $encdoc = null;
 
-    /** @var null|\DOMNode  */
+    /** @var \DOMNode|null */
     private $rawNode = null;
 
-    /** @var null|string */
+    /** @var string|null */
     public $type = null;
 
-    /** @var null|\DOMElement */
+    /** @var \DOMElement|null */
     public $encKey = null;
 
     /** @var array */
@@ -111,10 +111,6 @@ class XMLSecEnc
      */
     public function addReference(string $name, DOMNode $node, string $type): void
     {
-        if (!($node instanceof DOMNode)) {
-            throw new Exception('$node is not of type DOMNode');
-        }
-
         $curencdoc = $this->encdoc;
         $this->resetTemplate();
         $encdoc = $this->encdoc;
@@ -143,24 +139,28 @@ class XMLSecEnc
      * @param bool $replace Whether the encrypted node should be replaced in the original tree. Default is true.
      * @throws \Exception
      *
-     * @return \DOMElement  The <xenc:EncryptedData>-element.
+     * @return \DOMNode|false  The <xenc:EncryptedData>-element.
      */
-    public function encryptNode(XMLSecurityKey $objKey, bool $replace = true): DOMElement
+    public function encryptNode(XMLSecurityKey $objKey, bool $replace = true)
     {
         $data = '';
         if (empty($this->rawNode)) {
             throw new Exception('Node to encrypt has not been set');
         }
+
         if (!($objKey instanceof XMLSecurityKey)) {
             throw new Exception('Invalid Key');
         }
+
         $doc = $this->rawNode->ownerDocument;
         $xPath = new DOMXPath($this->encdoc);
         $objList = $xPath->query('/xenc:EncryptedData/xenc:CipherData/xenc:CipherValue');
+
         $cipherValue = $objList->item(0);
         if ($cipherValue == null) {
             throw new Exception('Error locating CipherValue element within template');
         }
+
         switch ($this->type) {
             case (self::ELEMENT):
                 $data = $doc->saveXML($this->rawNode);
@@ -556,7 +556,7 @@ class XMLSecEnc
      * @param \DOMNode|null $node
      * @return \RobRichards\XMLSecLibs\XMLSecurityKey|null
      */
-    public function locateKeyInfo(XMLSecurityKey $objBaseKey = null, DOMNode $node = null): XMLSecurityKey
+    public function locateKeyInfo(XMLSecurityKey $objBaseKey = null, DOMNode $node = null): ?XMLSecurityKey
     {
         if (empty($node)) {
             $node = $this->rawNode;
