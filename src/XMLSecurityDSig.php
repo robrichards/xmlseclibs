@@ -63,12 +63,6 @@ class XMLSecurityDSig
     public const EXC_C14N = 'http://www.w3.org/2001/10/xml-exc-c14n#';
     public const EXC_C14N_COMMENTS = 'http://www.w3.org/2001/10/xml-exc-c14n#WithComments';
 
-    private const template = '<ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
-  <ds:SignedInfo>
-    <ds:SignatureMethod />
-  </ds:SignedInfo>
-</ds:Signature>';
-
     private const BASE_TEMPLATE = '<Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
   <SignedInfo>
     <SignatureMethod />
@@ -161,20 +155,6 @@ class XMLSecurityDSig
                 substr($uuid, 16, 4) . "-" .
                 substr($uuid, 20, 12);
         return $guid;
-    }
-
-    /**
-     * Generate guid
-     *
-     * @param string $prefix Prefix to use for guid. defaults to pfx
-     *
-     * @return string The generated guid
-     *
-     * @deprecated Method deprecated in Release 1.4.1
-     */
-    public static function generate_GUID($prefix = 'pfx')
-    {
-        return self::generateGUID($prefix);
     }
 
     /**

@@ -429,9 +429,6 @@ class XMLSecurityKey
         $this->iv = openssl_random_pseudo_bytes(openssl_cipher_iv_length($this->cryptParams['cipher']));
         $authTag = null;
         if (in_array($this->cryptParams['cipher'], ['aes-128-gcm', 'aes-192-gcm', 'aes-256-gcm'])) {
-            if (version_compare(PHP_VERSION, '7.1.0') < 0) {
-                throw new Exception('PHP 7.1.0 is required to use AES GCM algorithms');
-            }
             $authTag = openssl_random_pseudo_bytes(self::AUTHTAG_LENGTH);
             $encrypted = openssl_encrypt(
                 $data,
@@ -471,9 +468,6 @@ class XMLSecurityKey
         $data = substr($data, $iv_length);
         $authTag = null;
         if (in_array($this->cryptParams['cipher'], ['aes-128-gcm', 'aes-192-gcm', 'aes-256-gcm'])) {
-            if (version_compare(PHP_VERSION, '7.1.0') < 0) {
-                throw new Exception('PHP 7.1.0 is required to use AES GCM algorithms');
-            }
             // obtain and remove the authentication tag
             $offset = 0 - self::AUTHTAG_LENGTH;
             $authTag = substr($data, $offset);
