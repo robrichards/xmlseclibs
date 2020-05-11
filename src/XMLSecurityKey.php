@@ -96,7 +96,7 @@ class XMLSecurityKey
     public const AUTHTAG_LENGTH = 16;
 
     /** @var array */
-    private $cryptParams = array();
+    private $cryptParams = [];
 
     /** @var int|string */
     public $type = 0;

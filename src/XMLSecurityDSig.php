@@ -92,10 +92,10 @@ class XMLSecurityDSig
     public $sigNode = null;
 
     /** @var array */
-    public $idKeys = array();
+    public $idKeys = [];
 
     /** @var array */
-    public $idNS = array();
+    public $idNS = [];
 
     /** @var string|null */
     private $signedInfo = null;
@@ -128,8 +128,8 @@ class XMLSecurityDSig
 
         if (!empty($prefix)) {
             $this->prefix = $prefix . ':';
-            $search = array("<S", "</S", "xmlns=");
-            $replace = array("<$prefix:S", "</$prefix:S", "xmlns:$prefix=");
+            $search = ["<S", "</S", "xmlns="];
+            $replace = ["<$prefix:S", "</$prefix:S", "xmlns:$prefix="];
             $template = str_replace($search, $replace, $template);
         }
 
@@ -354,7 +354,7 @@ class XMLSecurityDSig
                             if ($pfx = $node->getAttribute('PrefixList')) {
                                 $arpfx = array_filter(explode(' ', $pfx));
                                 if (count($arpfx) > 0) {
-                                    $prefixList = array_merge($prefixList ? $prefixList : array(), $arpfx);
+                                    $prefixList = array_merge($prefixList ? $prefixList : [], $arpfx);
                                 }
                             }
                         }
@@ -464,7 +464,7 @@ class XMLSecurityDSig
                     while ($node) {
                         if ($node->localName == 'InclusiveNamespaces') {
                             if ($pfx = $node->getAttribute('PrefixList')) {
-                                $arpfx = array();
+                                $arpfx = [];
                                 $pfxlist = explode(" ", $pfx);
                                 foreach ($pfxlist as $pfx) {
                                     $val = trim($pfx);
@@ -497,9 +497,9 @@ class XMLSecurityDSig
                     $node = $transform->firstChild;
                     while ($node) {
                         if ($node->localName == 'XPath') {
-                            $arXPath = array();
+                            $arXPath = [];
                             $arXPath['query'] = '(.//. | .//@* | .//namespace::*)[' . $node->nodeValue . ']';
-                            $arXPath['namespaces'] = array();
+                            $arXPath['namespaces'] = [];
                             $nslist = $xpath->query('./namespace::*', $node);
                             foreach ($nslist as $nsnode) {
                                 if ($nsnode->localName != "xml") {
@@ -619,7 +619,7 @@ class XMLSecurityDSig
      */
     public function getRefIDs(): array
     {
-        $refids = array();
+        $refids = [];
 
         $xpath = $this->getXPathObj();
         $query = "./secdsig:SignedInfo[1]/secdsig:Reference";
@@ -660,7 +660,7 @@ class XMLSecurityDSig
         }
 
         /* Initialize/reset the list of validated nodes. */
-        $this->validatedNodes = array();
+        $this->validatedNodes = [];
 
         foreach ($nodeset as $refNode) {
             if (!$this->processRefNode($refNode)) {
@@ -873,7 +873,7 @@ class XMLSecurityDSig
 
             if ($algorithm) {
                 try {
-                    $objKey = new XMLSecurityKey($algorithm, array('type' => 'public'));
+                    $objKey = new XMLSecurityKey($algorithm, ['type' => 'public']);
                 } catch (Exception $e) {
                     return null;
                 }
@@ -1047,7 +1047,7 @@ class XMLSecurityDSig
     {
         if ($isPEMFormat) {
             $data = '';
-            $certlist = array();
+            $certlist = [];
             $arCert = explode("\n", $certs);
             $inData = false;
 
@@ -1069,7 +1069,7 @@ class XMLSecurityDSig
 
             return $certlist;
         } else {
-            return array($certs);
+            return [$certs];
         }
     }
 
@@ -1150,11 +1150,11 @@ class XMLSecurityDSig
         $issuerSerial = false;
         $subjectName = false;
         if (is_array($options)) {
-            if (! empty($options['issuerSerial'])) {
+            if (!empty($options['issuerSerial'])) {
                 $issuerSerial = true;
             }
 
-            if (! empty($options['subjectName'])) {
+            if (!empty($options['subjectName'])) {
                 $subjectName = true;
             }
         }
@@ -1169,7 +1169,7 @@ class XMLSecurityDSig
                 if ($certData) {
                     if ($subjectName && !empty($certData['subject'])) {
                         if (is_array($certData['subject'])) {
-                            $parts = array();
+                            $parts = [];
                             foreach ($certData['subject'] as $key => $value) {
                                 if (is_array($value)) {
                                     foreach ($value as $valueElement) {
@@ -1192,7 +1192,7 @@ class XMLSecurityDSig
                     }
                     if ($issuerSerial && !empty($certData['issuer']) && !empty($certData['serialNumber'])) {
                         if (is_array($certData['issuer'])) {
-                            $parts = array();
+                            $parts = [];
                             foreach ($certData['issuer'] as $key => $value) {
                                 array_unshift($parts, "$key=$value");
                             }

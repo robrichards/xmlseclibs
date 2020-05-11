@@ -83,7 +83,7 @@ class XMLSecEnc
     public $encKey = null;
 
     /** @var array */
-    private $references = array();
+    private $references = [];
 
 
     public function __construct()
@@ -122,7 +122,7 @@ class XMLSecEnc
         $refuri = XMLSecurityDSig::generateGUID();
         $element = $encdoc->documentElement;
         $element->setAttribute("Id", $refuri);
-        $this->references[$name] = array("node" => $node, "type" => $type, "encnode" => $encdoc, "refuri" => $refuri);
+        $this->references[$name] = ["node" => $node, "type" => $type, "encnode" => $encdoc, "refuri" => $refuri];
     }
 
 
@@ -440,7 +440,7 @@ class XMLSecEnc
                 $attrAlgorithm = $encmeth->getAttribute("Algorithm");
 
                 try {
-                    $objKey = new XMLSecurityKey($attrAlgorithm, array('type' => 'private'));
+                    $objKey = new XMLSecurityKey($attrAlgorithm, ['type' => 'private']);
                 } catch (Exception $e) {
                     return null;
                 }
@@ -538,7 +538,7 @@ class XMLSecEnc
                     if ($x509certNodes = $child->getElementsByTagName('X509Certificate')) {
                         if ($x509certNodes->length > 0) {
                             $x509cert = $x509certNodes->item(0)->textContent;
-                            $x509cert = str_replace(array("\r", "\n", " "), "", $x509cert);
+                            $x509cert = str_replace(["\r", "\n", " "], "", $x509cert);
                             $x509cert = "-----BEGIN CERTIFICATE-----\n"
                                 . chunk_split($x509cert, 64, "\n") . "-----END CERTIFICATE-----\n";
                             $objBaseKey->loadKey($x509cert, false, true);
