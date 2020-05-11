@@ -50,16 +50,16 @@ use RobRichards\XMLSecLibs\Utils\XPath as XPath;
 
 class XMLSecEnc
 {
-    const template = "<xenc:EncryptedData xmlns:xenc='http://www.w3.org/2001/04/xmlenc#'>
+    private const template = "<xenc:EncryptedData xmlns:xenc='http://www.w3.org/2001/04/xmlenc#'>
    <xenc:CipherData>
       <xenc:CipherValue></xenc:CipherValue>
    </xenc:CipherData>
 </xenc:EncryptedData>";
 
-    const Element = 'http://www.w3.org/2001/04/xmlenc#Element';
-    const Content = 'http://www.w3.org/2001/04/xmlenc#Content';
-    const URI = 3;
-    const XMLENCNS = 'http://www.w3.org/2001/04/xmlenc#';
+    public const Element = 'http://www.w3.org/2001/04/xmlenc#Element';
+    public const Content = 'http://www.w3.org/2001/04/xmlenc#Content';
+    public const URI = 3;
+    public const XMLENCNS = 'http://www.w3.org/2001/04/xmlenc#';
 
     /** @var null|DOMDocument */
     private $encdoc = null;

@@ -46,22 +46,22 @@ use Exception;
 
 class XMLSecurityKey
 {
-    const TRIPLEDES_CBC = 'http://www.w3.org/2001/04/xmlenc#tripledes-cbc';
-    const AES128_CBC = 'http://www.w3.org/2001/04/xmlenc#aes128-cbc';
-    const AES192_CBC = 'http://www.w3.org/2001/04/xmlenc#aes192-cbc';
-    const AES256_CBC = 'http://www.w3.org/2001/04/xmlenc#aes256-cbc';
-    const AES128_GCM = 'http://www.w3.org/2009/xmlenc11#aes128-gcm';
-    const AES192_GCM = 'http://www.w3.org/2009/xmlenc11#aes192-gcm';
-    const AES256_GCM = 'http://www.w3.org/2009/xmlenc11#aes256-gcm';
-    const RSA_1_5 = 'http://www.w3.org/2001/04/xmlenc#rsa-1_5';
-    const RSA_OAEP_MGF1P = 'http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p';
-    const DSA_SHA1 = 'http://www.w3.org/2000/09/xmldsig#dsa-sha1';
-    const RSA_SHA1 = 'http://www.w3.org/2000/09/xmldsig#rsa-sha1';
-    const RSA_SHA256 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256';
-    const RSA_SHA384 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha384';
-    const RSA_SHA512 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha512';
-    const HMAC_SHA1 = 'http://www.w3.org/2000/09/xmldsig#hmac-sha1';
-    const AUTHTAG_LENGTH = 16;
+    public const TRIPLEDES_CBC = 'http://www.w3.org/2001/04/xmlenc#tripledes-cbc';
+    public const AES128_CBC = 'http://www.w3.org/2001/04/xmlenc#aes128-cbc';
+    public const AES192_CBC = 'http://www.w3.org/2001/04/xmlenc#aes192-cbc';
+    public const AES256_CBC = 'http://www.w3.org/2001/04/xmlenc#aes256-cbc';
+    public const AES128_GCM = 'http://www.w3.org/2009/xmlenc11#aes128-gcm';
+    public const AES192_GCM = 'http://www.w3.org/2009/xmlenc11#aes192-gcm';
+    public const AES256_GCM = 'http://www.w3.org/2009/xmlenc11#aes256-gcm';
+    public const RSA_1_5 = 'http://www.w3.org/2001/04/xmlenc#rsa-1_5';
+    public const RSA_OAEP_MGF1P = 'http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p';
+    public const DSA_SHA1 = 'http://www.w3.org/2000/09/xmldsig#dsa-sha1';
+    public const RSA_SHA1 = 'http://www.w3.org/2000/09/xmldsig#rsa-sha1';
+    public const RSA_SHA256 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256';
+    public const RSA_SHA384 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha384';
+    public const RSA_SHA512 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha512';
+    public const HMAC_SHA1 = 'http://www.w3.org/2000/09/xmldsig#hmac-sha1';
+    public const AUTHTAG_LENGTH = 16;
 
     /** @var array */
     private $cryptParams = array();

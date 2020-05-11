@@ -4,14 +4,14 @@ namespace RobRichards\XMLSecLibs\Utils;
 
 class XPath
 {
-    const ALPHANUMERIC = '\w\d';
-    const NUMERIC = '\d';
-    const LETTERS = '\w';
-    const EXTENDED_ALPHANUMERIC = '\w\d\s\-_:\.';
+    public const ALPHANUMERIC = '\w\d';
+    public const NUMERIC = '\d';
+    public const LETTERS = '\w';
+    public const EXTENDED_ALPHANUMERIC = '\w\d\s\-_:\.';
 
-    const SINGLE_QUOTE = '\'';
-    const DOUBLE_QUOTE = '"';
-    const ALL_QUOTES = '[\'"]';
+    public const SINGLE_QUOTE = '\'';
+    public const DOUBLE_QUOTE = '"';
+    public const ALL_QUOTES = '[\'"]';
 
 
     /**

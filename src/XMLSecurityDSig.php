@@ -50,25 +50,25 @@ use RobRichards\XMLSecLibs\Utils\XPath as XPath;
 
 class XMLSecurityDSig
 {
-    const XMLDSIGNS = 'http://www.w3.org/2000/09/xmldsig#';
-    const SHA1 = 'http://www.w3.org/2000/09/xmldsig#sha1';
-    const SHA256 = 'http://www.w3.org/2001/04/xmlenc#sha256';
-    const SHA384 = 'http://www.w3.org/2001/04/xmldsig-more#sha384';
-    const SHA512 = 'http://www.w3.org/2001/04/xmlenc#sha512';
-    const RIPEMD160 = 'http://www.w3.org/2001/04/xmlenc#ripemd160';
+    public const XMLDSIGNS = 'http://www.w3.org/2000/09/xmldsig#';
+    public const SHA1 = 'http://www.w3.org/2000/09/xmldsig#sha1';
+    public const SHA256 = 'http://www.w3.org/2001/04/xmlenc#sha256';
+    public const SHA384 = 'http://www.w3.org/2001/04/xmldsig-more#sha384';
+    public const SHA512 = 'http://www.w3.org/2001/04/xmlenc#sha512';
+    public const RIPEMD160 = 'http://www.w3.org/2001/04/xmlenc#ripemd160';
 
-    const C14N = 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315';
-    const C14N_COMMENTS = 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315#WithComments';
-    const EXC_C14N = 'http://www.w3.org/2001/10/xml-exc-c14n#';
-    const EXC_C14N_COMMENTS = 'http://www.w3.org/2001/10/xml-exc-c14n#WithComments';
+    public const C14N = 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315';
+    public const C14N_COMMENTS = 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315#WithComments';
+    public const EXC_C14N = 'http://www.w3.org/2001/10/xml-exc-c14n#';
+    public const EXC_C14N_COMMENTS = 'http://www.w3.org/2001/10/xml-exc-c14n#WithComments';
 
-    const template = '<ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+    private const template = '<ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
   <ds:SignedInfo>
     <ds:SignatureMethod />
   </ds:SignedInfo>
 </ds:Signature>';
 
-    const BASE_TEMPLATE = '<Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+    private const BASE_TEMPLATE = '<Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
   <SignedInfo>
     <SignatureMethod />
   </SignedInfo>
