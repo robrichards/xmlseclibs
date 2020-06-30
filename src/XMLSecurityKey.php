@@ -151,7 +151,7 @@ class XMLSecurityKey
                 $this->cryptParams['cipher'] = 'aes-128-gcm';
                 $this->cryptParams['type'] = 'symmetric';
                 $this->cryptParams['method'] = 'http://www.w3.org/2009/xmlenc11#aes128-gcm';
-                $this->cryptParams['keysize'] = 32;
+                $this->cryptParams['keysize'] = 16;
                 $this->cryptParams['blocksize'] = 16;
                 break;
             case (self::AES192_GCM):
@@ -159,7 +159,7 @@ class XMLSecurityKey
                 $this->cryptParams['cipher'] = 'aes-192-gcm';
                 $this->cryptParams['type'] = 'symmetric';
                 $this->cryptParams['method'] = 'http://www.w3.org/2009/xmlenc11#aes192-gcm';
-                $this->cryptParams['keysize'] = 32;
+                $this->cryptParams['keysize'] = 24;
                 $this->cryptParams['blocksize'] = 16;
                 break;
             case (self::AES256_GCM):
