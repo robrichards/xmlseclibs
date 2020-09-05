@@ -55,6 +55,7 @@ class XMLSecurityKey
     const AES256_GCM = 'http://www.w3.org/2009/xmlenc11#aes256-gcm';
     const RSA_1_5 = 'http://www.w3.org/2001/04/xmlenc#rsa-1_5';
     const RSA_OAEP_MGF1P = 'http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p';
+    const RSA_OAEP = 'http://www.w3.org/2009/xmlenc11#rsa-oaep';
     const DSA_SHA1 = 'http://www.w3.org/2000/09/xmldsig#dsa-sha1';
     const RSA_SHA1 = 'http://www.w3.org/2000/09/xmldsig#rsa-sha1';
     const RSA_SHA256 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256';
@@ -151,7 +152,7 @@ class XMLSecurityKey
                 $this->cryptParams['cipher'] = 'aes-128-gcm';
                 $this->cryptParams['type'] = 'symmetric';
                 $this->cryptParams['method'] = 'http://www.w3.org/2009/xmlenc11#aes128-gcm';
-                $this->cryptParams['keysize'] = 32;
+                $this->cryptParams['keysize'] = 16;
                 $this->cryptParams['blocksize'] = 16;
                 break;
             case (self::AES192_GCM):
@@ -159,7 +160,7 @@ class XMLSecurityKey
                 $this->cryptParams['cipher'] = 'aes-192-gcm';
                 $this->cryptParams['type'] = 'symmetric';
                 $this->cryptParams['method'] = 'http://www.w3.org/2009/xmlenc11#aes192-gcm';
-                $this->cryptParams['keysize'] = 32;
+                $this->cryptParams['keysize'] = 24;
                 $this->cryptParams['blocksize'] = 16;
                 break;
             case (self::AES256_GCM):
@@ -186,6 +187,18 @@ class XMLSecurityKey
                 $this->cryptParams['padding'] = OPENSSL_PKCS1_OAEP_PADDING;
                 $this->cryptParams['method'] = 'http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p';
                 $this->cryptParams['hash'] = null;
+                if (is_array($params) && ! empty($params['type'])) {
+                    if ($params['type'] == 'public' || $params['type'] == 'private') {
+                        $this->cryptParams['type'] = $params['type'];
+                        break;
+                    }
+                }
+                throw new Exception('Certificate "type" (private/public) must be passed via parameters');
+            case (self::RSA_OAEP):
+                $this->cryptParams['library'] = 'openssl';
+                $this->cryptParams['padding'] = OPENSSL_PKCS1_OAEP_PADDING;
+                $this->cryptParams['method'] = 'http://www.w3.org/2009/xmlenc11#rsa-oaep';
+                $this->cryptParams['hash'] = 'http://www.w3.org/2009/xmlenc11#mgf1sha1';
                 if (is_array($params) && ! empty($params['type'])) {
                     if ($params['type'] == 'public' || $params['type'] == 'private') {
                         $this->cryptParams['type'] = $params['type'];
@@ -375,7 +388,7 @@ class XMLSecurityKey
 
                 case'symmetric':
                     if (strlen($this->key) < $this->cryptParams['keysize']) {
-                        throw new Exception('Key must contain at least 25 characters for this cipher');
+                        throw new Exception('Key must contain at least '.$this->cryptParams['keysize'].' characters for this cipher, contains '.strlen($this->key));
                     }
                     break;
 
