@@ -731,7 +731,7 @@ class XMLSecurityDSig
      *                          id_name     => string ;
      *                          overwrite   => boolean ;
      *                          force_uri   => boolean ;
-     *                          include_ns  => string | array
+     *                          include_ns:[localName of Node]  => string | array
      */
     public function addReferenceList($arNodes, $algorithm, $arTransforms=null, $options=null)
     {
