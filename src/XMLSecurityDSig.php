@@ -224,7 +224,7 @@ class XMLSecurityDSig
      * @param string $method
      * @throws Exception
      */
-    public function setCanonicalMethod($method)
+    public function setCanonicalMethod($method, $include_ns=false)
     {
         switch ($method) {
             case 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315':
@@ -245,6 +245,11 @@ class XMLSecurityDSig
                 if (! ($canonNode = $nodeset->item(0))) {
                     $canonNode = $this->createNewSignNode('CanonicalizationMethod');
                     $sinfo->insertBefore($canonNode, $sinfo->firstChild);
+                    if($include_ns != false && ($method == self::EXC_C14N || $method == self::EXC_C14N_COMMENTS)) {
+                        $includeNode = $this->sigNode->ownerDocument->createElementNS($method, 'ec:InclusiveNamespaces', null);
+                        $includeNode->setAttribute('PrefixList', is_array($include_ns) ? implode(' ', $include_ns) : $include_ns);
+                        $canonNode->appendChild($includeNode);
+                    }
                 }
                 $canonNode->setAttribute('Algorithm', $this->canonicalMethod);
             }
@@ -420,28 +425,9 @@ class XMLSecurityDSig
                     } else {
                         $canonicalMethod = $algorithm;
                     }
-
-                    $node = $transform->firstChild;
-                    while ($node) {
-                        if ($node->localName == 'InclusiveNamespaces') {
-                            if ($pfx = $node->getAttribute('PrefixList')) {
-                                $arpfx = array();
-                                $pfxlist = explode(" ", $pfx);
-                                foreach ($pfxlist AS $pfx) {
-                                    $val = trim($pfx);
-                                    if (! empty($val)) {
-                                        $arpfx[] = $val;
-                                    }
-                                }
-                                if (count($arpfx) > 0) {
-                                    $prefixList = $arpfx;
-                                }
-                            }
-                            break;
-                        }
-                        $node = $node->nextSibling;
-                    }
-            break;
+                    
+                    $prefixList = $this->getInclusiveNamespaces($transform);
+                    break;
                 case 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315':
                 case 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315#WithComments':
                     if (!$includeCommentNodes) {
@@ -631,6 +617,7 @@ class XMLSecurityDSig
         $id_name = 'Id';
         $overwrite_id  = true;
         $force_uri = false;
+        $include_ns = false;
 
         if (is_array($options)) {
             $prefix = empty($options['prefix']) ? null : $options['prefix'];
@@ -638,6 +625,7 @@ class XMLSecurityDSig
             $id_name = empty($options['id_name']) ? 'Id' : $options['id_name'];
             $overwrite_id = !isset($options['overwrite']) ? true : (bool) $options['overwrite'];
             $force_uri = !isset($options['force_uri']) ? false : (bool) $options['force_uri'];
+            $include_ns = !isset($options['include_ns']) ? false : $options['include_ns'];
         }
 
         $attname = $id_name;
@@ -655,7 +643,9 @@ class XMLSecurityDSig
             }
             if (empty($uri)) {
                 $uri = self::generateGUID();
-                $node->setAttributeNS($prefix_ns, $attname, $uri);
+                $attrib = $this->sigNode->ownerDocument->createAttributeNS($prefix_ns, $attname);
+                $attrib->value = $uri;
+                $node->setAttributeNodeNS($attrib);
             }
             $refNode->setAttribute("URI", '#'.$uri);
         } elseif ($force_uri) {
@@ -677,7 +667,9 @@ class XMLSecurityDSig
                     $transNode->appendChild($XPathNode);
                     if (! empty($transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['namespaces'])) {
                         foreach ($transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['namespaces'] AS $prefix => $namespace) {
-                            $XPathNode->setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:$prefix", $namespace);
+                            $attrib = $this->sigNode->ownerDocument->createAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:$prefix");
+                            $attrib->value = $namespace;
+                            $XPathNode->setAttributeNodeNS($attrib);
                         }
                     }
                 } else {
@@ -688,6 +680,12 @@ class XMLSecurityDSig
             $transNode = $this->createNewSignNode('Transform');
             $transNodes->appendChild($transNode);
             $transNode->setAttribute('Algorithm', $this->canonicalMethod);
+            
+            if($include_ns != false && ($this->canonicalMethod == self::EXC_C14N || $this->canonicalMethod == self::EXC_C14N_COMMENTS)) {
+                $includeNode = $this->sigNode->ownerDocument->createElementNS($this->canonicalMethod, 'ec:InclusiveNamespaces');
+                $includeNode->setAttribute('PrefixList', is_array($include_ns) ? implode(' ', $include_ns) : $include_ns);
+                $transNode->appendChild($includeNode);
+            }
         }
 
         $canonicalData = $this->processTransforms($refNode, $node);
@@ -852,7 +850,10 @@ class XMLSecurityDSig
                 $nodeset = $xpath->query($query, $sInfo);
                 $sMethod = $nodeset->item(0);
                 $sMethod->setAttribute('Algorithm', $objKey->type);
-                $data = $this->canonicalizeData($sInfo, $this->canonicalMethod);
+                $query = "./secdsig:CanonicalizationMethod";
+                $nodeset = $xpath->query($query, $sInfo);
+                $canonNode = $nodeset->item(0);
+                $data = $this->canonicalizeData($sInfo, $this->canonicalMethod, null, $this->getInclusiveNamespaces($canonNode));
                 $sigValue = base64_encode($this->signData($objKey, $data));
                 $sigValueNode = $this->createNewSignNode('SignatureValue', $sigValue);
                 if ($infoSibling = $sInfo->nextSibling) {
@@ -863,6 +864,29 @@ class XMLSecurityDSig
             }
         }
     }
+    
+    
+    /**
+     * Collects all Namespaces from the InclusiveNamespaces Element in the $canonNode into an array.
+     * If there is no InclusiveNamespaces Element it returns null.
+     *
+     * @param DOMElement $canonNode
+     * @return null|array
+     */
+    private function getInclusiveNamespaces($canonNode) {
+        foreach($canonNode->childNodes as $node) {
+            if($node->localName == 'InclusiveNamespaces') {
+                if($prefixList = $node->getAttribute('PrefixList')) {
+                    $prefixList = array_filter(explode(' ', $prefixList));
+                    if(count($prefixList) > 0) {
+                        return $prefixList;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+    
 
     public function appendCert()
     {
