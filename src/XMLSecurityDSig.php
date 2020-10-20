@@ -628,7 +628,7 @@ class XMLSecurityDSig
             $id_name = empty($options['id_name']) ? 'Id' : $options['id_name'];
             $overwrite_id = !isset($options['overwrite']) ? true : (bool) $options['overwrite'];
             $force_uri = !isset($options['force_uri']) ? false : (bool) $options['force_uri'];
-            $include_ns = !isset($options['include_ns:'.$node->localName]) ? false : $options['include_ns'];
+            $include_ns = !isset($options['include_ns:'.$node->localName]) ? false : $options['include_ns'.$node->localName];
         }
 
         $attname = $id_name;
