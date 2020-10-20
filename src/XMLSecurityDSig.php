@@ -628,7 +628,7 @@ class XMLSecurityDSig
             $id_name = empty($options['id_name']) ? 'Id' : $options['id_name'];
             $overwrite_id = !isset($options['overwrite']) ? true : (bool) $options['overwrite'];
             $force_uri = !isset($options['force_uri']) ? false : (bool) $options['force_uri'];
-            $include_ns = !isset($options['include_ns']) ? false : $options['include_ns'];
+            $include_ns = !isset($options['include_ns:'.$node->localName]) ? false : $options['include_ns'];
         }
 
         $attname = $id_name;
@@ -726,6 +726,12 @@ class XMLSecurityDSig
      * @param string $algorithm
      * @param null|array $arTransforms
      * @param null|array $options
+     *      Takes Arguments:    prefix      => string ;
+     *                          prefix_ns   => string ;
+     *                          id_name     => string ;
+     *                          overwrite   => boolean ;
+     *                          force_uri   => boolean ;
+     *                          include_ns  => string | array
      */
     public function addReferenceList($arNodes, $algorithm, $arTransforms=null, $options=null)
     {
