@@ -222,6 +222,7 @@ class XMLSecurityDSig
 
     /**
      * @param string $method
+     * @param string|array $include_ns
      * @throws Exception
      */
     public function setCanonicalMethod($method, $include_ns=false)
@@ -396,6 +397,8 @@ class XMLSecurityDSig
     }
 
     /**
+     * Transforms the $objData according to the Algorithm and Inclusive Namespaces defined on the $refNode into it's Canonicalized form.
+     * 
      * @param $refNode
      * @param DOMNode $objData
      * @param bool $includeCommentNodes
@@ -717,6 +720,8 @@ class XMLSecurityDSig
     }
 
     /**
+     * Adds Reference Nodes for all $arNodes to the SignedInfo Node.
+     * 
      * @param array $arNodes
      * @param string $algorithm
      * @param null|array $arTransforms
