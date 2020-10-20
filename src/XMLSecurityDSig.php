@@ -246,7 +246,7 @@ class XMLSecurityDSig
                 if (! ($canonNode = $nodeset->item(0))) {
                     $canonNode = $this->createNewSignNode('CanonicalizationMethod');
                     $sinfo->insertBefore($canonNode, $sinfo->firstChild);
-                    if($include_ns != false && ($method == self::EXC_C14N || $method == self::EXC_C14N_COMMENTS)) {
+                    if($include_ns !== false && ($method == self::EXC_C14N || $method == self::EXC_C14N_COMMENTS)) {
                         $includeNode = $this->sigNode->ownerDocument->createElementNS($method, 'ec:InclusiveNamespaces', null);
                         $includeNode->setAttribute('PrefixList', is_array($include_ns) ? implode(' ', $include_ns) : $include_ns);
                         $canonNode->appendChild($includeNode);
@@ -628,7 +628,7 @@ class XMLSecurityDSig
             $id_name = empty($options['id_name']) ? 'Id' : $options['id_name'];
             $overwrite_id = !isset($options['overwrite']) ? true : (bool) $options['overwrite'];
             $force_uri = !isset($options['force_uri']) ? false : (bool) $options['force_uri'];
-            $include_ns = !isset($options['include_ns:'.$node->localName]) ? false : $options['include_ns'.$node->localName];
+            $include_ns = !isset($options['include_ns:'.$node->localName]) ? false : $options['include_ns:'.$node->localName];
         }
 
         $attname = $id_name;
@@ -684,7 +684,7 @@ class XMLSecurityDSig
             $transNodes->appendChild($transNode);
             $transNode->setAttribute('Algorithm', $this->canonicalMethod);
             
-            if($include_ns != false && ($this->canonicalMethod == self::EXC_C14N || $this->canonicalMethod == self::EXC_C14N_COMMENTS)) {
+            if($include_ns !== false && ($this->canonicalMethod == self::EXC_C14N || $this->canonicalMethod == self::EXC_C14N_COMMENTS)) {
                 $includeNode = $this->sigNode->ownerDocument->createElementNS($this->canonicalMethod, 'ec:InclusiveNamespaces');
                 $includeNode->setAttribute('PrefixList', is_array($include_ns) ? implode(' ', $include_ns) : $include_ns);
                 $transNode->appendChild($includeNode);
