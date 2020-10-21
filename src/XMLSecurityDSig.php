@@ -272,9 +272,11 @@ class XMLSecurityDSig
             case 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315':
                 $exclusive = false;
                 $withComments = false;
+                $prefixList = null;
                 break;
             case 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315#WithComments':
                 $withComments = true;
+                $prefixList = null;
                 break;
             case 'http://www.w3.org/2001/10/xml-exc-c14n#':
                 $exclusive = true;
@@ -320,22 +322,10 @@ class XMLSecurityDSig
             if ($signInfoNode = $nodeset->item(0)) {
                 $query = "./secdsig:CanonicalizationMethod";
                 $nodeset = $xpath->query($query, $signInfoNode);
-                $prefixList = null;
                 if ($canonNode = $nodeset->item(0)) {
                     $canonicalmethod = $canonNode->getAttribute('Algorithm');
-                    foreach ($canonNode->childNodes as $node)
-                    {
-                        if ($node->localName == 'InclusiveNamespaces') {
-                            if ($pfx = $node->getAttribute('PrefixList')) {
-                                $arpfx = array_filter(explode(' ', $pfx));
-                                if (count($arpfx) > 0) {
-                                    $prefixList = array_merge($prefixList ? $prefixList : array(), $arpfx);
-                                }
-                            }
-                        }
-                    }
                 }
-                $this->signedInfo = $this->canonicalizeData($signInfoNode, $canonicalmethod, null, $prefixList);
+                $this->signedInfo = $this->canonicalizeData($signInfoNode, $canonicalmethod, null, $this->getInclusiveNamespaces($canonNode));
                 return $this->signedInfo;
             }
         }
@@ -413,7 +403,6 @@ class XMLSecurityDSig
         $nodelist = $xpath->query($query, $refNode);
         $canonicalMethod = 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315';
         $arXPath = null;
-        $prefixList = null;
         foreach ($nodelist AS $transform) {
             $algorithm = $transform->getAttribute("Algorithm");
             switch ($algorithm) {
@@ -428,8 +417,6 @@ class XMLSecurityDSig
                     } else {
                         $canonicalMethod = $algorithm;
                     }
-                    
-                    $prefixList = $this->getInclusiveNamespaces($transform);
                     break;
                 case 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315':
                 case 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315#WithComments':
@@ -464,7 +451,7 @@ class XMLSecurityDSig
             }
         }
         if ($data instanceof DOMNode) {
-            $data = $this->canonicalizeData($objData, $canonicalMethod, $arXPath, $prefixList);
+            $data = $this->canonicalizeData($objData, $canonicalMethod, $arXPath, $this->getInclusiveNamespaces($transform));
         }
         return $data;
     }
@@ -878,16 +865,16 @@ class XMLSecurityDSig
     
     
     /**
-     * Collects all Namespaces from the InclusiveNamespaces Element in the $canonNode into an array.
+     * Collects all Namespaces from the InclusiveNamespaces Element in the $C14NNode into an array.
      * If there is no InclusiveNamespaces Element it returns null.
      *
      * @param DOMElement $canonNode
      * @return null|array
      */
-    private function getInclusiveNamespaces($canonNode) {
-        foreach($canonNode->childNodes as $node) {
-            if($node->localName == 'InclusiveNamespaces') {
-                if($prefixList = $node->getAttribute('PrefixList')) {
+    private function getInclusiveNamespaces($C14NNode) {
+        if(isset($C14NNode) && $C14NNode->hasChildNodes()) {
+            foreach($C14NNode->childNodes as $node) {
+                if($node->localName == 'InclusiveNamespaces' && $prefixList = $node->getAttribute('PrefixList')) {
                     $prefixList = array_filter(explode(' ', $prefixList));
                     if(count($prefixList) > 0) {
                         return $prefixList;
