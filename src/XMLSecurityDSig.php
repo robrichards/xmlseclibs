@@ -633,7 +633,7 @@ class XMLSecurityDSig
             }
             if (empty($uri)) {
                 $uri = self::generateGUID();
-                $attrib = $this->sigNode->ownerDocument->createAttributeNS($prefix_ns, $attname);
+                $attrib = $node->ownerDocument->createAttributeNS($prefix_ns, $attname);
                 $attrib->value = $uri;
                 $node->setAttributeNodeNS($attrib);
             }
@@ -840,6 +840,7 @@ class XMLSecurityDSig
             $this->appendSignature($appendToNode);
             $this->sigNode = $appendToNode->lastChild;
         }
+        $this->sigNode = $this->rebuildNode($this->sigNode);
         if ($xpath = $this->getXPathObj()) {
             $query = "./secdsig:SignedInfo";
             $nodeset = $xpath->query($query, $this->sigNode);
@@ -883,6 +884,29 @@ class XMLSecurityDSig
             }
         }
         return null;
+    }
+    
+    
+    /**
+     * Rebuild the inserted $node to include all Namespaces down from the SubTree to the Root!
+     * This Action should be envoked if there is a new Element with a differing Namespace appended to another Element that has already been appended to the Refering $node and a Canonicalization is needed!
+     *
+     *
+     * @param DOMElement $node
+     * @return null|DOMElement
+     */
+    private function rebuildNode($node) {
+        if(isset($node) && $node->hasChildNodes()) {
+            $childNodes = array();
+            foreach($node->childNodes as $child) {
+                $childNodes[] = $child;
+            }
+            foreach($childNodes as $child) {
+                $node->removeChild($child);
+                $node->appendChild($this->rebuildNode($child));
+            }
+        }
+        return $node;
     }
     
 
