@@ -835,12 +835,12 @@ class XMLSecurityDSig
     public function sign($objKey, $appendToNode = null)
     {
         // If we have a parent node append it now so C14N properly works
+        $this->sigNode = $this->rebuildNode($this->sigNode);
         if ($appendToNode != null) {
             $this->resetXPathObj();
             $this->appendSignature($appendToNode);
             $this->sigNode = $appendToNode->lastChild;
         }
-        $this->sigNode = $this->rebuildNode($this->sigNode);
         if ($xpath = $this->getXPathObj()) {
             $query = "./secdsig:SignedInfo";
             $nodeset = $xpath->query($query, $this->sigNode);
