@@ -6,6 +6,7 @@ require __DIR__ . '/../vendor/autoload.php';
 use DOMElement;
 use Exception;
 use phpseclib\Crypt\RSA;
+use phpseclib\File\X509;
 
 /**
  * xmlseclibs.php
@@ -64,12 +65,11 @@ class XMLSecurityKey
     const RSA_SHA256 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256';
     const RSA_SHA384 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha384';
     const RSA_SHA512 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha512';
-    # rsassaPss
-    // http://www.w3.org/2007/05/xmldsig-more#sha1-rsa-MGF1
-    // http://www.w3.org/2007/05/xmldsig-more#sha224-rsa-MGF1
+    const SHA1_RSA_MGF1 = 'http://www.w3.org/2007/05/xmldsig-more#sha1-rsa-MGF1';
+    const SHA224_RSA_MGF1 = 'http://www.w3.org/2007/05/xmldsig-more#sha224-rsa-MGF1';
     const SHA256_RSA_MGF1 = 'http://www.w3.org/2007/05/xmldsig-more#sha256-rsa-MGF1';
-    // http://www.w3.org/2007/05/xmldsig-more#sha384-rsa-MGF1
-    // http://www.w3.org/2007/05/xmldsig-more#sha512-rsa-MGF1
+    const SHA384_RSA_MGF1 = 'http://www.w3.org/2007/05/xmldsig-more#sha384-rsa-MGF1';
+    const SHA512_RSA_MGF1 = 'http://www.w3.org/2007/05/xmldsig-more#sha512-rsa-MGF1';
     const HMAC_SHA1 = 'http://www.w3.org/2000/09/xmldsig#hmac-sha1';
     const AUTHTAG_LENGTH = 16;
 
@@ -262,11 +262,53 @@ class XMLSecurityKey
                     }
                 }
                 throw new Exception('Certificate "type" (private/public) must be passed via parameters');
+            case (self::SHA1_RSA_MGF1):
+                $this->cryptParams['library'] = 'phpseclib';
+                $this->cryptParams['method'] = 'http://www.w3.org/2007/05/xmldsig-more#sha1-rsa-MGF1';
+                $this->cryptParams['digest'] = 'sha1';
+                if (is_array($params) && ! empty($params['type'])) {
+                    if ($params['type'] == 'public' || $params['type'] == 'private') {
+                    $this->cryptParams['type'] = $params['type'];
+                    break;
+                    }
+                }
+            case (self::SHA224_RSA_MGF1):
+                $this->cryptParams['library'] = 'phpseclib';
+                $this->cryptParams['method'] = 'http://www.w3.org/2007/05/xmldsig-more#sha224-rsa-MGF1';
+                $this->cryptParams['digest'] = 'sha224';
+                if (is_array($params) && ! empty($params['type'])) {
+                    if ($params['type'] == 'public' || $params['type'] == 'private') {
+                    $this->cryptParams['type'] = $params['type'];
+                    break;
+                    }
+                }
+                throw new Exception('Certificate "type" (private/public) must be passed via parameters');
             case (self::SHA256_RSA_MGF1):
                 $this->cryptParams['library'] = 'phpseclib';
                 $this->cryptParams['method'] = 'http://www.w3.org/2007/05/xmldsig-more#sha256-rsa-MGF1';
-                // $this->cryptParams['padding'] = OPENSSL_PKCS1_OAEP_PADDING;
-                $this->cryptParams['digest'] = 'SHA256';
+                $this->cryptParams['digest'] = 'sha256';
+                if (is_array($params) && ! empty($params['type'])) {
+                    if ($params['type'] == 'public' || $params['type'] == 'private') {
+                    $this->cryptParams['type'] = $params['type'];
+                    break;
+                    }
+                }
+                throw new Exception('Certificate "type" (private/public) must be passed via parameters');
+            case (self::SHA384_RSA_MGF1):
+                $this->cryptParams['library'] = 'phpseclib';
+                $this->cryptParams['method'] = 'http://www.w3.org/2007/05/xmldsig-more#sha384-rsa-MGF1';
+                $this->cryptParams['digest'] = 'sha384';
+                if (is_array($params) && ! empty($params['type'])) {
+                    if ($params['type'] == 'public' || $params['type'] == 'private') {
+                    $this->cryptParams['type'] = $params['type'];
+                    break;
+                    }
+                }
+                throw new Exception('Certificate "type" (private/public) must be passed via parameters');
+            case (self::SHA512_RSA_MGF1):
+                $this->cryptParams['library'] = 'phpseclib';
+                $this->cryptParams['method'] = 'http://www.w3.org/2007/05/xmldsig-more#sha512-rsa-MGF1';
+                $this->cryptParams['digest'] = 'sha512';
                 if (is_array($params) && ! empty($params['type'])) {
                     if ($params['type'] == 'public' || $params['type'] == 'private') {
                     $this->cryptParams['type'] = $params['type'];
@@ -420,6 +462,15 @@ class XMLSecurityKey
         if ($this->cryptParams['library'] == 'phpseclib') {
             switch ($this->cryptParams['type']) {
                 case 'public':
+                    $rsa = new RSA();
+                    if ($isCert) {
+                        $x509 = new X509();
+                        $x509->loadX509($this->key);
+                        $this->key = $x509->getPublicKey();
+                    }
+                    $rsa->loadKey($this->key);
+                    $this->key = $rsa;
+                    break;
                 case 'private':
                     $rsa = new RSA();
                     $rsa->loadKey($this->key);
@@ -599,6 +650,13 @@ class XMLSecurityKey
         return $signature;
     }
 
+    /**
+     * Signs the given data (string) using phpSecLib
+     *
+     * @param string $data
+     * @return string
+     * @throws Exception
+     */
     private function signPhpSecLib($data)
     {
         if (empty($this->cryptParams['digest'])) {
@@ -611,7 +669,6 @@ class XMLSecurityKey
         $rsa->loadKey($this->key);
         $rsa->setHash($this->cryptParams['digest']);
         $rsa->setMGFHash($this->cryptParams['digest']);
-        $rsa->setSignatureMode(RSA::SIGNATURE_PSS);
         $signature = $rsa->sign($data);
         if (!$signature) {
             throw new Exception('Failure Signing Data: - ' . $this->cryptParams['digest']);
@@ -644,6 +701,17 @@ class XMLSecurityKey
         return openssl_verify($data, $signature, $this->key, $algo);
     }
 
+    /**
+     * Verifies the given data (string) belonging to the given signature using phpseclib
+     *
+     * Returns:
+     *  1 on succesful signature verification,
+     *  0 when signature verification failed,
+     *
+     * @param string $data
+     * @param string $signature
+     * @return int
+     */
     private function verifyPhpSecLib($data, $signature)
     {
         if (empty($this->cryptParams['digest'])) {
@@ -656,11 +724,12 @@ class XMLSecurityKey
         $rsa->loadKey($this->key);
         $rsa->setHash($this->cryptParams['digest']);
         $rsa->setMGFHash($this->cryptParams['digest']);
-        $rsa->setSignatureMode(RSA::SIGNATURE_PSS);
         $verified = $rsa->verify($data, $signature);
-        var_dump($verified);
-
-        return -1;
+        if ($verified) {
+            return 1;
+        } else {
+            return 0;
+        }
     }
 
     /**
@@ -746,7 +815,6 @@ class XMLSecurityKey
                 $expectedSignature = hash_hmac("sha1", $data, $this->key, true);
                 return strcmp($signature, $expectedSignature) == 0;
             case 'phpseclib':
-                var_dump($this->key);
                 return $this->verifyPhpSecLib($data, $signature);
         }
     }
