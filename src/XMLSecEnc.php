@@ -77,13 +77,15 @@ class XMLSecEnc
     private $references = array();
 
     /** @var bool */
-    public $preserveWhiteSpace = true;
+    private $preserveWhiteSpace = true;
 
     /** @var bool */
-    public $formatOutput = false;
+    private $formatOutput = false;
 
-    public function __construct()
+    public function __construct($preserveWhiteSpace=true, $formatOutput=false)
     {
+        $this->preserveWhiteSpace = $preserveWhiteSpace;
+        $this->formatOutput = $formatOutput;
         $this->_resetTemplate();
     }
 

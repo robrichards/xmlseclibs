@@ -104,16 +104,10 @@ class XMLSecurityDSig
      */
     private $validatedNodes = null;
 
-    /** @var bool */
-    public $preserveWhiteSpace = true;
-
-    /** @var bool */
-    public $formatOutput = false;
-
     /**
      * @param string $prefix
      */
-    public function __construct($prefix='ds')
+    public function __construct($prefix='ds', $preserveWhiteSpace=true, $formatOutput=false)
     {
         $template = self::BASE_TEMPLATE;
         if (! empty($prefix)) {
@@ -123,8 +117,8 @@ class XMLSecurityDSig
             $template = str_replace($search, $replace, $template);
         }
         $sigdoc = new DOMDocument();
-        $sigdoc->preserveWhiteSpace = $this->preserveWhiteSpace;
-        $sigdoc->formatOutput = $this->formatOutput;
+        $sigdoc->preserveWhiteSpace = $preserveWhiteSpace;
+        $sigdoc->formatOutput = $formatOutput;
         $sigdoc->loadXML($template);
         $this->sigNode = $sigdoc->documentElement;
     }
