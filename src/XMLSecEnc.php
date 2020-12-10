@@ -76,6 +76,12 @@ class XMLSecEnc
     /** @var array */
     private $references = array();
 
+    /** @var bool */
+    public $preserveWhiteSpace = true;
+
+    /** @var bool */
+    public $formatOutput = false;
+
     public function __construct()
     {
         $this->_resetTemplate();
@@ -84,6 +90,8 @@ class XMLSecEnc
     private function _resetTemplate()
     {
         $this->encdoc = new DOMDocument();
+        $this->encdoc->preserveWhiteSpace = $this->preserveWhiteSpace;
+        $this->encdoc->formatOutput = $this->formatOutput;
         $this->encdoc->loadXML(self::template);
     }
 

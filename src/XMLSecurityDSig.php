@@ -104,6 +104,12 @@ class XMLSecurityDSig
      */
     private $validatedNodes = null;
 
+    /** @var bool */
+    public $preserveWhiteSpace = true;
+
+    /** @var bool */
+    public $formatOutput = false;
+
     /**
      * @param string $prefix
      */
@@ -117,6 +123,8 @@ class XMLSecurityDSig
             $template = str_replace($search, $replace, $template);
         }
         $sigdoc = new DOMDocument();
+        $sigdoc->preserveWhiteSpace = $this->preserveWhiteSpace;
+        $sigdoc->formatOutput = $this->formatOutput;
         $sigdoc->loadXML($template);
         $this->sigNode = $sigdoc->documentElement;
     }
