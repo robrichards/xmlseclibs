@@ -52,6 +52,7 @@ class XMLSecurityDSig
 {
     const XMLDSIGNS = 'http://www.w3.org/2000/09/xmldsig#';
     const SHA1 = 'http://www.w3.org/2000/09/xmldsig#sha1';
+    const SHA224 = 'https://www.w3.org/2001/04/xmldsig-more#sha224';
     const SHA256 = 'http://www.w3.org/2001/04/xmlenc#sha256';
     const SHA384 = 'http://www.w3.org/2001/04/xmldsig-more#sha384';
     const SHA512 = 'http://www.w3.org/2001/04/xmlenc#sha512';
@@ -348,6 +349,9 @@ class XMLSecurityDSig
         switch ($digestAlgorithm) {
             case self::SHA1:
                 $alg = 'sha1';
+                break;
+            case self::SHA224:
+                $alg = 'sha224';
                 break;
             case self::SHA256:
                 $alg = 'sha256';
