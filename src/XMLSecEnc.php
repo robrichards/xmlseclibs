@@ -1,12 +1,12 @@
 <?php
 namespace RobRichards\XMLSecLibs;
 
-use DOMDocument;
-use DOMElement;
-use DOMNode;
-use DOMXPath;
-use Exception;
-use RobRichards\XMLSecLibs\Utils\XPath as XPath;
+use \DOMDocument;
+use \DOMElement;
+use \DOMNode;
+use \DOMXPath;
+use \Exception;
+use RobRichards\XMLSecLibs\Utils\XPath as UtilsXPath;
 
 /**
  * xmlseclibs.php
@@ -278,6 +278,7 @@ class XMLSecEnc
                         } else {
                             $doc = $this->rawNode->ownerDocument;
                         }
+                        /** @var \DOMDocument $doc */
                         $newFrag = $doc->createDocumentFragment();
                         $newFrag->appendXML($decrypted);
                         $parent = $this->rawNode->parentNode;
@@ -311,16 +312,17 @@ class XMLSecEnc
         $root = $this->encdoc->documentElement;
         $encKey = $this->encdoc->createElementNS(self::XMLENCNS, 'xenc:EncryptedKey');
         if ($append) {
-            $keyInfo = $root->insertBefore($this->encdoc->createElementNS('http://www.w3.org/2000/09/xmldsig#', 'dsig:KeyInfo'), $root->firstChild);
+            $keyInfo = $root->insertBefore($this->encdoc->createElementNS( XMLSecurityDSig::XMLDSIGNS, 'dsig:KeyInfo'), $root->firstChild);
             $keyInfo->appendChild($encKey);
         } else {
             $this->encKey = $encKey;
         }
         $encMethod = $encKey->appendChild($this->encdoc->createElementNS(self::XMLENCNS, 'xenc:EncryptionMethod'));
-        $encMethod->setAttribute('Algorithm', $srcKey->getAlgorith());
-        if (! empty($srcKey->name)) {
-            $keyInfo = $encKey->appendChild($this->encdoc->createElementNS('http://www.w3.org/2000/09/xmldsig#', 'dsig:KeyInfo'));
-            $keyInfo->appendChild($this->encdoc->createElementNS('http://www.w3.org/2000/09/xmldsig#', 'dsig:KeyName', $srcKey->name));
+        $encMethod->setAttribute('Algorithm', $srcKey->getAlgorithm());
+        if (! empty($srcKey->name))
+        {
+            $keyInfo = $encKey->appendChild($this->encdoc->createElementNS( XMLSecurityDSig::XMLDSIGNS, 'dsig:KeyInfo' ) );
+            $keyInfo->appendChild($this->encdoc->createElementNS( XMLSecurityDSig::XMLDSIGNS, 'dsig:KeyName', $srcKey->name ) );
         }
         $cipherData = $encKey->appendChild($this->encdoc->createElementNS(self::XMLENCNS, 'xenc:CipherData'));
         $cipherData->appendChild($this->encdoc->createElementNS(self::XMLENCNS, 'xenc:CipherValue', $strEncKey));
@@ -389,7 +391,9 @@ class XMLSecEnc
             $xpath->registerNamespace('xmlsecenc', self::XMLENCNS);
             $query = ".//xmlsecenc:EncryptionMethod";
             $nodeset = $xpath->query($query, $node);
-            if ($encmeth = $nodeset->item(0)) {
+            if ($encmeth = $nodeset->item(0)) 
+            {
+                /** @var \DOMElement $encmeth */
                    $attrAlgorithm = $encmeth->getAttribute("Algorithm");
                 try {
                     $objKey = new XMLSecurityKey($attrAlgorithm, array('type' => 'private'));
@@ -472,7 +476,7 @@ class XMLSecEnc
                     }
                     $id = substr($uri, 1);
 
-                    $query = '//xmlsecenc:EncryptedKey[@Id="'.XPath::filterAttrValue($id, XPath::DOUBLE_QUOTE).'"]';
+                    $query = '//xmlsecenc:EncryptedKey[@Id="'. UtilsXPath::filterAttrValue($id, UtilsXPath::DOUBLE_QUOTE).'"]';
                     $keyElement = $xpath->query($query)->item(0);
                     if (!$keyElement) {
                         throw new Exception("Unable to locate EncryptedKey with @Id='$id'.");
