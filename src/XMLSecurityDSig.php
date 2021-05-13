@@ -526,8 +526,8 @@ class XMLSecurityDSig
                             UtilsXPath::filterAttrValue($identifier, UtilsXPath::DOUBLE_QUOTE).'"';
                         }
                     }
-                    $query = './/*['.$iDlist.']';
-                    $dataObject = $xPath->query( $query, $this->sigNode )->item(0);
+                    $query = '//*['.$iDlist.']';
+                    $dataObject = $xPath->query( $query )->item(0);
                 } else {
                     $dataObject = $refNode->ownerDocument;
                 }
