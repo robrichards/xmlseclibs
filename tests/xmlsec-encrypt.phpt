@@ -28,6 +28,17 @@ $encNode = $enc->encryptNode($objKey);
 
 $dom->save(dirname(__FILE__) . '/oaep_sha1.xml');
 
+$xPath = new DOMXPath($dom);
+$xPath->registerNamespace('dsig', 'http://www.w3.org/2000/09/xmldsig#');
+$xPath->registerNamespace('xenc', 'http://www.w3.org/2001/04/xmlenc#');
+
+$queriedNode = $xPath->query(
+    '/xenc:EncryptedData/dsig:KeyInfo/xenc:EncryptedKey/dsig:KeyInfo/dsig:X509Data/dsig:X509Certificate'
+);
+if ($queriedNode->length !== 0) {
+    echo 'X509Certificate was not expected to be found in KeyInfo';
+}
+
 $root = $dom->documentElement;
 echo $root->localName."\n";
 
