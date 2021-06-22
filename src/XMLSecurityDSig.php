@@ -301,6 +301,8 @@ class XMLSecurityDSig
             }
         }
 
+        // The PHP C14N function does not generate output that is the same as other software eg xmllint
+        $this->preCanonicalization( $node );
         return $node->C14N($exclusive, $withComments, $arXPath, $prefixList);
     }
 
@@ -1217,5 +1219,123 @@ class XMLSecurityDSig
     public function getValidatedNodes()
     {
         return $this->validatedNodes;
+    }
+
+    /**
+     * PHP canonicalization does not always result in the same output as other C14N
+     * implementations such as xmllint, Python lxml or Microsoft Crypto libraries.
+     * This preprocesses the DOM to make sure the output is consistent with other
+     * implementations.  See https://bugs.php.net/bug.php?id=81188
+     *
+     * The difference between the PHP implementation of C14N and others is that PHP
+     * does not order namespaces correctly (or, at least, not in the same way as 
+     * the other C14N implementations to which I have access). 
+     *
+     * See https://www.w3.org/TR/2001/REC-xml-c14n-20010315 section 4.8
+     *
+     * The fragment below, which is a node that might appear in a <Transform> element 
+     * (cut down for brevity) produces one output in PHP and another when using other
+     * software such as xmllint.
+     *
+     * Input Xml:
+     *
+     * <XPath xmlns:dsig="xxx" Filter="subtract" xmlns:a="xxx" xmlns="xxx">some xpath query here</XPath>
+     *
+     * PHP output:
+     *
+     * <XPath xmlns:dsig="xxx" xmlns:a="xxx" xmlns="xxx" Filter="subtract" >some xpath query here</XPath>
+     *
+     * xmllint and other's output:
+     *
+     * <XPath xmlns="xxx" xmlns:a="xxx" xmlns:dsig="xxx" Filter="subtract">some xpath query here</XPath>
+     *
+     * You can see the difference is that PHP does put namespaces before attributes 
+     * but leaves the namespaces in their document order.  The output by other tools
+     * sorts the namespaces by their prefix.
+     *
+     * @param \DOMElement $element
+     * @return void
+     */
+    function preCanonicalization( $element )
+    {
+        $doc = $element->ownerDocument;
+        $namespaceNodes = array();
+        $xpath = new \DOMXPath( $doc );
+        // This query will pull all namespace attributes (DOMNameSpaceNode instances)
+        // Most will be the default xml namespace or a copy of the namespace of the 
+        // parent node so can be ignored.
+        foreach( $xpath->query( './/namespace::*', $element ) as $node )
+        {
+            /** @var \DOMNameSpaceNode $node */
+            // Ignore the XML namespace
+            if ( $node->nodeValue == "http://www.w3.org/XML/1998/namespace" ) continue;
+    
+            // The parent node is the element to which the namespace attribute is assigned
+            /** @var \DOMElement $elementNode */
+            $elementNode = $node->parentNode;
+            // If the element has a parent node (is not the root node) make sure the 
+            // namespace is not the encapsulating namespace which can be ignored as 
+            // this not a namespace listed in the output text document.
+            if ( ! $node->prefix && $elementNode->parentNode && $elementNode->parentNode->namespaceURI == $elementNode->namespaceURI ) continue;
+    
+            // The id is not used except to keep the sets of recorded namespace details separate
+            $id = spl_object_hash( $elementNode );
+            if ( ! isset( $namespaceNodes[ $id ] ) )
+            {
+                $namespaceNodes[ $id ] = array('node' => $elementNode, 'ns' => array() );
+            }
+    
+            // Remove it so it can be added in the correct order in a subsequent step
+            if ( $elementNode->removeAttributeNS( $node->namespaceURI, $node->prefix ) === false )
+                continue;
+    
+            // Record the details indexed by the namespace parent element
+            $namespaceNodes[ $id ]['ns'][ $node->localName ] = $node->nodeValue;
+        }
+    
+        // Now for each of the affected elements remove regular attributes 
+        // then add namespace and then the regular attributes
+        foreach( $namespaceNodes as $namespaceNode )
+        {
+            // Sort the namespace in order of their prefix with any default namespace first.
+            // This is the feature that seems to be missing from the PHP C14N process.
+            uksort( $namespaceNode['ns'], function( $a, $b ) 
+            {
+                // xmlns is *always* to be the first
+                if ( $a == 'xmlns' ) return -1;
+                if ( $b == 'xmlns' ) return 1;
+                return strcmp( $a, $b );
+            } );
+    
+            // Record and remove all the attributes
+            /** @var \DOMNode $node */
+            $node = $namespaceNode['node'];
+            $attributes = array();
+            foreach( $node->attributes as $attribute )
+            {
+                /** @var \DOMAttr $attribute */
+                /** @var \DOMElement $node */
+                if ( ! $node->removeAttributeNode( $attribute ) )
+                    continue;
+    
+                $attributes[] = $attribute;
+            }
+    
+            // The attributes don't need sorting as the canonicalization process will take care of them.
+            // Reapply the attributes starting with the namespaces
+            foreach( $namespaceNode['ns'] as $prefix => $namespaceURI )
+            {
+                if ( $prefix == 'xmlns' )
+                    $node->setAttributeNS( '', "$prefix", $namespaceURI);
+                else
+                    $node->setAttribute( "xmlns:$prefix", $namespaceURI );
+            }
+    
+            // And then the attributes
+            foreach( $attributes as $attribute )
+            {
+                $node->setAttributeNode( $attribute );
+            }
+        }
     }
 }
