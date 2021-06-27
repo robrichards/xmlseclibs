@@ -356,39 +356,51 @@ class XMLSecurityKey
      */
     public function loadKey($key, $isFile=false, $isCert = false)
     {
-        if ($isFile) {
-            $this->key = file_get_contents($key);
-        } else {
+        if ( $isFile )
+        {
+            $this->key = file_get_contents( $key );
+        }
+        else
+        {
             $this->key = $key;
         }
-        if ($isCert) {
-            $this->key = openssl_x509_read($this->key);
-            openssl_x509_export($this->key, $str_cert);
+        if ( $isCert )
+        {
+            $this->key = openssl_x509_read( $this->key );
+            openssl_x509_export( $this->key, $str_cert );
             $this->x509Certificate = $str_cert;
             $this->key = $str_cert;
-        } else {
+        }
+        else
+        {
             $this->x509Certificate = null;
         }
-        if ($this->cryptParams['library'] == 'openssl') {
-            switch ($this->cryptParams['type']) {
+
+        if ( $this->cryptParams['library'] == 'openssl' )
+        {
+            switch ( $this->cryptParams['type'] )
+            {
                 case 'public':
-	                if ($isCert) {
+	                if ( $isCert )
+                    {
 	                    /* Load the thumbprint if this is an X509 certificate. */
-	                    $this->X509Thumbprint = self::getRawThumbprint($this->key);
+	                    $this->X509Thumbprint = self::getRawThumbprint( $this->key );
 	                }
-	                $this->key = openssl_get_publickey($this->key);
-	                if (! $this->key) {
+	                $this->key = openssl_get_publickey( $this->key );
+	                if (! $this->key)
+                    {
 	                    throw new \Exception('Unable to extract public key');
 	                }
 	                break;
 
 	            case 'private':
-                    $this->key = openssl_get_privatekey($this->key, $this->passphrase);
+                    $this->key = openssl_get_privatekey( $this->key, $this->passphrase );
                     break;
 
                 case'symmetric':
-                    if (strlen($this->key) < $this->cryptParams['keysize']) {
-                        throw new \Exception('Key must contain at least '.$this->cryptParams['keysize'].' characters for this cipher, contains '.strlen($this->key));
+                    if ( strlen( $this->key ) < $this->cryptParams['keysize'] )
+                    {
+                        throw new \Exception('Key must contain at least ' . $this->cryptParams['keysize'] . ' characters for this cipher, contains ' . strlen($this->key ) );
                     }
                     break;
 
@@ -588,7 +600,7 @@ class XMLSecurityKey
         if (! empty($this->cryptParams['digest'])) {
             $algo = $this->cryptParams['digest'];
         }
-        return openssl_verify($data, $signature, $this->key, $algo);
+        return openssl_verify( $data, $signature, $this->key, $algo );
     }
 
     /**
