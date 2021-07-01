@@ -617,14 +617,21 @@ class XMLSecurityDSig
 
                     $query = '//*['.$iDlist.']';
                     $dataObject = $xPath->query( $query )->item(0);
-                } else 
+                } else
                 {
                     $dataObject = $refNode->ownerDocument->documentElement;
                 }
             }
 
             // Create a new document containing the filtered nodes
-            $xml = $dataObject->ownerDocument->saveXML( $dataObject );
+            // When $dataObject is not the document element would prefer to just save as XML
+            // but the save process screws around with namespaces causing a problem.  So if
+            // the object refers to a sub-node the XML is produced using C14N.  The reason
+            // being cautious about use C14N is that its performance is really terrible when
+            // the document has many nodes.
+            $xml = $dataObject->isSameNode( $dataObject->ownerDocument->documentElement )
+                ? $dataObject->ownerDocument->saveXML( $dataObject )
+                : $dataObject->C14N( true, $includeCommentNodes );
             $dataObject = new \DOMDocument();
             $dataObject->loadXML( $xml );
 
@@ -784,7 +791,7 @@ class XMLSecurityDSig
         if (! $node instanceof DOMDocument)
         {
             $uri = null;
-            if (! $overwrite_id)
+            if ( ! $overwrite_id )
             {
                 $uri = $prefix_ns ? $node->getAttributeNS( $prefix_ns, $id_name ) : $node->getAttribute( $id_name );
             }
@@ -936,18 +943,28 @@ class XMLSecurityDSig
      */
     public function addTimestamp( $timestamp, $signatureId, $propertyId = 'timestamp' )
     {
-        $propertiesXml = "<ds:SignatureProperties xmlns:ds=\"http://www.w3.org/2000/09/xmldsig#\">" .
-            "<ds:SignatureProperty Id=\"$propertyId\" Target=\"#$signatureId\">" .
+        $propertiesXml = "<SignatureProperties xmlns=\"". self::XMLDSIGNS . "\">" .
+            "<SignatureProperty Id=\"$propertyId\" Target=\"#$signatureId\">" .
             "     <xs:timestamp xmlns:xs=\"http://www.w3.org/2001/XMLSchema\">$timestamp</xs:timestamp> " .
-            "  </ds:SignatureProperty>" .
-            "</ds:SignatureProperties>";
-    
+            "  </SignatureProperty>" .
+            "</SignatureProperties>";
+
+        // Replace the prefix if one is provided
+        if ( ! empty( $this->prefix ) )
+        {
+            $prefix = rtrim( $this->prefix, ':' );
+            $search = array( "<S", "</S", "xmlns=" );
+            $replace = array( "<{$prefix}:S", "</{$prefix}:S", "xmlns:{$prefix}=" );
+            $propertiesXml = str_replace( $search, $replace, $propertiesXml );
+        }
+
         $propertiesDom = new \DOMDocument();
         $propertiesDom->loadXML( $propertiesXml );
         $object = $this->addObject( $propertiesDom->documentElement );
         unset( $propertiesDom );
 
         $xpath = $this->getXPathObj();
+        $xpath->registerNamespace( 'ds', self::XMLDSIGNS );
         $nodes = $xpath->query("./ds:SignatureProperties/ds:SignatureProperty[\"@Id=$propertyId\"]", $object );
         if ( $nodes->length == 1 )
         {
@@ -1071,7 +1088,7 @@ class XMLSecurityDSig
                 $sMethod = $nodeset->item(0);
                 $sMethod->setAttribute( 'Algorithm', $securityKey->type );
 
-                // Compute thesignature value
+                // Compute the signature value
                 $data = $this->canonicalizeData($sInfo, $this->canonicalMethod);
                 $sigValue = base64_encode( $this->signData( $securityKey, $data ) );
 
