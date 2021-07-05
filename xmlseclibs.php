@@ -45,3 +45,4 @@ require $xmlseclibs_srcdir . '/XMLSecurityKey.php';
 require $xmlseclibs_srcdir . '/XMLSecurityDSig.php';
 require $xmlseclibs_srcdir . '/XMLSecEnc.php';
 require $xmlseclibs_srcdir . '/Utils/XPath.php';
+require $xmlseclibs_srcdir . '/XmlDsigFilterTransform.php';
