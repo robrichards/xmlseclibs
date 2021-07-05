@@ -458,14 +458,18 @@ class XMLSecurityDSig
 
         foreach ( $transforms AS $transform )
         {
+            /** @var \DOMElement $transform */
+
             $arXPath = null;
             $prefixList = null;
             $canonicalMethod = self::C14N;
             
             if ( is_string( $objData ) )
             {
-                $objData = new \DOMDocument();
-                $objData->loadXML( $objData );
+                $doc = new \DOMDocument();
+                $doc->loadXML( $objData );
+                $objData = $doc;
+                unset( $doc );
             }
 
             $algorithm = $transform->getAttribute("Algorithm");
@@ -536,9 +540,14 @@ class XMLSecurityDSig
                     break ;
 
                 case self::XPATH_FILTER2:
-                    //TODO
-                    $canonicalMethod = $includeCommentNodes ? self::C14N_COMMENTS : self::C14N;
-                    break 2;
+                    
+                    $filter = new XmlDsigFilterTransform( $objData );
+                    $filter->LoadinnerXml( $transform->childNodes );
+                    // The nodes list is the result of the filter
+                    $nodeList = $filter->getOutput();
+                    // Create an XML document as a string from the node list
+                    $objData = UtilsXPath::nodesetToXml( $nodeList, false, $includeCommentNodes );
+                    continue 2;
 
                 case self::ENV_SIG:
 
