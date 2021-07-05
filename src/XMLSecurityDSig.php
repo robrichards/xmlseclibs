@@ -48,6 +48,42 @@ use RobRichards\XMLSecLibs\Utils\XPath as UtilsXPath;
  * @license   http://www.opensource.org/licenses/bsd-license.php  BSD License
  */
 
+/**
+ * This include support for the https://www.w3.org/TR/xmldsig-filter2/ 
+ * transform specification.  
+ * 
+ * The example to exercise the new transform use an XML file made publicly
+ * available by the Dutch government.  The file describes the valid policies
+ * that can be used when an auditor signs the XBRL instance document of a
+ * business which is to be submitted to the Dutch treasury SBR system.
+ * 
+ * The file includes a digest value (base 64 encoded) which is the document
+ * excluding the digest element hashed using SHA-256.  The file also contains
+ * <Transforms> that includes two transforms one of which uses the Filter 2.0 
+ * form to remove the digest element so it an be hashed.  The example downloads
+ * the file, gets the digest value, then processes the transforms and generates
+ * a digest of the result and confirms it matches the original value.
+ * 
+ * 	$policy = 'http://nltaxonomie.nl/sbr/signature_policy_schema/v2.0/SBR-signature-policy-v2.0.xml';
+ *	$xml = file_get_contents( $policy );
+ *	$doc = new \DOMDocument();
+ *	$doc->loadXML( $xml );
+ *
+ *	// Create a new Security object and process the transforms
+ *	$objXMLSecDSig  = new XMLSecurityDSig();
+ *	$output = $objXMLSecDSig->processTransforms( $doc->documentElement, $doc->documentElement, false );
+ *
+ *  // Compute the digest
+ *  $hash = base64_encode( hash( 'sha256', $output, true ) );
+ *
+ *  // Get the orginal digest
+ *	$xpath = new \DOMXPath( $doc );
+ *	$digestElement = $xpath->query('//sbrsp:SignPolicyDigest');
+ *	$digest = $digestElement[0]->textContent;
+ *
+ *	$match = $hash == $digest;
+ */
+
 class XMLSecurityDSig
 {
     const XMLDSIGNS = 'http://www.w3.org/2000/09/xmldsig#';
@@ -546,7 +582,8 @@ class XMLSecurityDSig
                     // The nodes list is the result of the filter
                     $nodeList = $filter->getOutput();
                     // Create an XML document as a string from the node list
-                    $objData = UtilsXPath::nodesetToXml( $nodeList, false, $includeCommentNodes );
+                    $exclude = $algorithm == self::EXC_C14N || $algorithm == self::EXC_C14N_COMMENTS;
+                    $objData = UtilsXPath::nodesetToXml( $nodeList, $exclude, $includeCommentNodes );
                     continue 2;
 
                 case self::ENV_SIG:
