@@ -669,18 +669,33 @@ class XMLSecurityDSig
                 }
             }
 
-            // Create a new document containing the filtered nodes
+            // Create a new document containing the filtered nodes.  This makes sure any filters
+            // are applied only to a document that will be used and not affect the source.
+
             // When $dataObject is not the document element would prefer to just save as XML
             // but the save process screws around with namespaces causing a problem.  So if
             // the object refers to a sub-node the XML is produced using C14N.  The reason
             // being cautious about use C14N is that its performance is really terrible when
             // the document has many nodes.
-            $xml = $dataObject->isSameNode( $dataObject->ownerDocument->documentElement )
-                ? $dataObject->ownerDocument->saveXML( $dataObject )
-                : $dataObject->C14N( true, $includeCommentNodes );
+            if ( $dataObject->isSameNode( $dataObject->ownerDocument->documentElement ) )
+            {
+               $xml = $dataObject->ownerDocument->saveXML( $dataObject );
+            }
+            else
+            {
+                // $xml = $dataObject->C14N( false, $includeCommentNodes );
+                $xPath = new DOMXPath( $dataObject->ownerDocument );
+                $nodeList = iterator_to_array( $xPath->query( './/. | .//@*', $dataObject ) );
+                $namespaceNodes = $xPath->query("//namespace::*");
+                foreach( $namespaceNodes as $namespaceNode )
+                    $nodeList[] = $namespaceNode;
+
+                $xml = UtilsXPath::nodesetToXml( $nodeList, false, $includeCommentNodes );
+            }
+
             $dataObject = new \DOMDocument();
             $dataObject->loadXML( $xml );
-
+            unset( $xml );
         }
         else if ( ! $dataObject ) 
         {
@@ -709,7 +724,7 @@ class XMLSecurityDSig
             /* Add this node to the list of validated nodes. */
             if ( ! empty( $identifier ) )
             {
-                $this->validatedNodes[$identifier] = $dataObject;
+                $this->validatedNodes[ $identifier ] = $dataObject;
             }
             else
             {
@@ -764,7 +779,7 @@ class XMLSecurityDSig
 
     /**
      * @return bool
-     * @param \DOMNode $xmlNode This will be supplied if the signature is in a separate file which will be in 
+     * @param \DOMNode $xmlNode This will be supplied if the signature is in a separate file
      * @throws \Exception
      */
     public function validateReference( $xmlNode = null )
@@ -791,7 +806,7 @@ class XMLSecurityDSig
 
         foreach ( $nodeset AS $refNode ) 
         {
-            if (! $this->processRefNode( $refNode, $xmlNode ) )
+            if ( ! $this->processRefNode( $refNode, $xmlNode ) )
             {
                 /* Clear the list of validated nodes. */
                 $this->validatedNodes = null;
