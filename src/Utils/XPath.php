@@ -42,6 +42,54 @@ class XPath
         return preg_replace('#[^'.$allow.']#', '', $name);
     }
 
+	/**
+	 * Utility function to output a summary the items in a node list
+	 * @param \DOMNode[] $nodelist
+	 * @return void
+	 */
+	public static function dumpNodelist( $nodelist )
+	{
+		$elementTypes = array(
+			XML_ELEMENT_NODE => "XML_ELEMENT_NODE",
+			XML_ATTRIBUTE_NODE => "XML_ATTRIBUTE_NODE",
+			XML_TEXT_NODE => "XML_TEXT_NODE",
+			XML_CDATA_SECTION_NODE => "XML_CDATA_SECTION_NODE",
+			XML_ENTITY_REF_NODE => "XML_ENTITY_REF_NODE",
+			XML_ENTITY_NODE => "XML_ENTITY_NODE",
+			XML_PI_NODE => "XML_PI_NODE",
+			XML_COMMENT_NODE => "XML_COMMENT_NODE",
+			XML_DOCUMENT_NODE => "XML_DOCUMENT_NODE",
+			XML_DOCUMENT_TYPE_NODE => "XML_DOCUMENT_TYPE_NODE",
+			XML_DOCUMENT_FRAG_NODE => "XML_DOCUMENT_FRAG_NODE",
+			XML_NOTATION_NODE => "XML_NOTATION_NODE",
+			XML_HTML_DOCUMENT_NODE => "XML_HTML_DOCUMENT_NODE",
+			XML_DTD_NODE => "XML_DTD_NODE",
+			XML_ELEMENT_DECL_NODE => "XML_ELEMENT_DECL_NODE",
+			XML_ATTRIBUTE_DECL_NODE => "XML_ATTRIBUTE_DECL_NODE",
+			XML_ENTITY_DECL_NODE => "XML_ENTITY_DECL_NODE",
+			XML_NAMESPACE_DECL_NODE => "XML_NAMESPACE_DECL_NODE",
+			XML_ATTRIBUTE_CDATA => "XML_ATTRIBUTE_CDATA",
+			XML_ATTRIBUTE_ID => "XML_ATTRIBUTE_ID",
+			XML_ATTRIBUTE_IDREF => "XML_ATTRIBUTE_IDREF",
+			XML_ATTRIBUTE_IDREFS => "XML_ATTRIBUTE_IDREFS",
+			XML_ATTRIBUTE_ENTITY => "XML_ATTRIBUTE_ENTITY",
+			XML_ATTRIBUTE_NMTOKEN => "XML_ATTRIBUTE_NMTOKEN",
+			XML_ATTRIBUTE_NMTOKENS => "XML_ATTRIBUTE_NMTOKENS",
+			XML_ATTRIBUTE_ENUMERATION => "XML_ATTRIBUTE_ENUMERATION",
+			XML_ATTRIBUTE_NOTATION => "XML_ATTRIBUTE_NOTATION"
+		);
+		
+		$nodesOutput = "";
+		foreach( $nodelist as $node )
+		{
+			$nodesOutput .= $elementTypes[ $node->nodeType ] . "\t\t";
+			$nodesOutput .= $node->nodeName . "\t\t";
+			$nodesOutput .= $node->parentNode ? $node->parentNode->getNodePath() : "root";
+			$nodesOutput .= "\n";
+		}
+		file_put_contents( __DIR__ . "/../../../nodesOutput.txt", $nodesOutput );
+	}
+
     /**
 	 * Create an Xml document representing the nodeset nodes
 	 * @param \DOMNode[] $nodelist
@@ -52,6 +100,8 @@ class XPath
 	public static function nodesetToXml( $nodeList, $exclude = false, $withComments = false )
 	{
 		if ( count( $nodeList ) == 0) return "";
+
+		// self::dumpNodelist( $nodeList );
 
 		/**
 		 * Map between the old node and the new node
@@ -163,7 +213,10 @@ class XPath
 			foreach( $namespaceNodes[ $path ] as $namespaceNode )
 			{
 				/** @var \DOMNameSpaceNode $namespaceNode */
+				// Does the new node already have this namespace as an explicit node?
 				if ( $namespaceNode->localName == $newNode->prefix ) continue;
+				// Does the new node already have this namespace as the default node?
+				if ( $namespaceNode->localName == "xmlns" && ! $namespaceNode->prefix && ! $newNode->prefix && $namespaceNode->namespaceURI == $newNode->namespaceURI ) continue;
 
 				$newAttr = $newDoc->createAttribute( $namespaceNode->nodeName );
 				$newAttr->value = $namespaceNode->namespaceURI;
@@ -227,11 +280,27 @@ class XPath
 		// This is because namespaces added to nodes in the new document don't seem  
 		// to be recognized so are added to each sub-node.  The solution is to write 
 		// the XML to a string then load it into a document which can then be canonicalized
-		$output = $newDoc->saveXML( $newDoc->documentElement, LIBXML_NOEMPTYTAG );
 
-		// Create a new target document
-		$newDoc = new \DOMDocument();
-		$newDoc->loadXML( $output );
+		$output = $newDoc->saveXML( null, LIBXML_NOEMPTYTAG | LIBXML_NOXMLDECL );
+
+		if ( count( $newDoc->childNodes ) == 1 )
+		{
+			// Unlike .NET Framework, Java, Python and Ruby PHP will only accept XML with 
+			// one root node (even though it will happily create multiple roots and save
+			// them).  So in the case there are multiple root nodes its nessary to return
+			// the saved XML and hope (fingers crossed) that it's OK.
+
+			// Another approach might be to create a new document and copy each of the 
+			// root node one-by-one. However, this does not work reliably because namespaces
+			// are messed up such as namespaces being declared on sub-nodes are moved to 
+			// one of the root nodes.  Although this doesn't change the xml semantics, since
+			// the output xml will eventually be hashed the place where namespaces are
+			// declared is very important.
+
+			// Create a new target document
+			$newDoc = new \DOMDocument();
+			$newDoc->loadXML( $output );
+		}
 
 		$xml = $newDoc->C14N( $exclude, $withComments );
 
