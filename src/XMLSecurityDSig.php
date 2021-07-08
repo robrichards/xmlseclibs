@@ -7,6 +7,7 @@ use \DOMNode;
 use \DOMXPath;
 use \Exception;
 use RobRichards\XMLSecLibs\Utils\XPath as UtilsXPath;
+use \lyquidity\xmldsig\XmlDsigFilterTransform;
 
 /**
  * xmlseclibs.php
@@ -583,7 +584,7 @@ class XMLSecurityDSig
                     $nodeList = $filter->getOutput();
                     // Create an XML document as a string from the node list
                     $exclude = $algorithm == self::EXC_C14N || $algorithm == self::EXC_C14N_COMMENTS;
-                    $objData = UtilsXPath::nodesetToXml( $nodeList, $exclude, $includeCommentNodes );
+                    $objData = XmlDsigFilterTransform::nodesetToXml( $nodeList, $exclude, $includeCommentNodes );
                     continue 2;
 
                 case self::ENV_SIG:
@@ -690,7 +691,7 @@ class XMLSecurityDSig
                 foreach( $namespaceNodes as $namespaceNode )
                     $nodeList[] = $namespaceNode;
 
-                $xml = UtilsXPath::nodesetToXml( $nodeList, false, $includeCommentNodes );
+                $xml = XmlDsigFilterTransform::nodesetToXml( $nodeList, false, $includeCommentNodes );
             }
 
             $dataObject = new \DOMDocument();
