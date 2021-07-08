@@ -314,6 +314,15 @@ class XMLSecurityKey
     }
 
     /**
+     * Get the serial number of a certificate
+     * @return string[]
+     */
+    public function getCertificateData()
+    {
+        return openssl_x509_parse( $this->x509Certificate, true );
+    }
+
+    /**
      * Get the raw thumbprint of a certificate
      *
      * @param string $cert
