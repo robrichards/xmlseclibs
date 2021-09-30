@@ -631,6 +631,7 @@ class XMLSecurityDSig
         $id_name = 'Id';
         $overwrite_id  = true;
         $force_uri = false;
+        $transforms_elem = true;
 
         if (is_array($options)) {
             $prefix = empty($options['prefix']) ? null : $options['prefix'];
@@ -638,6 +639,7 @@ class XMLSecurityDSig
             $id_name = empty($options['id_name']) ? 'Id' : $options['id_name'];
             $overwrite_id = !isset($options['overwrite']) ? true : (bool) $options['overwrite'];
             $force_uri = !isset($options['force_uri']) ? false : (bool) $options['force_uri'];
+            $transforms_elem = !isset($options['transforms_elem']) ? true : (bool) $options['transforms_elem'];
         }
 
         $attname = $id_name;
@@ -662,32 +664,34 @@ class XMLSecurityDSig
             $refNode->setAttribute("URI", '');
         }
 
-        $transNodes = $this->createNewSignNode('Transforms');
-        $refNode->appendChild($transNodes);
+        if ($transforms_elem) {
+            $transNodes = $this->createNewSignNode('Transforms');
+            $refNode->appendChild($transNodes);
 
-        if (is_array($arTransforms)) {
-            foreach ($arTransforms AS $transform) {
+            if (is_array($arTransforms)) {
+                foreach ($arTransforms AS $transform) {
+                    $transNode = $this->createNewSignNode('Transform');
+                    $transNodes->appendChild($transNode);
+                    if (is_array($transform) &&
+                        (! empty($transform['http://www.w3.org/TR/1999/REC-xpath-19991116'])) &&
+                        (! empty($transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['query']))) {
+                        $transNode->setAttribute('Algorithm', 'http://www.w3.org/TR/1999/REC-xpath-19991116');
+                        $XPathNode = $this->createNewSignNode('XPath', $transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['query']);
+                        $transNode->appendChild($XPathNode);
+                        if (! empty($transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['namespaces'])) {
+                            foreach ($transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['namespaces'] AS $prefix => $namespace) {
+                                $XPathNode->setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:$prefix", $namespace);
+                            }
+                        }
+                    } else {
+                        $transNode->setAttribute('Algorithm', $transform);
+                    }
+                }
+            } elseif (! empty($this->canonicalMethod)) {
                 $transNode = $this->createNewSignNode('Transform');
                 $transNodes->appendChild($transNode);
-                if (is_array($transform) &&
-                    (! empty($transform['http://www.w3.org/TR/1999/REC-xpath-19991116'])) &&
-                    (! empty($transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['query']))) {
-                    $transNode->setAttribute('Algorithm', 'http://www.w3.org/TR/1999/REC-xpath-19991116');
-                    $XPathNode = $this->createNewSignNode('XPath', $transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['query']);
-                    $transNode->appendChild($XPathNode);
-                    if (! empty($transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['namespaces'])) {
-                        foreach ($transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['namespaces'] AS $prefix => $namespace) {
-                            $XPathNode->setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:$prefix", $namespace);
-                        }
-                    }
-                } else {
-                    $transNode->setAttribute('Algorithm', $transform);
-                }
+                $transNode->setAttribute('Algorithm', $this->canonicalMethod);
             }
-        } elseif (! empty($this->canonicalMethod)) {
-            $transNode = $this->createNewSignNode('Transform');
-            $transNodes->appendChild($transNode);
-            $transNode->setAttribute('Algorithm', $this->canonicalMethod);
         }
 
         $canonicalData = $this->processTransforms($refNode, $node);
