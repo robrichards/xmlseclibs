@@ -97,11 +97,16 @@ jobs:
         with:
           php-version: ${{ matrix.php-versions }}
           extensions: openssl
-          tools: phpunit:9.5
+          tools: phpunit/phpunit:9.5
 
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
 
       - name: Run tests
-        run: phpunit tests
+        run: phpunit --coverage-clover clover.xml tests
+
+      - uses: codecov/codecov-action@v2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./clover.xml
