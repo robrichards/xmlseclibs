@@ -107,9 +107,16 @@ class XMLSecurityDSig
     /**
      * @param string $prefix
      */
-    public function __construct($prefix='ds')
+    public function __construct($prefix='ds', $attributes=[])
     {
         $template = self::BASE_TEMPLATE;
+        if (count($attributes)) {
+            foreach ($attributes as $a=>$v) {
+                $search = array("<Signature ");
+                $replace = array('<Signature '.$a.'="'.$v.'" ');
+                $template = str_replace($search, $replace, $template);
+            }
+        }
         if (! empty($prefix)) {
             $this->prefix = $prefix.':';
             $search = array("<S", "</S", "xmlns=");
