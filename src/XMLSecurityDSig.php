@@ -110,12 +110,10 @@ class XMLSecurityDSig
     public function __construct($prefix='ds', $attributes=[])
     {
         $template = self::BASE_TEMPLATE;
-        if (count($attributes)) {
-            foreach ($attributes as $a=>$v) {
-                $search = array("<Signature ");
-                $replace = array('<Signature '.$a.'="'.$v.'" ');
-                $template = str_replace($search, $replace, $template);
-            }
+        foreach ($attributes as $a=>$v) {
+            $search = array("<Signature ");
+            $replace = array('<Signature '.$a.'="'.$v.'" ');
+            $template = str_replace($search, $replace, $template);
         }
         if (! empty($prefix)) {
             $this->prefix = $prefix.':';
