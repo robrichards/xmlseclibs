@@ -384,6 +384,9 @@ class XMLSecurityKey
 
 	            case 'private':
                     $this->key = openssl_get_privatekey($this->key, $this->passphrase);
+                    if ($this->key === false) {
+                        throw new Exception('Unable to extract private key (invalid key or passphrase): ' . openssl_error_string());
+                    }
                     break;
 
                 case'symmetric':
