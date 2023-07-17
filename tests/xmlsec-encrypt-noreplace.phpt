@@ -32,6 +32,7 @@ if ($newData !== $origData) {
 if ($encNode->namespaceURI !== XMLSecEnc::XMLENCNS || $encNode->localName !== 'EncryptedData') {
     echo "Encrypted node wasn't a <xenc:EncryptedData>-element.\n";
 }
-
+echo "DONE\n";
 ?>
 --EXPECTF--
+DONE
