@@ -3,6 +3,8 @@ xmlseclibs.php
 ??, ??? 2020, 3.1.2
 Improvements:
 - Add tab to list of whitespace values to remove from cert. refs #252
+- loadKey should check return value for openssl_get_privatekey (sammarshallou)
+- Switch to GitHub actions (SharkMachine)
 
 05, Sep 2020, 3.1.1
 Features:
