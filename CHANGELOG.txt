@@ -2,7 +2,7 @@ xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 ??, ??? 2020, 3.1.2
 Improvements:
-- Add tab to list of whitespace values to remove. refs #252
+- Add tab to list of whitespace values to remove from cert. refs #252
 
 05, Sep 2020, 3.1.1
 Features:
