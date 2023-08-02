@@ -1,3 +1,36 @@
+# guycalledseven xmlseclib fork
+
+This fork has one small but **very important** change in `XMLSecurityDSig` class. order to make signatures verifiable on C#. 
+
+Adding of signatures is done via predefined template string constant which contains whitespaces. If signed xml should not contain whitespaces - this will break signature and it won't validate (on eg. c#).
+
+To fix this, constructor now accepts optional parameters `$preserveWhiteSpace` and `$formatOutput` which now default both to false.
+
+
+```
+    /**
+     * Added preserveWhiteSpace = false since validating signature in C# fails because 
+     * signature base template contains & inserts whitespaces on it's own
+     * @param string $prefix
+     * @param boolean $preserveWhiteSpace
+     * @param boolean $formatOutput
+     */
+    public function __construct($prefix='ds', $preserveWhiteSpace = false, $formatOutput = false)
+    {
+
+    	...
+
+        $sigdoc = new DOMDocument();
+		$sigdoc->preserveWhiteSpace = $preserveWhiteSpace;
+		$sigdoc->formatOutput = $formatOutput;
+
+        $sigdoc->loadXML($template);
+        $this->sigNode = $sigdoc->documentElement;
+    }
+	
+
+```
+
 #xmlseclibs 
 
 xmlseclibs is a library written in PHP for working with XML Encryption and Signatures.
