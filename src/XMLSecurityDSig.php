@@ -107,9 +107,14 @@ class XMLSecurityDSig
     /**
      * @param string $prefix
      */
-    public function __construct($prefix='ds')
+    public function __construct($prefix='ds', $attributes=[])
     {
         $template = self::BASE_TEMPLATE;
+        foreach ($attributes as $a=>$v) {
+            $search = array("<Signature ");
+            $replace = array('<Signature '.$a.'="'.$v.'" ');
+            $template = str_replace($search, $replace, $template);
+        }
         if (! empty($prefix)) {
             $this->prefix = $prefix.':';
             $search = array("<S", "</S", "xmlns=");
@@ -631,6 +636,7 @@ class XMLSecurityDSig
         $id_name = 'Id';
         $overwrite_id  = true;
         $force_uri = false;
+        $uri_value = null;
 
         if (is_array($options)) {
             $prefix = empty($options['prefix']) ? null : $options['prefix'];
@@ -638,6 +644,7 @@ class XMLSecurityDSig
             $id_name = empty($options['id_name']) ? 'Id' : $options['id_name'];
             $overwrite_id = !isset($options['overwrite']) ? true : (bool) $options['overwrite'];
             $force_uri = !isset($options['force_uri']) ? false : (bool) $options['force_uri'];
+            $uri_value = empty($options['uri_value']) ? null : $options['uri_value'];
         }
 
         $attname = $id_name;
@@ -659,7 +666,7 @@ class XMLSecurityDSig
             }
             $refNode->setAttribute("URI", '#'.$uri);
         } elseif ($force_uri) {
-            $refNode->setAttribute("URI", '');
+            $refNode->setAttribute("URI", $uri_value ?? '');
         }
 
         $transNodes = $this->createNewSignNode('Transforms');
