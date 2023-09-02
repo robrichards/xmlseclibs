@@ -809,7 +809,6 @@ class XMLSecurityKey
         }
         $objKey->isEncrypted = true;
         $objKey->encryptedCtx = $objenc;
-        XMLSecEnc::staticLocateKeyInfo($objKey, $element);
         return $objKey;
     }
 
