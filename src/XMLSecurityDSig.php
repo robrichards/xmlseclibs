@@ -74,6 +74,8 @@ class XMLSecurityDSig
   </SignedInfo>
 </Signature>';
 
+    const BASE_TEMPLATE_NO_WHITESPACE = '<Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><SignatureMethod /></SignedInfo></Signature>';
+
     /** @var DOMElement|null */
     public $sigNode = null;
 
@@ -107,9 +109,9 @@ class XMLSecurityDSig
     /**
      * @param string $prefix
      */
-    public function __construct($prefix='ds')
+    public function __construct($prefix='ds', $options=null)
     {
-        $template = self::BASE_TEMPLATE;
+        $template = (!empty($options['excludeWhitespace']) && $options['excludeWhitespace'] === true) ? self::BASE_TEMPLATE_NO_WHITESPACE : self::BASE_TEMPLATE;
         if (! empty($prefix)) {
             $this->prefix = $prefix.':';
             $search = array("<S", "</S", "xmlns=");
