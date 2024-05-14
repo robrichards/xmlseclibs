@@ -388,19 +388,22 @@ class XMLSecurityKey
         }
         if ($this->cryptParams['library'] == 'openssl') {
             switch ($this->cryptParams['type']) {
-                case 'public':
-                    if ($isCert) {
-                        /* Load the thumbprint if this is an X509 certificate. */
-                        $this->X509Thumbprint = self::getRawThumbprint($this->key);
-                    }
-                    $this->key = openssl_get_publickey($this->key);
-                    if (! $this->key) {
-                        throw new Exception('Unable to extract public key');
-                    }
-                    break;
+	            case 'public':
+	                if ($isCert) {
+	                    /* Load the thumbprint if this is an X509 certificate. */
+	                    $this->X509Thumbprint = self::getRawThumbprint($this->key);
+	                }
+	                $this->key = openssl_get_publickey($this->key);
+	                if (! $this->key) {
+	                    throw new Exception('Unable to extract public key');
+	                }
+	                break;
 
-                case 'private':
+	            case 'private':
                     $this->key = openssl_get_privatekey($this->key, $this->passphrase);
+                    if ($this->key === false) {
+                        throw new Exception('Unable to extract private key (invalid key or passphrase): ' . openssl_error_string());
+                    }
                     break;
 
                 case'symmetric':
