@@ -371,6 +371,9 @@ class XMLSecurityKey
 
             if ($this->cryptParams['library'] == self::RSASSA_PSS) {
                 $this->rsaPrivateKey = PublicKeyLoader::loadPrivateKey(file_get_contents($key));
+                $this->rsaPrivateKey->withPadding(RSA::SIGNATURE_PSS);
+                $this->rsaPrivateKey->withHash('sha256');
+                $this->rsaPrivateKey->withMGFHash('sha256');
             }
         } else {
             $this->key = $key;
@@ -659,11 +662,7 @@ class XMLSecurityKey
             case (self::HMAC_SHA1):
                 return hash_hmac("sha1", $data, $this->key, true);
             case (self::RSASSA_PSS):
-                $privateKey = $this->rsaPrivateKey;
-                $privateKey->withPadding(RSA::SIGNATURE_PSS);
-                $privateKey->withHash('sha256');
-                $privateKey->withMGFHash('sha256');
-                return $privateKey->sign($data);
+                return $this->rsaPrivateKey->sign($data);
         }
     }
 
@@ -691,6 +690,8 @@ class XMLSecurityKey
             case (self::HMAC_SHA1):
                 $expectedSignature = hash_hmac("sha1", $data, $this->key, true);
                 return strcmp($signature, $expectedSignature) == 0;
+            case (self::RSASSA_PSS):
+                return $this->rsaPrivateKey->verify($data, $signature);
         }
     }
 
