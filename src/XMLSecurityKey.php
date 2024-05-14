@@ -1,7 +1,6 @@
 <?php
 namespace RobRichards\XMLSecLibs;
 
-use Alzura\Domain\Fiscal\BzSt;
 use DOMElement;
 use Exception;
 use phpseclib3\Crypt\PublicKeyLoader;
