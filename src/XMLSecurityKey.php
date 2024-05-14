@@ -1,8 +1,11 @@
 <?php
 namespace RobRichards\XMLSecLibs;
 
+use Alzura\Domain\Fiscal\BzSt;
 use DOMElement;
 use Exception;
+use phpseclib3\Crypt\PublicKeyLoader;
+use phpseclib3\Crypt\RSA;
 
 /**
  * xmlseclibs.php
@@ -62,6 +65,7 @@ class XMLSecurityKey
     const RSA_SHA384 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha384';
     const RSA_SHA512 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha512';
     const HMAC_SHA1 = 'http://www.w3.org/2000/09/xmldsig#hmac-sha1';
+    const RSASSA_PSS = 'http://www.w3.org/2007/05/xmldsig-more#sha256-rsa-MGF1';
     const AUTHTAG_LENGTH = 16;
 
     /** @var array */
@@ -72,6 +76,9 @@ class XMLSecurityKey
 
     /** @var mixed|null */
     public $key = null;
+
+    /** @var RSA|null */
+    public $rsaPrivateKey = null;
 
     /** @var string  */
     public $passphrase = "";
@@ -257,6 +264,10 @@ class XMLSecurityKey
                 $this->cryptParams['library'] = $type;
                 $this->cryptParams['method'] = 'http://www.w3.org/2000/09/xmldsig#hmac-sha1';
                 break;
+            case (self::RSASSA_PSS):
+                $this->cryptParams['library'] = $type;
+                $this->cryptParams['method'] = 'http://www.w3.org/2007/05/xmldsig-more#sha256-rsa-MGF1';
+                break;
             default:
                 throw new Exception('Invalid Key Type');
         }
@@ -291,9 +302,9 @@ class XMLSecurityKey
             throw new Exception('Unknown key size for type "' . $this->type . '".');
         }
         $keysize = $this->cryptParams['keysize'];
-        
+
         $key = openssl_random_pseudo_bytes($keysize);
-        
+
         if ($this->type === self::TRIPLEDES_CBC) {
             /* Make sure that the generated key has the proper parity bits set.
              * Mcrypt doesn't care about the parity bits, but others may care.
@@ -308,7 +319,7 @@ class XMLSecurityKey
                 $key[$i] = chr($byte);
             }
         }
-        
+
         $this->key = $key;
         return $key;
     }
@@ -358,6 +369,10 @@ class XMLSecurityKey
     {
         if ($isFile) {
             $this->key = file_get_contents($key);
+
+            if ($this->cryptParams['library'] == self::RSASSA_PSS) {
+                $this->rsaPrivateKey = PublicKeyLoader::loadPrivateKey(file_get_contents($key));
+            }
         } else {
             $this->key = $key;
         }
@@ -372,21 +387,18 @@ class XMLSecurityKey
         if ($this->cryptParams['library'] == 'openssl') {
             switch ($this->cryptParams['type']) {
                 case 'public':
-	                if ($isCert) {
-	                    /* Load the thumbprint if this is an X509 certificate. */
-	                    $this->X509Thumbprint = self::getRawThumbprint($this->key);
-	                }
-	                $this->key = openssl_get_publickey($this->key);
-	                if (! $this->key) {
-	                    throw new Exception('Unable to extract public key');
-	                }
-	                break;
-
-	            case 'private':
-                    $this->key = openssl_get_privatekey($this->key, $this->passphrase);
-                    if ($this->key === false) {
-                        throw new Exception('Unable to extract private key (invalid key or passphrase): ' . openssl_error_string());
+                    if ($isCert) {
+                        /* Load the thumbprint if this is an X509 certificate. */
+                        $this->X509Thumbprint = self::getRawThumbprint($this->key);
                     }
+                    $this->key = openssl_get_publickey($this->key);
+                    if (! $this->key) {
+                        throw new Exception('Unable to extract public key');
+                    }
+                    break;
+
+                case 'private':
+                    $this->key = openssl_get_privatekey($this->key, $this->passphrase);
                     break;
 
                 case'symmetric':
@@ -452,7 +464,7 @@ class XMLSecurityKey
             $data = $this->padISO10126($data, $this->cryptParams['blocksize']);
             $encrypted = openssl_encrypt($data, $this->cryptParams['cipher'], $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $this->iv);
         }
-        
+
         if (false === $encrypted) {
             throw new Exception('Failure encrypting Data (openssl symmetric) - ' . openssl_error_string());
         }
@@ -483,7 +495,7 @@ class XMLSecurityKey
         } else {
             $decrypted = openssl_decrypt($data, $this->cryptParams['cipher'], $this->key, OPENSSL_RAW_DATA | OPENSSL_ZERO_PADDING, $this->iv);
         }
-        
+
         if (false === $decrypted) {
             throw new Exception('Failure decrypting Data (openssl symmetric) - ' . openssl_error_string());
         }
@@ -647,6 +659,12 @@ class XMLSecurityKey
                 return $this->signOpenSSL($data);
             case (self::HMAC_SHA1):
                 return hash_hmac("sha1", $data, $this->key, true);
+            case (self::RSASSA_PSS):
+                $privateKey = $this->rsaPrivateKey;
+                $privateKey->withPadding(RSA::SIGNATURE_PSS);
+                $privateKey->withHash('sha256');
+                $privateKey->withMGFHash('sha256');
+                return $privateKey->sign($data);
         }
     }
 
