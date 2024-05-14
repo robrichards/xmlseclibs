@@ -388,7 +388,7 @@ class XMLSecurityKey
         }
         if ($this->cryptParams['library'] == 'openssl') {
             switch ($this->cryptParams['type']) {
-	            case 'public':
+                case 'public':
 	                if ($isCert) {
 	                    /* Load the thumbprint if this is an X509 certificate. */
 	                    $this->X509Thumbprint = self::getRawThumbprint($this->key);
