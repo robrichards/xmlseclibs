@@ -1,6 +1,6 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
-??, ??? 2020, 3.1.2
+20, Nov 2024, 3.1.2
 Improvements:
 - Add tab to list of whitespace values to remove from cert. refs #252
 - loadKey should check return value for openssl_get_privatekey (sammarshallou)
