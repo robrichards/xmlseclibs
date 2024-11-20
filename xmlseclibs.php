@@ -37,7 +37,7 @@
  * @author    Robert Richards <rrichards@cdatazone.org>
  * @copyright 2007-2024 Robert Richards <rrichards@cdatazone.org>
  * @license   http://www.opensource.org/licenses/bsd-license.php  BSD License
- * @version   3.1.2
+ * @version   3.1.3
  */
 
 $xmlseclibs_srcdir = dirname(__FILE__) . '/src/';
