@@ -105,9 +105,13 @@ class XMLSecurityDSig
     private $validatedNodes = null;
 
     /**
+     * Added preserveWhiteSpace = false since validating signature in C# fails because 
+     * signature base template contains & inserts whitespaces on it's own
      * @param string $prefix
+     * @param boolean $preserveWhiteSpace
+     * @param boolean $formatOutput
      */
-    public function __construct($prefix='ds')
+    public function __construct($prefix='ds', $preserveWhiteSpace = false, $formatOutput = false)
     {
         $template = self::BASE_TEMPLATE;
         if (! empty($prefix)) {
@@ -117,6 +121,9 @@ class XMLSecurityDSig
             $template = str_replace($search, $replace, $template);
         }
         $sigdoc = new DOMDocument();
+		$sigdoc->preserveWhiteSpace = $preserveWhiteSpace;
+		$sigdoc->formatOutput = $formatOutput;
+
         $sigdoc->loadXML($template);
         $this->sigNode = $sigdoc->documentElement;
     }
