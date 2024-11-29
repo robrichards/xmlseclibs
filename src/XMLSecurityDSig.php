@@ -1023,12 +1023,16 @@ class XMLSecurityDSig
 
         $issuerSerial = false;
         $subjectName = false;
+        $issuerCertificate = true;
         if (is_array($options)) {
             if (! empty($options['issuerSerial'])) {
                 $issuerSerial = true;
             }
             if (! empty($options['subjectName'])) {
                 $subjectName = true;
+            }
+            if (isset($options['issuerCertificate']) && $options['issuerCertificate']===false) {
+                $issuerCertificate = false;
             }
         }
 
@@ -1059,7 +1063,13 @@ class XMLSecurityDSig
                         if (is_array($certData['issuer'])) {
                             $parts = array();
                             foreach ($certData['issuer'] AS $key => $value) {
-                                array_unshift($parts, "$key=$value");
+                                if (is_array($value)) {
+                                    foreach ($value as $valueElement) {
+                                        array_unshift($parts, "$key=$valueElement");
+                                    }
+                                } else {
+                                    array_unshift($parts, "$key=$value");
+                                }
                             }
                             $issuerName = implode(',', $parts);
                         } else {
@@ -1077,8 +1087,10 @@ class XMLSecurityDSig
                 }
 
             }
-            $x509CertNode = $baseDoc->createElementNS(self::XMLDSIGNS, $dsig_pfx.'X509Certificate', $X509Cert);
-            $x509DataNode->appendChild($x509CertNode);
+            if ($issuerCertificate) {
+                $x509CertNode = $baseDoc->createElementNS(self::XMLDSIGNS, $dsig_pfx.'X509Certificate', $X509Cert);
+                $x509DataNode->appendChild($x509CertNode);
+            }
         }
     }
 
