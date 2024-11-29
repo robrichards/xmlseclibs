@@ -300,9 +300,10 @@ class XMLSecEnc
      * @param XMLSecurityKey $srcKey
      * @param XMLSecurityKey $rawKey
      * @param bool $append
+     * @param bool $includeKeyInfo
      * @throws Exception
      */
-    public function encryptKey($srcKey, $rawKey, $append=true)
+    public function encryptKey($srcKey, $rawKey, $append = true, $includeKeyInfo = false)
     {
         if ((! $srcKey instanceof XMLSecurityKey) || (! $rawKey instanceof XMLSecurityKey)) {
             throw new Exception('Invalid Key');
@@ -317,11 +318,32 @@ class XMLSecEnc
             $this->encKey = $encKey;
         }
         $encMethod = $encKey->appendChild($this->encdoc->createElementNS(self::XMLENCNS, 'xenc:EncryptionMethod'));
-        $encMethod->setAttribute('Algorithm', $srcKey->getAlgorith());
-        if (! empty($srcKey->name)) {
+        $encMethod->setAttribute('Algorithm', $srcKey->getAlgorithm());
+
+        $x509Certificate = $srcKey->getX509Certificate();
+        if ($includeKeyInfo && (!empty($srcKey->name) || !empty($x509Certificate))) {
             $keyInfo = $encKey->appendChild($this->encdoc->createElementNS('http://www.w3.org/2000/09/xmldsig#', 'dsig:KeyInfo'));
-            $keyInfo->appendChild($this->encdoc->createElementNS('http://www.w3.org/2000/09/xmldsig#', 'dsig:KeyName', $srcKey->name));
+
+            if (!empty($srcKey->name)) {
+                $keyInfo->appendChild($this->encdoc->createElementNS('http://www.w3.org/2000/09/xmldsig#', 'dsig:KeyName', $srcKey->name));
+            }
+
+            if (!empty($x509Certificate)) {
+                $x509Data = $keyInfo->appendChild($this->encdoc->createElementNS('http://www.w3.org/2000/09/xmldsig#', 'dsig:X509Data'));
+
+                $key = preg_split('~(\r?\n)+~', $x509Certificate, null, PREG_SPLIT_NO_EMPTY);
+
+                # Don't re-encode keys in PEM format
+                if($key[0] === '-----BEGIN CERTIFICATE-----') {
+                    $key = implode('', array_slice($key, 1, count($key) - 2));
+                } else {
+                    $key = base64_encode($x509Certificate);
+                }
+
+                $x509Data->appendChild($this->encdoc->createElementNS('http://www.w3.org/2000/09/xmldsig#', 'dsig:X509Certificate', $key));
+            }
         }
+
         $cipherData = $encKey->appendChild($this->encdoc->createElementNS(self::XMLENCNS, 'xenc:CipherData'));
         $cipherData->appendChild($this->encdoc->createElementNS(self::XMLENCNS, 'xenc:CipherValue', $strEncKey));
         if (is_array($this->references) && count($this->references) > 0) {
@@ -332,7 +354,6 @@ class XMLSecEnc
                 $dataRef->setAttribute("URI", '#' . $refuri);
             }
         }
-        return;
     }
 
     /**
