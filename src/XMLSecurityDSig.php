@@ -853,6 +853,7 @@ class XMLSecurityDSig
                 $sMethod = $nodeset->item(0);
                 $sMethod->setAttribute('Algorithm', $objKey->type);
                 $data = $this->canonicalizeData($sInfo, $this->canonicalMethod);
+                $data = preg_replace("/>\s+</", "><", $data); // remove whitespaces between elements
                 $sigValue = base64_encode($this->signData($objKey, $data));
                 $sigValueNode = $this->createNewSignNode('SignatureValue', $sigValue);
                 if ($infoSibling = $sInfo->nextSibling) {
