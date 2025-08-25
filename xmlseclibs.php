@@ -40,6 +40,7 @@
  * @version   3.1.3
  */
 
+require __DIR__ . '/vendor/autoload.php';
 $xmlseclibs_srcdir = dirname(__FILE__) . '/src/';
 require $xmlseclibs_srcdir . '/XMLSecurityKey.php';
 require $xmlseclibs_srcdir . '/XMLSecurityDSig.php';

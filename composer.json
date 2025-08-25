@@ -15,7 +15,7 @@
     }
   },
   "require": {
-    "php": ">= 5.4",
+    "php": ">= 5.6.1",
     "ext-openssl": "*",
     "phpseclib/phpseclib": "~3.0"
   }
