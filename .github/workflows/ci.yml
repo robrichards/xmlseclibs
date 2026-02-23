@@ -106,7 +106,7 @@ jobs:
         with:
           php-version: ${{ matrix.php-versions }}
           extensions: openssl
-          tools: phpunit/phpunit:9.5
+          tools: phpunit/phpunit:9.6
 
       - uses: actions/checkout@v3
         with:
