@@ -395,6 +395,10 @@ class XMLSecurityKey
                 default:
                     throw new Exception('Unknown type');
             }
+        } elseif ($this->cryptParams['library'] === 'phpseclib') {
+            if ($isCert) {
+                $this->X509Thumbprint = self::getRawThumbprint($this->key);
+            }
         }
     }
 
