@@ -1,5 +1,14 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+??, ??? ????, 4.0.0
+Security Improvements:
+
+Features:
+- Remove support for PHP < 8.0
+- add support for RSA PSS (Julius Türich and joonlabs)
+- use phpseclib for encrypting rsa-oaep and rsa-oaep-mgf1p 
+  (Julius Türich and joonlabs)
+
 12, Dec 2026, 3.1.5
 Security:
 - Validate AES-GCM Authentication Tag (Sideni)
