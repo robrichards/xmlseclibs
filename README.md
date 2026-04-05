@@ -6,14 +6,15 @@ The author of xmlseclibs is Rob Richards.
 
 # Branches
 Master is currently the only actively maintained branch.
-* master/3.1: Added AES-GCM support requiring 7.1+
+* master: requires PHP version 8.0+
+* 3.1: Added AES-GCM support requiring 7.1+
 * 3.0: Removes mcrypt usage requiring 5.4+ (5.6.24+ recommended for security reasons)
 * 2.0: Contains namespace support requiring 5.3+
 * 1.4: Contains auto-loader support while also maintaining backwards compatiblity with the older 1.3 version using the xmlseclibs.php file. Supports PHP 5.2+
 
 # Requirements
 
-xmlseclibs requires PHP version 5.4 or greater. **5.6.24+ recommended for security reasons**
+xmlseclibs requires PHP version 8.0 or greater.
 
 
 ## How to Install

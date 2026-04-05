@@ -19,11 +19,6 @@ foreach ($arTests AS $testName=>$testParams) {
 	}
 	
 	print "$testName: ";
-	// Travis not honoring SKIPIF
-	if (version_compare(PHP_VERSION, '7.1.0') < 0) {
-		print "EncryptedData\n";
-		continue;
-	}
 	
 	$dom = new DOMDocument();
 	$dom->load(dirname(__FILE__) . '/basic-doc.xml');

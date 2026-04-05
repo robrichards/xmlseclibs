@@ -1,7 +1,5 @@
 --TEST--
 Verify RSA SHA256
---SKIPIF--
-<?php if (version_compare(PHP_VERSION, '5.3.0', '<')) die('SKIP Requires PHP version 5.3.0 or newer.'); ?>
 --FILE--
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');
