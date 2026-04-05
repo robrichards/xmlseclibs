@@ -25,12 +25,6 @@ foreach ($arTests AS $testName=>$testFile) {
 	$output = NULL;
 	print "$testName: ";
 
-	// Skip AES tests is PHP < 7.1.0
-	if ((substr($testName, 0, 3) === "AES") && (version_compare(PHP_VERSION, '7.1.0') < 0)) {
-		print "Passed\n";
-		continue;
-	}
-
 	$doc->load(dirname(__FILE__) . "/$testFile");
 	
 	try {
