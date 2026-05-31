@@ -624,6 +624,13 @@ class XMLSecurityKey
                 case 'private':
                     return $this->encryptPrivate($data);
             }
+        } elseif ($this->cryptParams['library'] === 'phpseclib' && $this->cryptParams['type'] === 'public') {
+            $public = PublicKeyLoader::load($this->key);
+            return $public
+                ->withPadding($this->cryptParams['padding'])
+                ->withHash($this->cryptParams['digest'])
+                ->withMGFHash($this->cryptParams['digest'])
+                ->encrypt($data);
         }
     }
 
