@@ -9,7 +9,7 @@ use phpseclib3\Crypt\RSA;
 /**
  * xmlseclibs.php
  *
- * Copyright (c) 2007-2024, Robert Richards <rrichards@cdatazone.org>.
+ * Copyright (c) 2007-2026, Robert Richards <rrichards@cdatazone.org>.
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -42,7 +42,7 @@ use phpseclib3\Crypt\RSA;
  * POSSIBILITY OF SUCH DAMAGE.
  *
  * @author    Robert Richards <rrichards@cdatazone.org>
- * @copyright 2007-2024 Robert Richards <rrichards@cdatazone.org>
+ * @copyright 2007-2026 Robert Richards <rrichards@cdatazone.org>
  * @license   http://www.opensource.org/licenses/bsd-license.php  BSD License
  */
 
@@ -624,6 +624,13 @@ class XMLSecurityKey
                 case 'private':
                     return $this->encryptPrivate($data);
             }
+        } elseif ($this->cryptParams['library'] === 'phpseclib' && $this->cryptParams['type'] === 'public') {
+            $public = PublicKeyLoader::load($this->key);
+            return $public
+                ->withPadding($this->cryptParams['padding'])
+                ->withHash($this->cryptParams['digest'])
+                ->withMGFHash($this->cryptParams['digest'])
+                ->encrypt($data);
         }
     }
 
