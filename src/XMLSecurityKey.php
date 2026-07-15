@@ -234,7 +234,7 @@ class XMLSecurityKey
                 }
                 throw new Exception('Certificate "type" (private/public) must be passed via parameters');
             case (self::ECDSA_SHA256):
-                $this->cryptParams['library'] = 'openssl';
+                $this->cryptParams['library'] = 'phpseclib';
                 $this->cryptParams['method'] = 'http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256';
                 $this->cryptParams['digest'] = 'SHA256';
                 if (is_array($params) && ! empty($params['type'])) {
@@ -591,9 +591,6 @@ class XMLSecurityKey
         if (! openssl_sign($data, $signature, $this->key, $algo)) {
             throw new Exception('Failure Signing Data: ' . openssl_error_string() . ' - ' . $algo);
         }
-        if ($this->type === self::ECDSA_SHA256) {
-            $signature = $this->derToRawEcdsa($signature, 32);
-        }
         return $signature;
     }
 
@@ -618,9 +615,6 @@ class XMLSecurityKey
         $algo = OPENSSL_ALGO_SHA1;
         if (! empty($this->cryptParams['digest'])) {
             $algo = $this->cryptParams['digest'];
-        }
-        if ($this->type === self::ECDSA_SHA256) {
-            $signature = $this->rawToDerEcdsa($signature);
         }
         return openssl_verify($data, $signature, $this->key, $algo);
     }
@@ -693,6 +687,12 @@ class XMLSecurityKey
                 return $this->signOpenSSL($data);
             case 'phpseclib':
                 $private = PublicKeyLoader::load($this->key);
+                if ($this->type === self::ECDSA_SHA256) {
+                    return $private
+                        ->withHash($this->cryptParams['digest'])
+                        ->withSignatureFormat('IEEE')
+                        ->sign($data);
+                }
                 return $private
                     ->withPadding($this->cryptParams['padding'])
                     ->withHash($this->cryptParams['digest'])
@@ -726,6 +726,13 @@ class XMLSecurityKey
                 return $this->verifyOpenSSL($data, $signature);
             case 'phpseclib':
                 $public = PublicKeyLoader::load($this->key);
+                if ($this->type === self::ECDSA_SHA256) {
+                    $result = $public
+                        ->withHash($this->cryptParams['digest'])
+                        ->withSignatureFormat('IEEE')
+                        ->verify($data, $signature);
+                    return $result === true ? 1 : 0;
+                }
                 $result = $public
                     ->withPadding($this->cryptParams['padding'])
                     ->withHash($this->cryptParams['digest'])
@@ -872,87 +879,6 @@ class XMLSecurityKey
         $objKey->encryptedCtx = $objenc;
         XMLSecEnc::staticLocateKeyInfo($objKey, $element);
         return $objKey;
-    }
-
-    /**
-     * Converts ASN.1 DER ECDSA signature to RAW (IEEE P1363) format
-     *
-     * @param string $derSignature
-     * @param int $curveByteSize
-     * @return string
-     * @throws Exception
-     */
-    private function derToRawEcdsa($derSignature, $curveByteSize = 32) {
-        $offset = 0;
-        
-        // 1. SEQUENCE (0x30) check
-        if (ord($derSignature[$offset++]) !== 0x30) {
-            throw new Exception("Invalid DER signature.");
-        }
-        
-        $offset++; // Skip total length
-        
-        // 2. R value (0x02)
-        if (ord($derSignature[$offset++]) !== 0x02) {
-            throw new Exception("Invalid DER format (missing R).");
-        }
-        $rLen = ord($derSignature[$offset++]);
-        $r = substr($derSignature, $offset, $rLen);
-        $offset += $rLen;
-        
-        // 3. S value (0x02)
-        if (ord($derSignature[$offset++]) !== 0x02) {
-            throw new Exception("Invalid DER format (missing S).");
-        }
-        $sLen = ord($derSignature[$offset++]);
-        $s = substr($derSignature, $offset, $sLen);
-        
-        // 4. Clean up DER padding (leading 0x00 bytes) if any
-        $r = ltrim($r, "\x00");
-        $s = ltrim($s, "\x00");
-        
-        // 5. Adjust to curve size (32 bytes) with padding
-        $r = str_pad($r, $curveByteSize, "\x00", STR_PAD_LEFT);
-        $s = str_pad($s, $curveByteSize, "\x00", STR_PAD_LEFT);
-        
-        // 6. Concat and return
-        return $r . $s; 
-    }
-
-    /**
-     * Converts RAW (IEEE P1363) ECDSA signature to ASN.1 DER format
-     *
-     * @param string $rawSignature
-     * @return string
-     * @throws Exception
-     */
-    private function rawToDerEcdsa($rawSignature) {
-        // P-256 RAW signature should be exactly 64 bytes
-        if (strlen($rawSignature) !== 64) {
-            throw new Exception("Invalid RAW signature length. Expected 64 bytes for P-256.");
-        }
-        
-        $r = substr($rawSignature, 0, 32);
-        $s = substr($rawSignature, 32, 32);
-        
-        // Remove leading zeros
-        $r = ltrim($r, "\x00");
-        $s = ltrim($s, "\x00");
-        
-        // If high bit is set, prepend 0x00 to make it positive integer in ASN.1
-        if (ord($r[0]) >= 0x80) {
-            $r = "\x00" . $r;
-        }
-        if (ord($s[0]) >= 0x80) {
-            $s = "\x00" . $s;
-        }
-        
-        $rDer = chr(0x02) . chr(strlen($r)) . $r;
-        $sDer = chr(0x02) . chr(strlen($s)) . $s;
-        
-        $sequence = $rDer . $sDer;
-        
-        return chr(0x30) . chr(strlen($sequence)) . $sequence;
     }
 
 }
