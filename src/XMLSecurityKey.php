@@ -63,6 +63,7 @@ class XMLSecurityKey
     const RSA_SHA256 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256';
     const RSA_SHA384 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha384';
     const RSA_SHA512 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha512';
+    const ECDSA_SHA256 = 'http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256';
     const HMAC_SHA1 = 'http://www.w3.org/2000/09/xmldsig#hmac-sha1';
     const RSA_SHA256_MGF1 = 'http://www.w3.org/2007/05/xmldsig-more#sha256-rsa-MGF1';
     const AUTHTAG_LENGTH = 16;
@@ -232,6 +233,17 @@ class XMLSecurityKey
                     }
                 }
                 throw new Exception('Certificate "type" (private/public) must be passed via parameters');
+            case (self::ECDSA_SHA256):
+                $this->cryptParams['library'] = 'phpseclib';
+                $this->cryptParams['method'] = 'http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256';
+                $this->cryptParams['digest'] = 'SHA256';
+                if (is_array($params) && ! empty($params['type'])) {
+                    if ($params['type'] == 'public' || $params['type'] == 'private') {
+                        $this->cryptParams['type'] = $params['type'];
+                        break;
+                    }
+                }
+                throw new Exception('Certificate "type" (private/public) must be passed via parameters');               
             case (self::RSA_SHA384):
                 $this->cryptParams['library'] = 'openssl';
                 $this->cryptParams['method'] = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha384';
@@ -675,6 +687,12 @@ class XMLSecurityKey
                 return $this->signOpenSSL($data);
             case 'phpseclib':
                 $private = PublicKeyLoader::load($this->key);
+                if ($this->type === self::ECDSA_SHA256) {
+                    return $private
+                        ->withHash($this->cryptParams['digest'])
+                        ->withSignatureFormat('IEEE')
+                        ->sign($data);
+                }
                 return $private
                     ->withPadding($this->cryptParams['padding'])
                     ->withHash($this->cryptParams['digest'])
@@ -708,6 +726,13 @@ class XMLSecurityKey
                 return $this->verifyOpenSSL($data, $signature);
             case 'phpseclib':
                 $public = PublicKeyLoader::load($this->key);
+                if ($this->type === self::ECDSA_SHA256) {
+                    $result = $public
+                        ->withHash($this->cryptParams['digest'])
+                        ->withSignatureFormat('IEEE')
+                        ->verify($data, $signature);
+                    return $result === true ? 1 : 0;
+                }
                 $result = $public
                     ->withPadding($this->cryptParams['padding'])
                     ->withHash($this->cryptParams['digest'])
