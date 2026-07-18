@@ -16,7 +16,9 @@
   },
   "require": {
     "php": ">= 8.0",
-    "ext-openssl": "*",
     "phpseclib/phpseclib": "~3.0"
+  },
+  "suggest": {
+    "ext-openssl": "Improves phpseclib performance when available"
   }
 }

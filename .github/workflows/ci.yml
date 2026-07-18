@@ -16,7 +16,6 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-versions }}
-          extensions: openssl
           tools: phpunit/phpunit:9.6
 
       - uses: actions/checkout@v3
@@ -46,7 +45,6 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-versions }}
-          extensions: openssl
           tools: phpunit/phpunit:9.6
 
       - uses: actions/checkout@v3
@@ -76,7 +74,6 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: ${{ matrix.php-versions }}
-          extensions: openssl
           tools: phpunit/phpunit:9.6
 
       - uses: actions/checkout@v3
