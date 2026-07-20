@@ -14,7 +14,15 @@ Master is currently the only actively maintained branch.
 
 # Requirements
 
-xmlseclibs requires PHP version 8.0 or greater.
+xmlseclibs requires PHP version 8.0 or greater. OpenSSL is optional (phpseclib is used for crypto).
+
+## Security notes
+
+* Always check signature verification with a strict comparison: `$objDSig->verify($key) === 1`. A return of `-1` is an error and is truthy in boolean context.
+* After `validateReference()`, use `getValidatedNodes()` and operate only on those nodes (especially for SAML / WS-Security). Do not re-select assertions by Id from the whole document.
+* Do not trust a signing certificate from `KeyInfo` alone. Load and pin trusted keys yourself.
+* Prefer RSA-OAEP and AES-GCM for encryption. RSA-1.5 and CBC algorithms remain for legacy interoperability only.
+* XPath transforms are capped by default (`maxXPathTransforms` / `maxXPathNamespaces`, defaults 5 and 20). Raise or lower these on the `XMLSecurityDSig` instance if your use case needs different limits.
 
 
 ## How to Install

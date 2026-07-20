@@ -61,6 +61,9 @@ class XMLSecEnc
     const URI = 3;
     const XMLENCNS = 'http://www.w3.org/2001/04/xmlenc#';
 
+    /** Maximum depth of EncryptedKey/RetrievalMethod resolution (DoS protection). */
+    const MAX_KEYINFO_DEPTH = 10;
+
     /** @var null|DOMDocument */
     private $encdoc = null;
 
@@ -265,7 +268,13 @@ class XMLSecEnc
                 switch ($this->type) {
                     case (self::Element):
                         $newdoc = new DOMDocument();
-                        $newdoc->loadXML($decrypted);
+                        $previous = libxml_use_internal_errors(true);
+                        $loaded = $newdoc->loadXML($decrypted, LIBXML_NONET);
+                        libxml_clear_errors();
+                        libxml_use_internal_errors($previous);
+                        if ($loaded === false || $newdoc->documentElement === null) {
+                            throw new Exception('Error parsing decrypted XML');
+                        }
                         if ($this->rawNode->nodeType == XML_DOCUMENT_NODE) {
                             return $newdoc;
                         }
@@ -278,8 +287,18 @@ class XMLSecEnc
                         } else {
                             $doc = $this->rawNode->ownerDocument;
                         }
+                        $tmp = new DOMDocument();
+                        $previous = libxml_use_internal_errors(true);
+                        $loaded = $tmp->loadXML('<root>'.$decrypted.'</root>', LIBXML_NONET);
+                        libxml_clear_errors();
+                        libxml_use_internal_errors($previous);
+                        if ($loaded === false || $tmp->documentElement === null) {
+                            throw new Exception('Error parsing decrypted XML');
+                        }
                         $newFrag = $doc->createDocumentFragment();
-                        $newFrag->appendXML($decrypted);
+                        foreach (iterator_to_array($tmp->documentElement->childNodes) as $child) {
+                            $newFrag->appendChild($doc->importNode($child, true));
+                        }
                         $parent = $this->rawNode->parentNode;
                         $parent->replaceChild($newFrag, $this->rawNode);
                         return $parent;
@@ -408,10 +427,19 @@ class XMLSecEnc
      * @return null|XMLSecurityKey
      * @throws Exception
      */
-    public static function staticLocateKeyInfo($objBaseKey=null, $node=null)
+    public static function staticLocateKeyInfo($objBaseKey=null, $node=null, $depth=0)
     {
         if (empty($node) || (! $node instanceof DOMNode)) {
             return null;
+        }
+        /*
+         * Bound the EncryptedKey / RetrievalMethod resolution chain. A crafted
+         * document can otherwise reference EncryptedKey elements in a cycle
+         * (e.g. a RetrievalMethod pointing back at its own EncryptedKey),
+         * causing unbounded recursion and memory exhaustion (DoS).
+         */
+        if ($depth > self::MAX_KEYINFO_DEPTH) {
+            throw new Exception('EncryptedKey reference chain is too deep');
         }
         $doc = $node->ownerDocument;
         if (!$doc) {
@@ -478,9 +506,9 @@ class XMLSecEnc
                         throw new Exception("Unable to locate EncryptedKey with @Id='$id'.");
                     }
 
-                    return XMLSecurityKey::fromEncryptedKeyElement($keyElement);
+                    return XMLSecurityKey::fromEncryptedKeyElement($keyElement, $depth + 1);
                 case 'EncryptedKey':
-                    return XMLSecurityKey::fromEncryptedKeyElement($child);
+                    return XMLSecurityKey::fromEncryptedKeyElement($child, $depth + 1);
                 case 'X509Data':
                     if ($x509certNodes = $child->getElementsByTagName('X509Certificate')) {
                         if ($x509certNodes->length > 0) {

@@ -2,6 +2,18 @@ xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 ??, ??? ????, 4.0.0
 Security Improvements:
+- Reject asymmetric key material (X.509 certificate / PEM public key) being
+  loaded as an HMAC key; prevents signature key/algorithm confusion forgery
+- Bound EncryptedKey / RetrievalMethod resolution depth (prevents recursive
+  key-reference DoS / memory exhaustion)
+- Cap XPath transforms (max 5) and namespaces per XPath transform (max 20);
+  overridable via $maxXPathTransforms / $maxXPathNamespaces
+- Fail closed on unresolved, external, and duplicate-Id Reference URIs
+- Reject unknown CanonicalizationMethod algorithms
+- Use hash_equals for digest and HMAC compares; HMAC verify returns 1/0
+- Validate ISO 10126 pad length on CBC decrypt
+- Harden decrypted XML parsing (LIBXML_NONET); restrict certificate URL fetches
+- Use random_bytes for GUID generation
 
 Features:
 - Remove support for PHP < 8.0
@@ -10,6 +22,12 @@ Features:
   (Julius Türich and joonlabs)
 - use phpseclib for all crypto (symmetric, RSA-1.5, RSA signatures,
   X.509); OpenSSL extension is now optional
+
+Notes:
+- Prefer RSA-OAEP and AES-GCM for new deployments; RSA-1.5 and CBC remain
+  for legacy XML Encryption interoperability
+- Always check verify() === 1; use getValidatedNodes() for SAML/WS-Security
+- Do not trust KeyInfo certificates alone — pin or validate against a trust store
 
 12, Dec 2026, 3.1.5
 Security:

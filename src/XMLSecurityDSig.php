@@ -63,6 +63,12 @@ class XMLSecurityDSig
     const EXC_C14N = 'http://www.w3.org/2001/10/xml-exc-c14n#';
     const EXC_C14N_COMMENTS = 'http://www.w3.org/2001/10/xml-exc-c14n#WithComments';
 
+    /** Default maximum XPath transforms allowed per Reference (DoS protection). */
+    const MAX_XPATH_TRANSFORMS = 5;
+
+    /** Default maximum namespaces allowed on a single XPath transform (DoS protection). */
+    const MAX_XPATH_NAMESPACES = 20;
+
     const template = '<ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
   <ds:SignedInfo>
     <ds:SignatureMethod />
@@ -83,6 +89,20 @@ class XMLSecurityDSig
 
     /** @var array */
     public $idNS = array();
+
+    /**
+     * Maximum XPath transforms allowed per Reference (DoS protection).
+     * Defaults to MAX_XPATH_TRANSFORMS; override for stricter or more relaxed limits.
+     * @var int
+     */
+    public $maxXPathTransforms = self::MAX_XPATH_TRANSFORMS;
+
+    /**
+     * Maximum namespaces allowed on a single XPath transform (DoS protection).
+     * Defaults to MAX_XPATH_NAMESPACES; override for stricter or more relaxed limits.
+     * @var int
+     */
+    public $maxXPathNamespaces = self::MAX_XPATH_NAMESPACES;
 
     /** @var string|null */
     private $signedInfo = null;
@@ -154,7 +174,7 @@ class XMLSecurityDSig
      */
     public static function generateGUID($prefix='pfx')
     {
-        $uuid = md5(uniqid(mt_rand(), true));
+        $uuid = bin2hex(random_bytes(16));
         $guid = $prefix.substr($uuid, 0, 8)."-".
                 substr($uuid, 8, 4)."-".
                 substr($uuid, 12, 4)."-".
@@ -278,6 +298,8 @@ class XMLSecurityDSig
                 $exclusive = true;
                 $withComments = true;
                 break;
+            default:
+                throw new Exception('Invalid CanonicalizationMethod: '.$canonicalmethod);
         }
 
         if (is_null($arXPath) && ($node instanceof DOMNode) && ($node->ownerDocument !== null) && $node->isSameNode($node->ownerDocument->documentElement)) {
@@ -392,7 +414,7 @@ class XMLSecurityDSig
         $digValue = $this->calculateDigest($digestAlgorithm, $data, false);
         $query = 'string(./secdsig:DigestValue)';
         $digestValue = $xpath->evaluate($query, $refNode);
-        return ($digValue === base64_decode($digestValue));
+        return ($digValue !== false && hash_equals($digValue, base64_decode($digestValue)));
     }
 
     /**
@@ -400,6 +422,7 @@ class XMLSecurityDSig
      * @param DOMNode $objData
      * @param bool $includeCommentNodes
      * @return string
+     * @throws Exception
      */
     public function processTransforms($refNode, $objData, $includeCommentNodes = true)
     {
@@ -411,6 +434,7 @@ class XMLSecurityDSig
         $canonicalMethod = 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315';
         $arXPath = null;
         $prefixList = null;
+        $xpathTransformCount = 0;
         foreach ($nodelist AS $transform) {
             $algorithm = $transform->getAttribute("Algorithm");
             switch ($algorithm) {
@@ -460,6 +484,12 @@ class XMLSecurityDSig
 
                     break;
                 case 'http://www.w3.org/TR/1999/REC-xpath-19991116':
+                    $xpathTransformCount++;
+                    if ($xpathTransformCount > $this->maxXPathTransforms) {
+                        throw new Exception(
+                            'Too many XPath Transformations found ('.$nodelist->length.') with a max allowed of '.$this->maxXPathTransforms
+                        );
+                    }
                     $node = $transform->firstChild;
                     while ($node) {
                         if ($node->localName == 'XPath') {
@@ -468,9 +498,16 @@ class XMLSecurityDSig
                             $arXPath['namespaces'] = array();
                             $nslist = $xpath->query('./namespace::*', $node);
                             foreach ($nslist AS $nsnode) {
-                                if ($nsnode->localName != "xml") {
+                                /* Exclude xml and the default xmlns (empty prefix). */
+                                if ($nsnode->localName != "xml" && $nsnode->localName !== '' && $nsnode->localName !== 'xmlns') {
                                     $arXPath['namespaces'][$nsnode->localName] = $nsnode->nodeValue;
                                 }
+                            }
+                            $nsCount = count($arXPath['namespaces']);
+                            if ($nsCount > $this->maxXPathNamespaces) {
+                                throw new Exception(
+                                    'Too many namespaces in XPath Transformation found ('.$nsCount.')  with a max allowed of '.$this->maxXPathNamespaces
+                                );
                             }
                             break;
                         }
@@ -488,10 +525,12 @@ class XMLSecurityDSig
     /**
      * @param DOMNode $refNode
      * @return bool
+     * @throws Exception
      */
     public function processRefNode($refNode)
     {
         $dataObject = null;
+        $identifier = null;
 
         /*
          * Depending on the URI, we may not want to include comments in the result
@@ -501,8 +540,11 @@ class XMLSecurityDSig
 
         if ($uri = $refNode->getAttribute("URI")) {
             $arUrl = parse_url($uri);
+            if (! empty($arUrl['path']) || ! empty($arUrl['host']) || ! empty($arUrl['scheme'])) {
+                throw new Exception('Reference URI must be a same-document reference');
+            }
             if (empty($arUrl['path'])) {
-                if ($identifier = $arUrl['fragment']) {
+                if ($identifier = $arUrl['fragment'] ?? null) {
 
                     /* This reference identifies a node with the given id by using
                      * a URI on the form "#identifier". This should not include comments.
@@ -523,7 +565,14 @@ class XMLSecurityDSig
                         }
                     }
                     $query = '//*['.$iDlist.']';
-                    $dataObject = $xPath->query($query)->item(0);
+                    $nodeset = $xPath->query($query);
+                    if ($nodeset->length === 0) {
+                        throw new Exception('Reference URI does not identify a node');
+                    }
+                    if ($nodeset->length > 1) {
+                        throw new Exception('Reference URI identifies multiple nodes');
+                    }
+                    $dataObject = $nodeset->item(0);
                 } else {
                     $dataObject = $refNode->ownerDocument;
                 }
@@ -536,18 +585,21 @@ class XMLSecurityDSig
 
             $dataObject = $refNode->ownerDocument;
         }
+
+        if (! $dataObject instanceof DOMNode) {
+            throw new Exception('Reference URI could not be resolved');
+        }
+
         $data = $this->processTransforms($refNode, $dataObject, $includeCommentNodes);
         if (!$this->validateDigest($refNode, $data)) {
             return false;
         }
 
-        if ($dataObject instanceof DOMNode) {
-            /* Add this node to the list of validated nodes. */
-            if (! empty($identifier)) {
-                $this->validatedNodes[$identifier] = $dataObject;
-            } else {
-                $this->validatedNodes[] = $dataObject;
-            }
+        /* Add this node to the list of validated nodes. */
+        if (! empty($identifier)) {
+            $this->validatedNodes[$identifier] = $dataObject;
+        } else {
+            $this->validatedNodes[] = $dataObject;
         }
 
         return true;
@@ -978,7 +1030,18 @@ class XMLSecurityDSig
     public static function staticAdd509Cert($parentRef, $cert, $isPEMFormat=true, $isURL=false, $xpath=null, $options=null)
     {
         if ($isURL) {
+            $parts = parse_url($cert);
+            $scheme = isset($parts['scheme']) ? strtolower($parts['scheme']) : 'file';
+            if (! in_array($scheme, array('file', 'http', 'https'), true)) {
+                throw new Exception('Unsupported certificate URL scheme');
+            }
+            if ($scheme !== 'file' && (empty($parts['host']) || preg_match('/^(localhost|127\.|10\.|192\.168\.|169\.254\.|::1)/i', $parts['host']))) {
+                throw new Exception('Certificate URL host is not allowed');
+            }
             $cert = file_get_contents($cert);
+            if ($cert === false) {
+                throw new Exception('Unable to load certificate from URL');
+            }
         }
         if (! $parentRef instanceof DOMElement) {
             throw new Exception('Invalid parent Node parameter');
