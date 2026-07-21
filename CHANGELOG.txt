@@ -2,6 +2,14 @@ xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 ??, ??? ????, 4.0.0
 Security Improvements:
+- Deny RSA-1.5 (PKCS#1 v1.5) key transport on decryption by default
+  (Bleichenbacher / XML-Encryption backward-compatibility attack); opt in via
+  XMLSecEnc::$allowRSA15KeyTransport. Add optional key-transport / data
+  algorithm allowlists ($allowedKeyAlgorithms / $allowedDataAlgorithms, with
+  DEFAULT_KEY_ALGORITHMS / DEFAULT_DATA_ALGORITHMS presets)
+- Use a single generic "Failure decrypting Data" error for all decryption
+  failures (bad padding, cipher error, failed RSA unwrap) so callers cannot
+  build a CBC padding oracle from distinguishable errors
 - Add verifyDocument(): safe-by-default signature verification that requires a
   caller-pinned key (never trusts KeyInfo), enforces a SignatureMethod/DigestMethod
   algorithm allowlist, fails closed on unvalidated references, and returns the

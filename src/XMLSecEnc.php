@@ -64,6 +64,54 @@ class XMLSecEnc
     /** Maximum depth of EncryptedKey/RetrievalMethod resolution (DoS protection). */
     const MAX_KEYINFO_DEPTH = 10;
 
+    /**
+     * Recommended key-transport (asymmetric) algorithms. RSA-1.5 is excluded:
+     * it is vulnerable to Bleichenbacher / XML-Encryption backward-compatibility
+     * attacks and must be opted into explicitly.
+     */
+    const DEFAULT_KEY_ALGORITHMS = array(
+        XMLSecurityKey::RSA_OAEP,
+        XMLSecurityKey::RSA_OAEP_MGF1P,
+    );
+
+    /**
+     * Recommended data-encryption (symmetric) algorithms. Authenticated GCM
+     * modes only; unauthenticated CBC modes are excluded because they are
+     * malleable and prone to padding-oracle attacks.
+     */
+    const DEFAULT_DATA_ALGORITHMS = array(
+        XMLSecurityKey::AES128_GCM,
+        XMLSecurityKey::AES192_GCM,
+        XMLSecurityKey::AES256_GCM,
+    );
+
+    /**
+     * Allowlist of acceptable key-transport (asymmetric) algorithm URIs.
+     * When null (default) no allowlist restriction is applied, preserving
+     * backward compatibility. Note that RSA-1.5 is additionally governed by
+     * $allowRSA15KeyTransport regardless of this list.
+     * @var array|null
+     */
+    public $allowedKeyAlgorithms = null;
+
+    /**
+     * Allowlist of acceptable data-encryption (symmetric) algorithm URIs.
+     * When null (default) no allowlist restriction is applied.
+     * @var array|null
+     */
+    public $allowedDataAlgorithms = null;
+
+    /**
+     * Whether RSA-1.5 (PKCS#1 v1.5) key transport is permitted on decryption.
+     *
+     * Denied by default: an attacker who chooses the EncryptedKey algorithm can
+     * otherwise mount a Bleichenbacher adaptive chosen-ciphertext attack against
+     * the private key. Set to true only for legacy interoperability, ideally
+     * behind additional oracle protections.
+     * @var bool
+     */
+    public $allowRSA15KeyTransport = false;
+
     /** @var null|DOMDocument */
     private $encdoc = null;
 
@@ -261,6 +309,8 @@ class XMLSecEnc
             throw new Exception('Invalid Key');
         }
 
+        $this->enforceAlgorithmPolicy($objKey);
+
         $encryptedData = $this->getCipherValue();
         if ($encryptedData) {
             $decrypted = $objKey->decryptData($encryptedData);
@@ -415,10 +465,48 @@ class XMLSecEnc
                 } catch (Exception $e) {
                     return null;
                 }
+                $this->enforceAlgorithmPolicy($objKey);
                 return $objKey;
             }
         }
         return null;
+    }
+
+    /**
+     * Enforce the configured algorithm policy for a key located in the document.
+     *
+     * Fails closed (throws) when the document-selected algorithm is not
+     * permitted. This is what prevents an attacker from downgrading key
+     * transport to RSA-1.5 or selecting an algorithm outside a caller's
+     * allowlist.
+     *
+     * @param XMLSecurityKey $objKey
+     * @throws Exception
+     */
+    private function enforceAlgorithmPolicy($objKey)
+    {
+        if (! $objKey instanceof XMLSecurityKey) {
+            return;
+        }
+        $algorithm = $objKey->getAlgorithm();
+        if ($objKey->isSymmetricCipher()) {
+            if ($this->allowedDataAlgorithms !== null
+                && ! in_array($algorithm, $this->allowedDataAlgorithms, true)) {
+                throw new Exception("Data encryption algorithm is not allowed: '$algorithm'");
+            }
+            return;
+        }
+        /* Asymmetric key-transport algorithm. */
+        if ($algorithm === XMLSecurityKey::RSA_1_5 && ! $this->allowRSA15KeyTransport) {
+            throw new Exception(
+                'RSA-1.5 key transport is disabled (Bleichenbacher risk); '
+                . 'set allowRSA15KeyTransport = true to opt in'
+            );
+        }
+        if ($this->allowedKeyAlgorithms !== null
+            && ! in_array($algorithm, $this->allowedKeyAlgorithms, true)) {
+            throw new Exception("Key transport algorithm is not allowed: '$algorithm'");
+        }
     }
 
     /**
@@ -427,7 +515,7 @@ class XMLSecEnc
      * @return null|XMLSecurityKey
      * @throws Exception
      */
-    public static function staticLocateKeyInfo($objBaseKey=null, $node=null, $depth=0)
+    public static function staticLocateKeyInfo($objBaseKey=null, $node=null, $depth=0, $allowRSA15=false)
     {
         if (empty($node) || (! $node instanceof DOMNode)) {
             return null;
@@ -506,9 +594,9 @@ class XMLSecEnc
                         throw new Exception("Unable to locate EncryptedKey with @Id='$id'.");
                     }
 
-                    return XMLSecurityKey::fromEncryptedKeyElement($keyElement, $depth + 1);
+                    return XMLSecurityKey::fromEncryptedKeyElement($keyElement, $depth + 1, $allowRSA15);
                 case 'EncryptedKey':
-                    return XMLSecurityKey::fromEncryptedKeyElement($child, $depth + 1);
+                    return XMLSecurityKey::fromEncryptedKeyElement($child, $depth + 1, $allowRSA15);
                 case 'X509Data':
                     if ($x509certNodes = $child->getElementsByTagName('X509Certificate')) {
                         if ($x509certNodes->length > 0) {
@@ -534,6 +622,6 @@ class XMLSecEnc
         if (empty($node)) {
             $node = $this->rawNode;
         }
-        return self::staticLocateKeyInfo($objBaseKey, $node);
+        return self::staticLocateKeyInfo($objBaseKey, $node, 0, $this->allowRSA15KeyTransport);
     }
 }

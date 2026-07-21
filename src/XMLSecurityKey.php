@@ -70,6 +70,15 @@ class XMLSecurityKey
     const RSA_SHA256_MGF1 = 'http://www.w3.org/2007/05/xmldsig-more#sha256-rsa-MGF1';
     const AUTHTAG_LENGTH = 16;
 
+    /**
+     * Generic decryption failure message.
+     *
+     * All decryption failures (bad padding, wrong key, cipher error, failed
+     * RSA unwrap) must surface the same message so callers cannot build a
+     * padding / ciphertext-validity oracle from distinguishable errors.
+     */
+    const DECRYPTION_FAILURE = 'Failure decrypting Data';
+
     /** @var array */
     private $cryptParams = array();
 
@@ -465,14 +474,31 @@ class XMLSecurityKey
     {
         $len = strlen($data);
         if ($len === 0) {
-            throw new Exception('Failure decrypting Data (invalid padding)');
+            /*
+             * Use a single, generic error for every decryption failure. Do not
+             * reveal whether the padding (as opposed to the ciphertext) was the
+             * cause: distinguishable padding errors turn unauthenticated CBC
+             * decryption into a padding oracle (plaintext recovery).
+             */
+            throw new Exception(self::DECRYPTION_FAILURE);
         }
         $padLen = ord($data[$len - 1]);
         $blockSize = $this->cryptParams['blocksize'] ?? 16;
         if ($padLen < 1 || $padLen > $blockSize || $padLen > $len) {
-            throw new Exception('Failure decrypting Data (invalid padding)');
+            throw new Exception(self::DECRYPTION_FAILURE);
         }
         return substr($data, 0, -$padLen);
+    }
+
+    /**
+     * Whether this key represents a symmetric (data-encryption) cipher rather
+     * than an asymmetric (key-transport) algorithm.
+     *
+     * @return bool
+     */
+    public function isSymmetricCipher()
+    {
+        return ($this->cryptParams['type'] ?? null) === 'symmetric';
     }
 
     /**
@@ -547,7 +573,7 @@ class XMLSecurityKey
             $offset = 0 - self::AUTHTAG_LENGTH;
             $authTag = substr($data, $offset);
             if (strlen($authTag) !== self::AUTHTAG_LENGTH) {
-                throw new Exception('Authentication tag length is invalid');
+                throw new Exception(self::DECRYPTION_FAILURE);
             }
             $data = substr($data, 0, $offset);
             $cipher->setNonce($this->iv);
@@ -560,7 +586,7 @@ class XMLSecurityKey
         }
 
         if ($decrypted === false) {
-            throw new Exception('Failure decrypting Data (phpseclib symmetric)');
+            throw new Exception(self::DECRYPTION_FAILURE);
         }
         return null !== $authTag ? $decrypted : $this->unpadISO10126($decrypted);
     }
@@ -635,7 +661,7 @@ class XMLSecurityKey
                 $private = PublicKeyLoader::load($this->key, $passphrase);
                 $decrypted = $this->configureRSAKey($private)->decrypt($data);
                 if ($decrypted === false) {
-                    throw new Exception('Failure decrypting Data (phpseclib)');
+                    throw new Exception(self::DECRYPTION_FAILURE);
                 }
                 return $decrypted;
         }
@@ -825,17 +851,18 @@ class XMLSecurityKey
      *
      * @return XMLSecurityKey The new key.
      */
-    public static function fromEncryptedKeyElement(DOMElement $element, $depth = 0)
+    public static function fromEncryptedKeyElement(DOMElement $element, $depth = 0, $allowRSA15 = false)
     {
 
         $objenc = new XMLSecEnc();
+        $objenc->allowRSA15KeyTransport = $allowRSA15;
         $objenc->setNode($element);
         if (! $objKey = $objenc->locateKey()) {
             throw new Exception("Unable to locate algorithm for this Encrypted Key");
         }
         $objKey->isEncrypted = true;
         $objKey->encryptedCtx = $objenc;
-        XMLSecEnc::staticLocateKeyInfo($objKey, $element, $depth);
+        XMLSecEnc::staticLocateKeyInfo($objKey, $element, $depth, $allowRSA15);
         return $objKey;
     }
 

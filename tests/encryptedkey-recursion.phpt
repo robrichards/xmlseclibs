@@ -9,7 +9,7 @@ use RobRichards\XMLSecLibs\XMLSecurityKey;
 $xml = <<<XML
 <?xml version="1.0"?>
 <xenc:EncryptedKey xmlns:xenc="http://www.w3.org/2001/04/xmlenc#" xmlns:dsig="http://www.w3.org/2000/09/xmldsig#" Id="loop">
-  <xenc:EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#rsa-1_5"/>
+  <xenc:EncryptionMethod Algorithm="http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p"/>
   <dsig:KeyInfo>
     <dsig:RetrievalMethod Type="http://www.w3.org/2001/04/xmlenc#EncryptedKey" URI="#loop"/>
   </dsig:KeyInfo>
