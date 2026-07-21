@@ -69,6 +69,29 @@ class XMLSecurityDSig
     /** Default maximum namespaces allowed on a single XPath transform (DoS protection). */
     const MAX_XPATH_NAMESPACES = 20;
 
+    /**
+     * Safe-by-default SignatureMethod allowlist applied by verifyDocument().
+     * SHA-1 based signatures (rsa-sha1, dsa-sha1, hmac-sha1) are intentionally
+     * excluded; callers that must interoperate with legacy peers can opt in by
+     * populating $allowedSignatureAlgorithms explicitly.
+     */
+    const DEFAULT_SIGNATURE_ALGORITHMS = array(
+        XMLSecurityKey::RSA_SHA256,
+        XMLSecurityKey::RSA_SHA384,
+        XMLSecurityKey::RSA_SHA512,
+        XMLSecurityKey::RSA_SHA256_MGF1,
+    );
+
+    /**
+     * Safe-by-default DigestMethod allowlist applied by verifyDocument().
+     * SHA-1 and RIPEMD-160 are intentionally excluded.
+     */
+    const DEFAULT_DIGEST_ALGORITHMS = array(
+        self::SHA256,
+        self::SHA384,
+        self::SHA512,
+    );
+
     const template = '<ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
   <ds:SignedInfo>
     <ds:SignatureMethod />
@@ -103,6 +126,28 @@ class XMLSecurityDSig
      * @var int
      */
     public $maxXPathNamespaces = self::MAX_XPATH_NAMESPACES;
+
+    /**
+     * Allowlist of acceptable SignatureMethod algorithm URIs.
+     *
+     * When null (the default), the low-level verify() primitive imposes no
+     * restriction, preserving backward compatibility. verifyDocument() applies
+     * DEFAULT_SIGNATURE_ALGORITHMS when this is null. Set explicitly (e.g.
+     * add XMLSecurityKey::RSA_SHA1) to widen or narrow the accepted set.
+     *
+     * @var array|null
+     */
+    public $allowedSignatureAlgorithms = null;
+
+    /**
+     * Allowlist of acceptable Reference DigestMethod algorithm URIs.
+     *
+     * When null (the default), no restriction is imposed by the low-level
+     * primitives. verifyDocument() applies DEFAULT_DIGEST_ALGORITHMS when null.
+     *
+     * @var array|null
+     */
+    public $allowedDigestAlgorithms = null;
 
     /** @var string|null */
     private $signedInfo = null;
@@ -411,6 +456,10 @@ class XMLSecurityDSig
         $xpath->registerNamespace('secdsig', self::XMLDSIGNS);
         $query = 'string(./secdsig:DigestMethod/@Algorithm)';
         $digestAlgorithm = $xpath->evaluate($query, $refNode);
+        if ($this->allowedDigestAlgorithms !== null
+            && ! in_array($digestAlgorithm, $this->allowedDigestAlgorithms, true)) {
+            throw new Exception("DigestMethod algorithm is not allowed: '$digestAlgorithm'");
+        }
         $digValue = $this->calculateDigest($digestAlgorithm, $data, false);
         $query = 'string(./secdsig:DigestValue)';
         $digestValue = $xpath->evaluate($query, $refNode);
@@ -871,12 +920,91 @@ class XMLSecurityDSig
         $doc = $this->sigNode->ownerDocument;
         $xpath = new DOMXPath($doc);
         $xpath->registerNamespace('secdsig', self::XMLDSIGNS);
+
+        if ($this->allowedSignatureAlgorithms !== null) {
+            $query = "string(./secdsig:SignedInfo/secdsig:SignatureMethod/@Algorithm)";
+            $sigMethod = $xpath->evaluate($query, $this->sigNode);
+            if (! in_array($sigMethod, $this->allowedSignatureAlgorithms, true)) {
+                throw new Exception("SignatureMethod algorithm is not allowed: '$sigMethod'");
+            }
+            /*
+             * Bind the document's declared algorithm to the caller-supplied key.
+             * This prevents an attacker from selecting a different (e.g. weaker)
+             * algorithm than the one the relying party intends to trust.
+             */
+            if ($objKey->type !== $sigMethod) {
+                throw new Exception('SignatureMethod algorithm does not match the supplied key type');
+            }
+        }
+
         $query = "string(./secdsig:SignatureValue)";
         $sigValue = $xpath->evaluate($query, $this->sigNode);
         if (empty($sigValue)) {
             throw new Exception("Unable to locate SignatureValue");
         }
         return $objKey->verifySignature($this->signedInfo, base64_decode($sigValue));
+    }
+
+    /**
+     * Safe, high-level XML signature verification.
+     *
+     * This is the recommended entry point for relying parties (SAML,
+     * WS-Security, etc.). Unlike the low-level primitives, it is safe by
+     * default:
+     *
+     *  - The verification key MUST be supplied by the caller (a pinned key or
+     *    trust anchor). The key is NEVER derived from the document's KeyInfo,
+     *    so an attacker cannot both supply the message and the key that
+     *    verifies it.
+     *  - Both the SignatureMethod and every Reference DigestMethod are checked
+     *    against an algorithm allowlist. Strong defaults
+     *    (DEFAULT_SIGNATURE_ALGORITHMS / DEFAULT_DIGEST_ALGORITHMS) are applied
+     *    unless the caller has populated $allowedSignatureAlgorithms /
+     *    $allowedDigestAlgorithms explicitly.
+     *  - Success is only reported when the SignedInfo signature is valid AND
+     *    every Reference digest validated. The set of validated nodes is
+     *    returned so callers never have to re-query the document (which would
+     *    reintroduce XML Signature Wrapping).
+     *
+     * @param XMLSecurityKey       $objKey Trusted/pinned verification key.
+     * @param DOMDocument|DOMNode  $objDoc Document (or node) to verify.
+     * @param int                  $pos    Which Signature element to verify (default: first).
+     * @return array Associative array of validated nodes (id => node). Never empty on success.
+     * @throws Exception on any verification failure.
+     */
+    public function verifyDocument($objKey, $objDoc, $pos = 0)
+    {
+        if (! $objKey instanceof XMLSecurityKey) {
+            throw new Exception('A trusted key must be supplied to verifyDocument()');
+        }
+
+        if ($this->allowedSignatureAlgorithms === null) {
+            $this->allowedSignatureAlgorithms = self::DEFAULT_SIGNATURE_ALGORITHMS;
+        }
+        if ($this->allowedDigestAlgorithms === null) {
+            $this->allowedDigestAlgorithms = self::DEFAULT_DIGEST_ALGORITHMS;
+        }
+
+        $this->resetXPathObj();
+        if (! $this->locateSignature($objDoc, $pos)) {
+            throw new Exception('Cannot locate Signature Node');
+        }
+        if ($this->canonicalizeSignedInfo() === null) {
+            throw new Exception('Cannot canonicalize SignedInfo');
+        }
+
+        /* Throws on any unresolved/failed/duplicate reference (fail closed). */
+        $this->validateReference();
+
+        if ($this->verify($objKey) !== 1) {
+            throw new Exception('Signature validation failed');
+        }
+
+        $validatedNodes = $this->getValidatedNodes();
+        if (empty($validatedNodes)) {
+            throw new Exception('Signature verified but no signed nodes were validated');
+        }
+        return $validatedNodes;
     }
 
     /**

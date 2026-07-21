@@ -2,6 +2,13 @@ xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 ??, ??? ????, 4.0.0
 Security Improvements:
+- Add verifyDocument(): safe-by-default signature verification that requires a
+  caller-pinned key (never trusts KeyInfo), enforces a SignatureMethod/DigestMethod
+  algorithm allowlist, fails closed on unvalidated references, and returns the
+  validated node set. New $allowedSignatureAlgorithms / $allowedDigestAlgorithms
+  properties (default strong: SHA-256+ digests, RSA-SHA-256+/PSS signatures);
+  the low-level verify()/validateReference() primitives remain unrestricted for
+  backward compatibility unless these properties are set.
 - Reject asymmetric key material (X.509 certificate / PEM public key) being
   loaded as an HMAC key; prevents signature key/algorithm confusion forgery
 - Bound EncryptedKey / RetrievalMethod resolution depth (prevents recursive

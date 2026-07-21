@@ -18,11 +18,40 @@ xmlseclibs requires PHP version 8.0 or greater. OpenSSL is optional (phpseclib i
 
 ## Security notes
 
-* Always check signature verification with a strict comparison: `$objDSig->verify($key) === 1`. A return of `-1` is an error and is truthy in boolean context.
+* Prefer the safe-by-default verifier `verifyDocument()` (see below). It requires a caller-supplied (pinned) key, never derives the key from the document's `KeyInfo`, enforces an algorithm allowlist for both the `SignatureMethod` and every `DigestMethod`, and only reports success when every reference validated. It returns the validated nodes for you to operate on.
+* If you use the low-level primitives directly, always check verification with a strict comparison: `$objDSig->verify($key) === 1`. A return of `-1` is an error and is truthy in boolean context.
 * After `validateReference()`, use `getValidatedNodes()` and operate only on those nodes (especially for SAML / WS-Security). Do not re-select assertions by Id from the whole document.
 * Do not trust a signing certificate from `KeyInfo` alone. Load and pin trusted keys yourself.
+* By default `verifyDocument()` accepts only SHA-256/384/512 digests and RSA-SHA-256/384/512 (and RSA-PSS) signatures. To interoperate with legacy peers, widen the sets explicitly, e.g. `$objDSig->allowedSignatureAlgorithms[] = XMLSecurityKey::RSA_SHA1;`.
 * Prefer RSA-OAEP and AES-GCM for encryption. RSA-1.5 and CBC algorithms remain for legacy interoperability only.
 * XPath transforms are capped by default (`maxXPathTransforms` / `maxXPathNamespaces`, defaults 5 and 20). Raise or lower these on the `XMLSecurityDSig` instance if your use case needs different limits.
+
+### Verifying a signature (recommended)
+
+```php
+use RobRichards\XMLSecLibs\XMLSecurityDSig;
+use RobRichards\XMLSecLibs\XMLSecurityKey;
+
+$doc = new DOMDocument();
+$doc->load('./path/to/signed.xml');
+
+// Pin the key/certificate you trust (do NOT read it from the document).
+$objKey = new XMLSecurityKey(XMLSecurityKey::RSA_SHA256, array('type' => 'public'));
+$objKey->loadKey('./path/to/trusted-cert.pem', true, true);
+
+$objDSig = new XMLSecurityDSig();
+// If assertions use custom Id attributes (e.g. WS-Security), declare them first:
+// $objDSig->idKeys = array('wsu:Id');
+// $objDSig->idNS   = array('wsu' => 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd');
+
+try {
+    // Throws on any failure; returns the validated nodes on success.
+    $validatedNodes = $objDSig->verifyDocument($objKey, $doc);
+    // Operate ONLY on $validatedNodes from here on.
+} catch (Exception $e) {
+    // Verification failed - reject the message.
+}
+```
 
 
 ## How to Install
