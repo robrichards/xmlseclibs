@@ -1147,6 +1147,113 @@ class XMLSecurityDSig
     }
 
     /**
+     * Fetch a certificate from a URL with SSRF protections.
+     *
+     * Only http/https are permitted by default; file:// must be explicitly
+     * enabled via $options['allow_file_scheme']. For http/https the host is
+     * resolved and every resulting IP address is validated to be public
+     * (rejecting loopback, private, link-local, reserved and CGNAT ranges),
+     * and HTTP redirects are disabled so a public URL cannot bounce to an
+     * internal one.
+     *
+     * NOTE: a small DNS-rebinding TOCTOU window remains because the transport
+     * re-resolves the host; only enable URL fetching with trusted input.
+     *
+     * @param string $url
+     * @param null|array $options
+     * @return string
+     * @throws Exception
+     */
+    private static function fetchCertFromURL($url, $options = null)
+    {
+        $allowFile = is_array($options) && ! empty($options['allow_file_scheme']);
+        $parts = parse_url($url);
+        if ($parts === false || empty($parts['scheme'])) {
+            throw new Exception('Invalid certificate URL');
+        }
+        $scheme = strtolower($parts['scheme']);
+
+        if ($scheme === 'file') {
+            if (! $allowFile) {
+                throw new Exception('file:// certificate URLs are disabled');
+            }
+            $data = file_get_contents($url);
+            if ($data === false) {
+                throw new Exception('Unable to load certificate from URL');
+            }
+            return $data;
+        }
+
+        if ($scheme !== 'http' && $scheme !== 'https') {
+            throw new Exception('Unsupported certificate URL scheme');
+        }
+
+        $host = isset($parts['host']) ? trim($parts['host'], '[]') : '';
+        if ($host === '') {
+            throw new Exception('Certificate URL host is not allowed');
+        }
+        self::assertPublicHost($host);
+
+        $streamOpts = array('follow_location' => 0, 'max_redirects' => 0, 'timeout' => 10);
+        $context = stream_context_create(array('http' => $streamOpts, 'https' => $streamOpts));
+        $data = file_get_contents($url, false, $context);
+        if ($data === false) {
+            throw new Exception('Unable to load certificate from URL');
+        }
+        return $data;
+    }
+
+    /**
+     * Ensure a host resolves only to public IP addresses (SSRF guard).
+     *
+     * @param string $host Hostname or IP literal (IPv6 without brackets).
+     * @throws Exception when the host cannot be resolved or maps to a
+     *                   non-public address.
+     */
+    private static function assertPublicHost($host)
+    {
+        $ips = array();
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            $ips[] = $host;
+        } else {
+            $records = @dns_get_record($host, DNS_A | DNS_AAAA);
+            if (is_array($records)) {
+                foreach ($records as $record) {
+                    if (! empty($record['ip'])) {
+                        $ips[] = $record['ip'];
+                    }
+                    if (! empty($record['ipv6'])) {
+                        $ips[] = $record['ipv6'];
+                    }
+                }
+            }
+            if (empty($ips)) {
+                $resolved = gethostbyname($host);
+                if ($resolved !== $host) {
+                    $ips[] = $resolved;
+                }
+            }
+        }
+
+        if (empty($ips)) {
+            throw new Exception('Unable to resolve certificate URL host');
+        }
+
+        foreach ($ips as $ip) {
+            if (! filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                throw new Exception('Certificate URL host is not allowed');
+            }
+            /* PHP's reserved-range flag misses CGNAT (100.64.0.0/10). */
+            if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+                $long = ip2long($ip);
+                if ($long !== false && ($long & 0xffc00000) === (ip2long('100.64.0.0') & 0xffc00000)) {
+                    throw new Exception('Certificate URL host is not allowed');
+                }
+            }
+        }
+    }
+
+    /**
      * @param DOMElement $parentRef
      * @param string $cert
      * @param bool $isPEMFormat
@@ -1158,18 +1265,7 @@ class XMLSecurityDSig
     public static function staticAdd509Cert($parentRef, $cert, $isPEMFormat=true, $isURL=false, $xpath=null, $options=null)
     {
         if ($isURL) {
-            $parts = parse_url($cert);
-            $scheme = isset($parts['scheme']) ? strtolower($parts['scheme']) : 'file';
-            if (! in_array($scheme, array('file', 'http', 'https'), true)) {
-                throw new Exception('Unsupported certificate URL scheme');
-            }
-            if ($scheme !== 'file' && (empty($parts['host']) || preg_match('/^(localhost|127\.|10\.|192\.168\.|169\.254\.|::1)/i', $parts['host']))) {
-                throw new Exception('Certificate URL host is not allowed');
-            }
-            $cert = file_get_contents($cert);
-            if ($cert === false) {
-                throw new Exception('Unable to load certificate from URL');
-            }
+            $cert = self::fetchCertFromURL($cert, $options);
         }
         if (! $parentRef instanceof DOMElement) {
             throw new Exception('Invalid parent Node parameter');

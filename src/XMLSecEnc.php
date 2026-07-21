@@ -317,14 +317,7 @@ class XMLSecEnc
             if ($replace) {
                 switch ($this->type) {
                     case (self::Element):
-                        $newdoc = new DOMDocument();
-                        $previous = libxml_use_internal_errors(true);
-                        $loaded = $newdoc->loadXML($decrypted, LIBXML_NONET);
-                        libxml_clear_errors();
-                        libxml_use_internal_errors($previous);
-                        if ($loaded === false || $newdoc->documentElement === null) {
-                            throw new Exception('Error parsing decrypted XML');
-                        }
+                        $newdoc = self::parseDecryptedXML($decrypted);
                         if ($this->rawNode->nodeType == XML_DOCUMENT_NODE) {
                             return $newdoc;
                         }
@@ -337,14 +330,7 @@ class XMLSecEnc
                         } else {
                             $doc = $this->rawNode->ownerDocument;
                         }
-                        $tmp = new DOMDocument();
-                        $previous = libxml_use_internal_errors(true);
-                        $loaded = $tmp->loadXML('<root>'.$decrypted.'</root>', LIBXML_NONET);
-                        libxml_clear_errors();
-                        libxml_use_internal_errors($previous);
-                        if ($loaded === false || $tmp->documentElement === null) {
-                            throw new Exception('Error parsing decrypted XML');
-                        }
+                        $tmp = self::parseDecryptedXML('<root>'.$decrypted.'</root>');
                         $newFrag = $doc->createDocumentFragment();
                         foreach (iterator_to_array($tmp->documentElement->childNodes) as $child) {
                             $newFrag->appendChild($doc->importNode($child, true));
@@ -361,6 +347,35 @@ class XMLSecEnc
         } else {
             throw new Exception("Cannot locate encrypted data");
         }
+    }
+
+    /**
+     * Safely parse decrypted XML.
+     *
+     * External entity resolution is disabled (LIBXML_NONET and the parser
+     * default of not expanding entities), and any DOCTYPE is rejected. XML
+     * Encryption payloads never legitimately carry a DOCTYPE, so refusing one
+     * closes off entity-expansion (billion laughs) and XXE vectors in content
+     * that an attacker who knows the key could otherwise craft.
+     *
+     * @param string $xml
+     * @return DOMDocument
+     * @throws Exception
+     */
+    private static function parseDecryptedXML($xml)
+    {
+        $doc = new DOMDocument();
+        $previous = libxml_use_internal_errors(true);
+        $loaded = $doc->loadXML($xml, LIBXML_NONET);
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+        if ($loaded === false || $doc->documentElement === null) {
+            throw new Exception('Error parsing decrypted XML');
+        }
+        if ($doc->doctype !== null) {
+            throw new Exception('Decrypted XML must not contain a DOCTYPE');
+        }
+        return $doc;
     }
 
     /**

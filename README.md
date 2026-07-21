@@ -25,6 +25,8 @@ xmlseclibs requires PHP version 8.0 or greater. OpenSSL is optional (phpseclib i
 * By default `verifyDocument()` accepts only SHA-256/384/512 digests and RSA-SHA-256/384/512 (and RSA-PSS) signatures. To interoperate with legacy peers, widen the sets explicitly, e.g. `$objDSig->allowedSignatureAlgorithms[] = XMLSecurityKey::RSA_SHA1;`.
 * Prefer RSA-OAEP and AES-GCM for encryption. RSA-1.5 key transport is **denied by default** on decryption (Bleichenbacher risk); opt in with `$objenc->allowRSA15KeyTransport = true;` only for legacy interop. You can additionally pin exact algorithms via `$objenc->allowedKeyAlgorithms` / `$objenc->allowedDataAlgorithms` (presets: `XMLSecEnc::DEFAULT_KEY_ALGORITHMS` and `XMLSecEnc::DEFAULT_DATA_ALGORITHMS`, both authenticated/OAEP-only). Unauthenticated CBC modes remain available for interop but are malleable — prefer AES-GCM.
 * XPath transforms are capped by default (`maxXPathTransforms` / `maxXPathNamespaces`, defaults 5 and 20). Raise or lower these on the `XMLSecurityDSig` instance if your use case needs different limits.
+* `add509Cert(..., $isURL = true)` fetches over http/https only and rejects hosts that resolve to loopback/private/link-local/reserved/CGNAT addresses, with redirects disabled (SSRF hardening). `file://` is disabled unless you pass `array('allow_file_scheme' => true)` in `$options`. Only fetch certificates from trusted URLs — a small DNS-rebinding window remains.
+* Decrypted XML containing a `DOCTYPE` is rejected to guard against entity-expansion / XXE. Always load untrusted *input* documents yourself with DTD/entity processing disabled.
 
 ### Verifying a signature (recommended)
 
