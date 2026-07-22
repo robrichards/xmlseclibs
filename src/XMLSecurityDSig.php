@@ -942,20 +942,26 @@ class XMLSecurityDSig
         $xpath = new DOMXPath($doc);
         $xpath->registerNamespace('secdsig', self::XMLDSIGNS);
 
-        if ($this->allowedSignatureAlgorithms !== null) {
-            $query = "string(./secdsig:SignedInfo/secdsig:SignatureMethod/@Algorithm)";
-            $sigMethod = $xpath->evaluate($query, $this->sigNode);
-            if (! in_array($sigMethod, $this->allowedSignatureAlgorithms, true)) {
-                throw new Exception("SignatureMethod algorithm is not allowed: '$sigMethod'");
-            }
-            /*
-             * Bind the document's declared algorithm to the caller-supplied key.
-             * This prevents an attacker from selecting a different (e.g. weaker)
-             * algorithm than the one the relying party intends to trust.
-             */
-            if ($objKey->type !== $sigMethod) {
-                throw new Exception('SignatureMethod algorithm does not match the supplied key type');
-            }
+        $query = "string(./secdsig:SignedInfo/secdsig:SignatureMethod/@Algorithm)";
+        $sigMethod = $xpath->evaluate($query, $this->sigNode);
+
+        /*
+         * Always bind the document's declared SignatureMethod to the algorithm
+         * of the caller-supplied key. Without this, an attacker who controls
+         * the XML can substitute the algorithm (e.g. downgrade an RSA signature
+         * to hmac-sha1) so that the relying party's *public* key material is
+         * used as the HMAC secret, enabling signature forgery (key/algorithm
+         * confusion, GHSA-m5mw-mr39-66vp). The key's algorithm is fixed by the
+         * caller -- or, in the locateKey() flow, derived from the same document
+         * -- so a mismatch always signals tampering.
+         */
+        if ($objKey->type !== $sigMethod) {
+            throw new Exception('SignatureMethod algorithm does not match the supplied key type');
+        }
+
+        if ($this->allowedSignatureAlgorithms !== null
+            && ! in_array($sigMethod, $this->allowedSignatureAlgorithms, true)) {
+            throw new Exception("SignatureMethod algorithm is not allowed: '$sigMethod'");
         }
 
         $query = "string(./secdsig:SignatureValue)";
