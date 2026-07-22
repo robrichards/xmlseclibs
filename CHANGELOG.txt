@@ -39,6 +39,13 @@ Security Improvements:
   so a public key is used as the HMAC secret) (GHSA-m5mw-mr39-66vp)
 - Bound EncryptedKey / RetrievalMethod resolution depth (prevents recursive
   key-reference DoS / memory exhaustion)
+- Reject XPath (REC-xpath-19991116) Transforms during verification by default
+  (GHSA-7mf5-fjj8-mvjc). The transform evaluates a document-supplied XPath
+  expression in validateReference() before any crypto runs, so a crafted
+  expression is a pre-auth CPU denial-of-service; the expression is arbitrary
+  XPath by design and cannot be sanitized. SAML / WS-Security do not use XPath
+  transforms. Opt in with XMLSecurityDSig::$allowXPathTransforms = true. Signing
+  is unaffected
 - Cap XPath transforms (max 5) and namespaces per XPath transform (max 20);
   overridable via $maxXPathTransforms / $maxXPathNamespaces
 - Fail closed on unresolved, external, and duplicate-Id Reference URIs

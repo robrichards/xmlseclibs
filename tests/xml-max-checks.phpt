@@ -14,6 +14,7 @@ foreach ($arTests AS $testName=>$testFile) {
 	try {
 		$doc->load(dirname(__FILE__) . "/$testFile");
 		$objXMLSecDSig = new XMLSecurityDSig();
+		$objXMLSecDSig->allowXPathTransforms = true;
 		
 		$objDSig = $objXMLSecDSig->locateSignature($doc);
 		if (! $objDSig) {
@@ -57,6 +58,7 @@ foreach ($arTests AS $testName=>$testFile) {
 try {
 	$doc->load(dirname(__FILE__) . '/xml-max-transforms.xml');
 	$objXMLSecDSig = new XMLSecurityDSig();
+	$objXMLSecDSig->allowXPathTransforms = true;
 	$objXMLSecDSig->maxXPathTransforms = 2;
 	$objDSig = $objXMLSecDSig->locateSignature($doc);
 	$objXMLSecDSig->canonicalizeSignedInfo();
@@ -72,6 +74,7 @@ try {
 try {
 	$doc->load(dirname(__FILE__) . '/xml-max-transforms.xml');
 	$objXMLSecDSig = new XMLSecurityDSig();
+	$objXMLSecDSig->allowXPathTransforms = true;
 	$objXMLSecDSig->maxXPathTransforms = 100;
 	$objDSig = $objXMLSecDSig->locateSignature($doc);
 	$objXMLSecDSig->canonicalizeSignedInfo();
@@ -91,6 +94,7 @@ try {
 try {
 	$doc->load(dirname(__FILE__) . '/xml-max-namespaces.xml');
 	$objXMLSecDSig = new XMLSecurityDSig();
+	$objXMLSecDSig->allowXPathTransforms = true;
 	$objXMLSecDSig->maxXPathNamespaces = 100;
 	$objDSig = $objXMLSecDSig->locateSignature($doc);
 	$objXMLSecDSig->canonicalizeSignedInfo();

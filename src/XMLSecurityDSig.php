@@ -128,6 +128,28 @@ class XMLSecurityDSig
     public $maxXPathNamespaces = self::MAX_XPATH_NAMESPACES;
 
     /**
+     * Allow XPath (REC-xpath-19991116) Transforms while verifying references.
+     *
+     * The XPath Filtering Transform evaluates an arbitrary, document-supplied
+     * XPath expression during validateReference() -- before any signature
+     * cryptography runs. A crafted expression (e.g. deeply nested predicates)
+     * can be evaluated at super-linear cost, giving an unauthenticated attacker
+     * a pre-auth CPU denial-of-service (GHSA-7mf5-fjj8-mvjc). The expression is
+     * an arbitrary XPath by design, so it cannot be sanitized without breaking
+     * the feature; the maxXPath* caps only bound the count, not the cost of a
+     * single expression.
+     *
+     * SAML and WS-Security do not use XPath transforms, so this defaults to
+     * false (reject them on the verification path). Set to true only if you
+     * must verify signatures that legitimately rely on XPath transforms and you
+     * trust the document source. Signing is unaffected (the transforms are
+     * caller-supplied, not attacker-controlled).
+     *
+     * @var bool
+     */
+    public $allowXPathTransforms = false;
+
+    /**
      * Allowlist of acceptable SignatureMethod algorithm URIs.
      *
      * When null (the default), the low-level verify() primitive imposes no
@@ -494,7 +516,7 @@ class XMLSecurityDSig
      * @return string
      * @throws Exception
      */
-    public function processTransforms($refNode, $objData, $includeCommentNodes = true)
+    public function processTransforms($refNode, $objData, $includeCommentNodes = true, $signing = false)
     {
         $data = $objData;
         $xpath = new DOMXPath($refNode->ownerDocument);
@@ -554,6 +576,17 @@ class XMLSecurityDSig
 
                     break;
                 case 'http://www.w3.org/TR/1999/REC-xpath-19991116':
+                    /*
+                     * Reject attacker-controlled XPath transforms on the
+                     * verification path unless explicitly allowed. Signing uses
+                     * caller-supplied transforms and is always permitted.
+                     */
+                    if (! $signing && ! $this->allowXPathTransforms) {
+                        throw new Exception(
+                            'XPath Transforms are not allowed during verification; set '
+                            . 'XMLSecurityDSig::$allowXPathTransforms = true to enable them'
+                        );
+                    }
                     $xpathTransformCount++;
                     if ($xpathTransformCount > $this->maxXPathTransforms) {
                         throw new Exception(
@@ -817,7 +850,7 @@ class XMLSecurityDSig
             $transNode->setAttribute('Algorithm', $this->canonicalMethod);
         }
 
-        $canonicalData = $this->processTransforms($refNode, $node);
+        $canonicalData = $this->processTransforms($refNode, $node, true, true);
         $digValue = $this->calculateDigest($algorithm, $canonicalData);
 
         $digestMethod = $this->createNewSignNode('DigestMethod');
