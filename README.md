@@ -55,6 +55,66 @@ try {
 }
 ```
 
+### Decrypting XML (recommended recipe)
+
+xmlseclibs does not derive the decryption key from the document: you supply
+your own private key, and the document's session key is unwrapped with it. The
+recipe below covers the common `EncryptedKey` (key transport) + `EncryptedData`
+(data) layout used by SAML and WS-Security, with the algorithm policy pinned.
+
+```php
+use RobRichards\XMLSecLibs\XMLSecEnc;
+use RobRichards\XMLSecLibs\XMLSecurityKey;
+
+$doc = new DOMDocument();
+$doc->load('./path/to/encrypted.xml');
+
+$objenc = new XMLSecEnc();
+
+// Pin the algorithm policy (all optional, but recommended):
+//  - RSA-1.5 key transport is already denied by default (Bleichenbacher);
+//    only set this if you must interoperate with a legacy peer.
+// $objenc->allowRSA15KeyTransport = true;
+//  - Restrict data encryption to authenticated AES-GCM (rejects CBC):
+$objenc->allowedDataAlgorithms = XMLSecEnc::DEFAULT_DATA_ALGORITHMS;
+//  - Restrict key transport to RSA-OAEP:
+$objenc->allowedKeyAlgorithms  = XMLSecEnc::DEFAULT_KEY_ALGORITHMS;
+
+$encData = $objenc->locateEncryptedData($doc);
+if (! $encData) {
+    throw new Exception('Cannot locate EncryptedData');
+}
+$objenc->setNode($encData);
+$objenc->type = $encData->getAttribute('Type');
+
+// Resolve the session key. locateKey() reads the data algorithm from the
+// document; locateKeyInfo() finds the EncryptedKey.
+$objKey = $objenc->locateKey();
+if (! $objKey) {
+    throw new Exception('Unknown data encryption algorithm');
+}
+
+if ($objKeyInfo = $objenc->locateKeyInfo($objKey)) {
+    if ($objKeyInfo->isEncrypted) {
+        // Load YOUR trusted private key to unwrap the session key.
+        $objKeyInfo->loadKey('./path/to/your-private-key.pem', true);
+        $sessionKey = $objKeyInfo->encryptedCtx->decryptKey($objKeyInfo);
+        $objKey->loadKey($sessionKey);
+    }
+}
+
+// If the session key was supplied out-of-band (no EncryptedKey), load it here:
+// if (empty($objKey->key)) { $objKey->loadKey($sharedSecretBytes); }
+
+// Decrypted content is returned; a DOCTYPE in the plaintext is rejected.
+$decrypted = $objenc->decryptNode($objKey, true);
+```
+
+If the recipient key is selected by `KeyName` (rather than an embedded
+`EncryptedKey`), read `$objKeyInfo->name` and load the matching local private
+key yourself before decrypting. Never treat key material from the document as
+trusted.
+
 
 ## How to Install
 
