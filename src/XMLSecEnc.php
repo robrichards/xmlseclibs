@@ -132,6 +132,25 @@ class XMLSecEnc
         $this->_resetTemplate();
     }
 
+    /**
+     * Restore pre-4.0 interoperability defaults for XML Encryption decryption.
+     *
+     * Use this only when you must decrypt payloads that use RSA-1.5 key
+     * transport. Prefer migrating senders to RSA-OAEP (and AES-GCM) and then
+     * removing the call.
+     *
+     * This does NOT undo 4.0 oracle / XXE hardening that is always enforced
+     * (uniform decryption error messages, DOCTYPE rejection in decrypted XML,
+     * EncryptedKey recursion depth bound, ISO 10126 pad-length validation).
+     *
+     * @return $this
+     */
+    public function enableLegacyMode()
+    {
+        $this->allowRSA15KeyTransport = true;
+        return $this;
+    }
+
     private function _resetTemplate()
     {
         $this->encdoc = new DOMDocument();

@@ -132,12 +132,9 @@ class XMLSecurityDSig
      *
      * The XPath Filtering Transform evaluates an arbitrary, document-supplied
      * XPath expression during validateReference() -- before any signature
-     * cryptography runs. A crafted expression (e.g. deeply nested predicates)
-     * can be evaluated at super-linear cost, giving an unauthenticated attacker
-     * a pre-auth CPU denial-of-service (GHSA-7mf5-fjj8-mvjc). The expression is
-     * an arbitrary XPath by design, so it cannot be sanitized without breaking
-     * the feature; the maxXPath* caps only bound the count, not the cost of a
-     * single expression.
+     * cryptography runs. The expression is an arbitrary XPath by design, so it 
+     * cannot be sanitized without breaking the feature.
+     * The maxXPath* caps only bound the count, not the cost of a single expression.
      *
      * SAML and WS-Security do not use XPath transforms, so this defaults to
      * false (reject them on the verification path). Set to true only if you
@@ -225,6 +222,29 @@ class XMLSecurityDSig
         $sigdoc = new DOMDocument();
         $sigdoc->loadXML($template);
         $this->sigNode = $sigdoc->documentElement;
+    }
+
+    /**
+     * Restore pre-4.0 interoperability defaults for signature verification.
+     *
+     * Use this only when you must accept documents/peers that rely on
+     * behaviours 4.0 rejects by default (DOCTYPE, XPath Filtering Transforms,
+     * uncapped XPath transform counts). Prefer migrating peers and then
+     * removing the call.
+     *
+     * This does NOT weaken cryptographic checks that are always enforced in
+     * 4.0 (SignatureMethod/key algorithm binding, hash_equals compares,
+     * fail-closed Reference handling, unknown C14N rejection).
+     *
+     * @return $this
+     */
+    public function enableLegacyMode()
+    {
+        $this->forbidDoctype = false;
+        $this->allowXPathTransforms = true;
+        $this->maxXPathTransforms = PHP_INT_MAX;
+        $this->maxXPathNamespaces = PHP_INT_MAX;
+        return $this;
     }
 
     /**
@@ -646,39 +666,37 @@ class XMLSecurityDSig
             if (! empty($arUrl['path']) || ! empty($arUrl['host']) || ! empty($arUrl['scheme'])) {
                 throw new Exception('Reference URI must be a same-document reference');
             }
-            if (empty($arUrl['path'])) {
-                if ($identifier = $arUrl['fragment'] ?? null) {
+            if ($identifier = $arUrl['fragment'] ?? null) {
 
-                    /* This reference identifies a node with the given id by using
-                     * a URI on the form "#identifier". This should not include comments.
-                     */
-                    $includeCommentNodes = false;
+                /* This reference identifies a node with the given id by using
+                 * a URI on the form "#identifier". This should not include comments.
+                 */
+                $includeCommentNodes = false;
 
-                    $xPath = new DOMXPath($refNode->ownerDocument);
-                    if ($this->idNS && is_array($this->idNS)) {
-                        foreach ($this->idNS as $nspf => $ns) {
-                            $xPath->registerNamespace($nspf, $ns);
-                        }
+                $xPath = new DOMXPath($refNode->ownerDocument);
+                if ($this->idNS && is_array($this->idNS)) {
+                    foreach ($this->idNS as $nspf => $ns) {
+                        $xPath->registerNamespace($nspf, $ns);
                     }
-                    $iDlist = '@Id="'.XPath::filterAttrValue($identifier, XPath::DOUBLE_QUOTE).'"';
-                    if (is_array($this->idKeys)) {
-                        foreach ($this->idKeys as $idKey) {
-                            $iDlist .= " or @".XPath::filterAttrName($idKey).'="'.
-                                XPath::filterAttrValue($identifier, XPath::DOUBLE_QUOTE).'"';
-                        }
-                    }
-                    $query = '//*['.$iDlist.']';
-                    $nodeset = $xPath->query($query);
-                    if ($nodeset->length === 0) {
-                        throw new Exception('Reference URI does not identify a node');
-                    }
-                    if ($nodeset->length > 1) {
-                        throw new Exception('Reference URI identifies multiple nodes');
-                    }
-                    $dataObject = $nodeset->item(0);
-                } else {
-                    $dataObject = $refNode->ownerDocument;
                 }
+                $iDlist = '@Id="'.XPath::filterAttrValue($identifier, XPath::DOUBLE_QUOTE).'"';
+                if (is_array($this->idKeys)) {
+                    foreach ($this->idKeys as $idKey) {
+                        $iDlist .= " or @".XPath::filterAttrName($idKey).'="'.
+                            XPath::filterAttrValue($identifier, XPath::DOUBLE_QUOTE).'"';
+                    }
+                }
+                $query = '//*['.$iDlist.']';
+                $nodeset = $xPath->query($query);
+                if ($nodeset->length === 0) {
+                    throw new Exception('Reference URI does not identify a node');
+                }
+                if ($nodeset->length > 1) {
+                    throw new Exception('Reference URI identifies multiple nodes');
+                }
+                $dataObject = $nodeset->item(0);
+            } else {
+                $dataObject = $refNode->ownerDocument;
             }
         } else {
             /* This reference identifies the root node with an empty URI. This should
@@ -980,11 +998,7 @@ class XMLSecurityDSig
 
         /*
          * Always bind the document's declared SignatureMethod to the algorithm
-         * of the caller-supplied key. Without this, an attacker who controls
-         * the XML can substitute the algorithm (e.g. downgrade an RSA signature
-         * to hmac-sha1) so that the relying party's *public* key material is
-         * used as the HMAC secret, enabling signature forgery (key/algorithm
-         * confusion, GHSA-m5mw-mr39-66vp). The key's algorithm is fixed by the
+         * of the caller-supplied key. The key's algorithm is fixed by the
          * caller -- or, in the locateKey() flow, derived from the same document
          * -- so a mismatch always signals tampering.
          */
@@ -1215,9 +1229,6 @@ class XMLSecurityDSig
      * (rejecting loopback, private, link-local, reserved and CGNAT ranges),
      * and HTTP redirects are disabled so a public URL cannot bounce to an
      * internal one.
-     *
-     * NOTE: a small DNS-rebinding TOCTOU window remains because the transport
-     * re-resolves the host; only enable URL fetching with trusted input.
      *
      * @param string $url
      * @param null|array $options

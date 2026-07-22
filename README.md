@@ -32,6 +32,8 @@ xmlseclibs requires PHP version 8.0 or greater. OpenSSL is optional (phpseclib i
 
 * Documents carrying a `DOCTYPE` are rejected during signature verification (`locateSignature()` / `verifyDocument()`). This closes the entity-reference bypass in which an `Id="&e;"` attribute is resolved by `getAttribute()` but is invisible to the XPath reference lookup (a libxml2 hashing bug, the same root cause as CVE-2025-23369), causing `verify()` to validate a different node than the one your application reads. Set `$objDSig->forbidDoctype = false` only if you fully trust the document source and require DTD support.
 
+* **Legacy interoperability (temporary):** if you must accept documents/peers that rely on pre-4.0 behaviour, call `$objDSig->enableLegacyMode()` and/or `$objenc->enableLegacyMode()` once after construction. That restores the interoperability settings in one place (DOCTYPE allowed on verify, XPath transforms allowed without count caps, RSA-1.5 key transport allowed). It does **not** undo always-on hardening such as SignatureMethod/key binding, uniform decryption errors, or DOCTYPE rejection in *decrypted* XML. Prefer migrating peers and removing the call.
+
 ### Verifying a signature (recommended)
 
 ```php

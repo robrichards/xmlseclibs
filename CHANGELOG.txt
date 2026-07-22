@@ -7,9 +7,8 @@ Security Improvements:
   loopback/private/link-local/reserved/CGNAT addresses; disable HTTP redirects
 - Reject a DOCTYPE in decrypted XML (defense against entity-expansion / XXE in
   attacker-crafted encrypted content)
-- Reject a DOCTYPE in documents being signature-verified (locateSignature), the
-  same defense onelogin/php-saml and simplesamlphp ship. Closes the
-  entity-reference signature bypass where an Id="&e;" attribute is resolved by
+- Reject a DOCTYPE in documents being signature-verified (locateSignature). Closes
+  the entity-reference signature bypass where an Id="&e;" attribute is resolved by
   getAttribute() but invisible to the XPath reference lookup (libxml2
   xmlXPathNodeValHash bug, the CVE-2025-23369 root cause), letting verify()
   validate a different node than the application reads. Opt out with
@@ -36,16 +35,15 @@ Security Improvements:
   the supplied key (previously only when $allowedSignatureAlgorithms was set),
   so a mismatch is rejected even on the low-level path. Blocks algorithm
   substitution / key confusion (e.g. downgrading an RSA signature to hmac-sha1
-  so a public key is used as the HMAC secret) (GHSA-m5mw-mr39-66vp)
+  so a public key is used as the HMAC secret)
 - Bound EncryptedKey / RetrievalMethod resolution depth (prevents recursive
   key-reference DoS / memory exhaustion)
-- Reject XPath (REC-xpath-19991116) Transforms during verification by default
-  (GHSA-7mf5-fjj8-mvjc). The transform evaluates a document-supplied XPath
-  expression in validateReference() before any crypto runs, so a crafted
-  expression is a pre-auth CPU denial-of-service; the expression is arbitrary
-  XPath by design and cannot be sanitized. SAML / WS-Security do not use XPath
-  transforms. Opt in with XMLSecurityDSig::$allowXPathTransforms = true. Signing
-  is unaffected
+- Reject XPath (REC-xpath-19991116) Transforms during verification by default.
+  The transform evaluates a document-supplied XPath expression in 
+  validateReference()  before any crypto runs, so a crafted expression is a 
+  pre-auth CPU denial-of-service; the expression is arbitrary XPath by design 
+  and cannot be sanitized. SAML / WS-Security do not use XPath transforms. Opt in
+  with XMLSecurityDSig::$allowXPathTransforms = true. Signing is unaffected
 - Cap XPath transforms (max 5) and namespaces per XPath transform (max 20);
   overridable via $maxXPathTransforms / $maxXPathNamespaces
 - Fail closed on unresolved, external, and duplicate-Id Reference URIs
@@ -62,12 +60,18 @@ Features:
   (Julius Türich and joonlabs)
 - use phpseclib for all crypto (symmetric, RSA-1.5, RSA signatures,
   X.509); OpenSSL extension is now optional
+- Add enableLegacyMode() on XMLSecurityDSig and XMLSecEnc: one call restores
+  pre-4.0 interoperability defaults (accept DOCTYPE, allow XPath transforms
+  without count caps, allow RSA-1.5 key transport). Does not undo always-on
+  cryptographic hardening (algorithm/key binding, uniform decrypt errors,
+  hash_equals, decrypted-XML DOCTYPE rejection, etc.). Temporary migration aid.
 
 Notes:
 - Prefer RSA-OAEP and AES-GCM for new deployments; RSA-1.5 and CBC remain
   for legacy XML Encryption interoperability
 - Always check verify() === 1; use getValidatedNodes() for SAML/WS-Security
 - Do not trust KeyInfo certificates alone — pin or validate against a trust store
+- Prefer secure defaults; use enableLegacyMode() only while migrating peers
 
 12, Dec 2026, 3.1.5
 Security:
