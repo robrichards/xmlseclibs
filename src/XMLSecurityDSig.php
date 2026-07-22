@@ -149,6 +149,24 @@ class XMLSecurityDSig
      */
     public $allowedDigestAlgorithms = null;
 
+    /**
+     * Reject documents that carry a DOCTYPE when locating a Signature.
+     *
+     * A DOCTYPE has no legitimate role in a signed XML document, but it enables
+     * a class of signature-verification bypasses: entity references in ID
+     * attributes (e.g. Id="&e;") are resolved by getAttribute() yet are
+     * invisible to the XPath "//*[@Id=...]" reference lookup, due to a libxml2
+     * hashing bug (same root cause as CVE-2025-23369). The signature then
+     * validates against one node while the application reads another. Rejecting
+     * any DOCTYPE closes this vector (and entity-expansion DoS) outright.
+     *
+     * Defaults to true (secure). Set to false ONLY if you fully trust the
+     * document source and require DTD support.
+     *
+     * @var bool
+     */
+    public $forbidDoctype = true;
+
     /** @var string|null */
     private $signedInfo = null;
 
@@ -255,6 +273,9 @@ class XMLSecurityDSig
             $doc = $objDoc->ownerDocument;
         }
         if ($doc) {
+            if ($this->forbidDoctype && $doc->doctype !== null) {
+                throw new Exception('A DOCTYPE is not allowed in a document being verified');
+            }
             $xpath = new DOMXPath($doc);
             $xpath->registerNamespace('secdsig', self::XMLDSIGNS);
             $query = ".//secdsig:Signature";

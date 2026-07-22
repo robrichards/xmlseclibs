@@ -7,6 +7,13 @@ Security Improvements:
   loopback/private/link-local/reserved/CGNAT addresses; disable HTTP redirects
 - Reject a DOCTYPE in decrypted XML (defense against entity-expansion / XXE in
   attacker-crafted encrypted content)
+- Reject a DOCTYPE in documents being signature-verified (locateSignature), the
+  same defense onelogin/php-saml and simplesamlphp ship. Closes the
+  entity-reference signature bypass where an Id="&e;" attribute is resolved by
+  getAttribute() but invisible to the XPath reference lookup (libxml2
+  xmlXPathNodeValHash bug, the CVE-2025-23369 root cause), letting verify()
+  validate a different node than the application reads. Opt out with
+  XMLSecurityDSig::$forbidDoctype = false
 - Deny RSA-1.5 (PKCS#1 v1.5) key transport on decryption by default
   (Bleichenbacher / XML-Encryption backward-compatibility attack); opt in via
   XMLSecEnc::$allowRSA15KeyTransport. Add optional key-transport / data

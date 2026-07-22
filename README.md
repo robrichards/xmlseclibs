@@ -28,6 +28,8 @@ xmlseclibs requires PHP version 8.0 or greater. OpenSSL is optional (phpseclib i
 * `add509Cert(..., $isURL = true)` fetches over http/https only and rejects hosts that resolve to loopback/private/link-local/reserved/CGNAT addresses, with redirects disabled (SSRF hardening). `file://` is disabled unless you pass `array('allow_file_scheme' => true)` in `$options`. Only fetch certificates from trusted URLs — a small DNS-rebinding window remains.
 * Decrypted XML containing a `DOCTYPE` is rejected to guard against entity-expansion / XXE. Always load untrusted *input* documents yourself with DTD/entity processing disabled.
 
+* Documents carrying a `DOCTYPE` are rejected during signature verification (`locateSignature()` / `verifyDocument()`). This closes the entity-reference bypass in which an `Id="&e;"` attribute is resolved by `getAttribute()` but is invisible to the XPath reference lookup (a libxml2 hashing bug, the same root cause as CVE-2025-23369), causing `verify()` to validate a different node than the one your application reads. Set `$objDSig->forbidDoctype = false` only if you fully trust the document source and require DTD support.
+
 ### Verifying a signature (recommended)
 
 ```php
