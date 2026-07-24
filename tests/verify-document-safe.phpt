@@ -38,7 +38,7 @@ try {
 
 /* 3. A key must be supplied; KeyInfo is never trusted implicitly. */
 $doc = new DOMDocument();
-$doc->load(dirname(__FILE__) . '/sign-sha256-rsa-sha256-test.xml');
+$doc->load(dirname(__FILE__) . '/sign-sha256-rsa-sha256-test.res');
 $objXMLSecDSig = new XMLSecurityDSig();
 try {
     $objXMLSecDSig->verifyDocument(null, $doc);
