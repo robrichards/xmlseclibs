@@ -12,7 +12,7 @@ function rsaPublicKey() {
     return $objKey;
 }
 
-$signed = file_get_contents(dirname(__FILE__) . '/sign-sha256-rsa-sha256-test.xml');
+$signed = file_get_contents(dirname(__FILE__) . '/sign-sha256-rsa-sha256-test.res');
 
 /* 1. Positive control: untouched document verifies with the matching key
  * using the low-level primitives (no allowlist configured). */

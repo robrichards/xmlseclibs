@@ -21,7 +21,7 @@ print "DSIG_LEGACY: forbidDoctype=".($dsig->forbidDoctype ? '1' : '0')
     ." maxXN=".($dsig->maxXPathNamespaces === PHP_INT_MAX ? 'MAX' : $dsig->maxXPathNamespaces)."\n";
 
 /* DOCTYPE is accepted after enableLegacyMode(). */
-$signed = file_get_contents(dirname(__FILE__) . '/sign-sha256-rsa-sha256-test.xml');
+$signed = file_get_contents(dirname(__FILE__) . '/sign-sha256-rsa-sha256-test.res');
 $withDoctype = preg_replace(
     '/(<\?xml[^>]*\?>\n)/',
     "$1<!DOCTYPE Root [ <!ENTITY e \"anything\"> ]>\n",

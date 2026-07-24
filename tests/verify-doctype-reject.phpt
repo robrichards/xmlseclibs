@@ -15,7 +15,7 @@ function pinnedKey() {
 /* Take a legitimately signed document and inject a DOCTYPE, mimicking the
  * entity-reference XPath-hash-skip bypass (same libxml2 root cause as
  * CVE-2025-23369). The DOCTYPE itself must be refused. */
-$signed = file_get_contents(dirname(__FILE__) . '/sign-sha256-rsa-sha256-test.xml');
+$signed = file_get_contents(dirname(__FILE__) . '/sign-sha256-rsa-sha256-test.res');
 $withDoctype = preg_replace(
     '/(<\?xml[^>]*\?>\n)/',
     "$1<!DOCTYPE Root [ <!ENTITY e \"anything\"> ]>\n",

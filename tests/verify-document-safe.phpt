@@ -14,7 +14,7 @@ function pinnedKey() {
 
 /* 1. Happy path: strong algorithms + pinned key. */
 $doc = new DOMDocument();
-$doc->load(dirname(__FILE__) . '/sign-sha256-rsa-sha256-test.xml');
+$doc->load(dirname(__FILE__) . '/sign-sha256-rsa-sha256-test.res');
 $objXMLSecDSig = new XMLSecurityDSig();
 try {
     $nodes = $objXMLSecDSig->verifyDocument(pinnedKey(), $doc);
