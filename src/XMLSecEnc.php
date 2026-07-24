@@ -61,6 +61,57 @@ class XMLSecEnc
     const URI = 3;
     const XMLENCNS = 'http://www.w3.org/2001/04/xmlenc#';
 
+    /** Maximum depth of EncryptedKey/RetrievalMethod resolution (DoS protection). */
+    const MAX_KEYINFO_DEPTH = 10;
+
+    /**
+     * Recommended key-transport (asymmetric) algorithms. RSA-1.5 is excluded:
+     * it is vulnerable to Bleichenbacher / XML-Encryption backward-compatibility
+     * attacks and must be opted into explicitly.
+     */
+    const DEFAULT_KEY_ALGORITHMS = array(
+        XMLSecurityKey::RSA_OAEP,
+        XMLSecurityKey::RSA_OAEP_MGF1P,
+    );
+
+    /**
+     * Recommended data-encryption (symmetric) algorithms. Authenticated GCM
+     * modes only; unauthenticated CBC modes are excluded because they are
+     * malleable and prone to padding-oracle attacks.
+     */
+    const DEFAULT_DATA_ALGORITHMS = array(
+        XMLSecurityKey::AES128_GCM,
+        XMLSecurityKey::AES192_GCM,
+        XMLSecurityKey::AES256_GCM,
+    );
+
+    /**
+     * Allowlist of acceptable key-transport (asymmetric) algorithm URIs.
+     * When null (default) no allowlist restriction is applied, preserving
+     * backward compatibility. Note that RSA-1.5 is additionally governed by
+     * $allowRSA15KeyTransport regardless of this list.
+     * @var array|null
+     */
+    public $allowedKeyAlgorithms = null;
+
+    /**
+     * Allowlist of acceptable data-encryption (symmetric) algorithm URIs.
+     * When null (default) no allowlist restriction is applied.
+     * @var array|null
+     */
+    public $allowedDataAlgorithms = null;
+
+    /**
+     * Whether RSA-1.5 (PKCS#1 v1.5) key transport is permitted on decryption.
+     *
+     * Denied by default: an attacker who chooses the EncryptedKey algorithm can
+     * otherwise mount a Bleichenbacher adaptive chosen-ciphertext attack against
+     * the private key. Set to true only for legacy interoperability, ideally
+     * behind additional oracle protections.
+     * @var bool
+     */
+    public $allowRSA15KeyTransport = false;
+
     /** @var null|DOMDocument */
     private $encdoc = null;
 
@@ -79,6 +130,25 @@ class XMLSecEnc
     public function __construct()
     {
         $this->_resetTemplate();
+    }
+
+    /**
+     * Restore pre-4.0 interoperability defaults for XML Encryption decryption.
+     *
+     * Use this only when you must decrypt payloads that use RSA-1.5 key
+     * transport. Prefer migrating senders to RSA-OAEP (and AES-GCM) and then
+     * removing the call.
+     *
+     * This does NOT undo 4.0 oracle / XXE hardening that is always enforced
+     * (uniform decryption error messages, DOCTYPE rejection in decrypted XML,
+     * EncryptedKey recursion depth bound, ISO 10126 pad-length validation).
+     *
+     * @return $this
+     */
+    public function enableLegacyMode()
+    {
+        $this->allowRSA15KeyTransport = true;
+        return $this;
     }
 
     private function _resetTemplate()
@@ -258,14 +328,15 @@ class XMLSecEnc
             throw new Exception('Invalid Key');
         }
 
+        $this->enforceAlgorithmPolicy($objKey);
+
         $encryptedData = $this->getCipherValue();
         if ($encryptedData) {
             $decrypted = $objKey->decryptData($encryptedData);
             if ($replace) {
                 switch ($this->type) {
                     case (self::Element):
-                        $newdoc = new DOMDocument();
-                        $newdoc->loadXML($decrypted);
+                        $newdoc = self::parseDecryptedXML($decrypted);
                         if ($this->rawNode->nodeType == XML_DOCUMENT_NODE) {
                             return $newdoc;
                         }
@@ -278,8 +349,11 @@ class XMLSecEnc
                         } else {
                             $doc = $this->rawNode->ownerDocument;
                         }
+                        $tmp = self::parseDecryptedXML('<root>'.$decrypted.'</root>');
                         $newFrag = $doc->createDocumentFragment();
-                        $newFrag->appendXML($decrypted);
+                        foreach (iterator_to_array($tmp->documentElement->childNodes) as $child) {
+                            $newFrag->appendChild($doc->importNode($child, true));
+                        }
                         $parent = $this->rawNode->parentNode;
                         $parent->replaceChild($newFrag, $this->rawNode);
                         return $parent;
@@ -292,6 +366,35 @@ class XMLSecEnc
         } else {
             throw new Exception("Cannot locate encrypted data");
         }
+    }
+
+    /**
+     * Safely parse decrypted XML.
+     *
+     * External entity resolution is disabled (LIBXML_NONET and the parser
+     * default of not expanding entities), and any DOCTYPE is rejected. XML
+     * Encryption payloads never legitimately carry a DOCTYPE, so refusing one
+     * closes off entity-expansion (billion laughs) and XXE vectors in content
+     * that an attacker who knows the key could otherwise craft.
+     *
+     * @param string $xml
+     * @return DOMDocument
+     * @throws Exception
+     */
+    private static function parseDecryptedXML($xml)
+    {
+        $doc = new DOMDocument();
+        $previous = libxml_use_internal_errors(true);
+        $loaded = $doc->loadXML($xml, LIBXML_NONET);
+        libxml_clear_errors();
+        libxml_use_internal_errors($previous);
+        if ($loaded === false || $doc->documentElement === null) {
+            throw new Exception('Error parsing decrypted XML');
+        }
+        if ($doc->doctype !== null) {
+            throw new Exception('Decrypted XML must not contain a DOCTYPE');
+        }
+        return $doc;
     }
 
     /**
@@ -396,10 +499,48 @@ class XMLSecEnc
                 } catch (Exception $e) {
                     return null;
                 }
+                $this->enforceAlgorithmPolicy($objKey);
                 return $objKey;
             }
         }
         return null;
+    }
+
+    /**
+     * Enforce the configured algorithm policy for a key located in the document.
+     *
+     * Fails closed (throws) when the document-selected algorithm is not
+     * permitted. This is what prevents an attacker from downgrading key
+     * transport to RSA-1.5 or selecting an algorithm outside a caller's
+     * allowlist.
+     *
+     * @param XMLSecurityKey $objKey
+     * @throws Exception
+     */
+    private function enforceAlgorithmPolicy($objKey)
+    {
+        if (! $objKey instanceof XMLSecurityKey) {
+            return;
+        }
+        $algorithm = $objKey->getAlgorithm();
+        if ($objKey->isSymmetricCipher()) {
+            if ($this->allowedDataAlgorithms !== null
+                && ! in_array($algorithm, $this->allowedDataAlgorithms, true)) {
+                throw new Exception("Data encryption algorithm is not allowed: '$algorithm'");
+            }
+            return;
+        }
+        /* Asymmetric key-transport algorithm. */
+        if ($algorithm === XMLSecurityKey::RSA_1_5 && ! $this->allowRSA15KeyTransport) {
+            throw new Exception(
+                'RSA-1.5 key transport is disabled (Bleichenbacher risk); '
+                . 'set allowRSA15KeyTransport = true to opt in'
+            );
+        }
+        if ($this->allowedKeyAlgorithms !== null
+            && ! in_array($algorithm, $this->allowedKeyAlgorithms, true)) {
+            throw new Exception("Key transport algorithm is not allowed: '$algorithm'");
+        }
     }
 
     /**
@@ -408,10 +549,19 @@ class XMLSecEnc
      * @return null|XMLSecurityKey
      * @throws Exception
      */
-    public static function staticLocateKeyInfo($objBaseKey=null, $node=null)
+    public static function staticLocateKeyInfo($objBaseKey=null, $node=null, $depth=0, $allowRSA15=false)
     {
         if (empty($node) || (! $node instanceof DOMNode)) {
             return null;
+        }
+        /*
+         * Bound the EncryptedKey / RetrievalMethod resolution chain. A crafted
+         * document can otherwise reference EncryptedKey elements in a cycle
+         * (e.g. a RetrievalMethod pointing back at its own EncryptedKey),
+         * causing unbounded recursion and memory exhaustion (DoS).
+         */
+        if ($depth > self::MAX_KEYINFO_DEPTH) {
+            throw new Exception('EncryptedKey reference chain is too deep');
         }
         $doc = $node->ownerDocument;
         if (!$doc) {
@@ -478,9 +628,9 @@ class XMLSecEnc
                         throw new Exception("Unable to locate EncryptedKey with @Id='$id'.");
                     }
 
-                    return XMLSecurityKey::fromEncryptedKeyElement($keyElement);
+                    return XMLSecurityKey::fromEncryptedKeyElement($keyElement, $depth + 1, $allowRSA15);
                 case 'EncryptedKey':
-                    return XMLSecurityKey::fromEncryptedKeyElement($child);
+                    return XMLSecurityKey::fromEncryptedKeyElement($child, $depth + 1, $allowRSA15);
                 case 'X509Data':
                     if ($x509certNodes = $child->getElementsByTagName('X509Certificate')) {
                         if ($x509certNodes->length > 0) {
@@ -506,6 +656,6 @@ class XMLSecEnc
         if (empty($node)) {
             $node = $this->rawNode;
         }
-        return self::staticLocateKeyInfo($objBaseKey, $node);
+        return self::staticLocateKeyInfo($objBaseKey, $node, 0, $this->allowRSA15KeyTransport);
     }
 }

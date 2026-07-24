@@ -1,7 +1,57 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
-??, ??? ????, 4.0.0
+24, Jul 2026, 4.0.0-beta1
 Security Improvements:
+- Harden add509Cert() URL fetching against SSRF: only http/https by default
+  (file:// requires options['allow_file_scheme']); resolve the host and reject
+  loopback/private/link-local/reserved/CGNAT addresses; disable HTTP redirects
+- Reject a DOCTYPE in decrypted XML (defense against entity-expansion / XXE in
+  attacker-crafted encrypted content)
+- Reject a DOCTYPE in documents being signature-verified (locateSignature). Closes
+  the entity-reference signature bypass where an Id="&e;" attribute is resolved by
+  getAttribute() but invisible to the XPath reference lookup (libxml2
+  xmlXPathNodeValHash bug, the CVE-2025-23369 root cause), letting verify()
+  validate a different node than the application reads. Opt out with
+  XMLSecurityDSig::$forbidDoctype = false
+- Deny RSA-1.5 (PKCS#1 v1.5) key transport on decryption by default
+  (Bleichenbacher / XML-Encryption backward-compatibility attack); opt in via
+  XMLSecEnc::$allowRSA15KeyTransport. Add optional key-transport / data
+  algorithm allowlists ($allowedKeyAlgorithms / $allowedDataAlgorithms, with
+  DEFAULT_KEY_ALGORITHMS / DEFAULT_DATA_ALGORITHMS presets)
+- Use a single generic "Failure decrypting Data" error for all decryption
+  failures (bad padding, cipher error, failed RSA unwrap) so callers cannot
+  build a CBC padding oracle from distinguishable errors
+- Add verifyDocument(): safe-by-default signature verification that requires a
+  caller-pinned key (never trusts KeyInfo), enforces a SignatureMethod/DigestMethod
+  algorithm allowlist, fails closed on unvalidated references, and returns the
+  validated node set. New $allowedSignatureAlgorithms / $allowedDigestAlgorithms
+  properties (default strong: SHA-256+ digests, RSA-SHA-256+/PSS signatures);
+  the low-level verify()/validateReference() primitives remain unrestricted for
+  backward compatibility unless these properties are set (except the
+  SignatureMethod/key-algorithm binding, which is always enforced -- see below).
+- Reject asymmetric key material (X.509 certificate / PEM public key) being
+  loaded as an HMAC key; prevents signature key/algorithm confusion forgery
+- verify() now always binds the document's SignatureMethod to the algorithm of
+  the supplied key (previously only when $allowedSignatureAlgorithms was set),
+  so a mismatch is rejected even on the low-level path. Blocks algorithm
+  substitution / key confusion (e.g. downgrading an RSA signature to hmac-sha1
+  so a public key is used as the HMAC secret)
+- Bound EncryptedKey / RetrievalMethod resolution depth (prevents recursive
+  key-reference DoS / memory exhaustion)
+- Reject XPath (REC-xpath-19991116) Transforms during verification by default.
+  The transform evaluates a document-supplied XPath expression in 
+  validateReference()  before any crypto runs, so a crafted expression is a 
+  pre-auth CPU denial-of-service; the expression is arbitrary XPath by design 
+  and cannot be sanitized. SAML / WS-Security do not use XPath transforms. Opt in
+  with XMLSecurityDSig::$allowXPathTransforms = true. Signing is unaffected
+- Cap XPath transforms (max 5) and namespaces per XPath transform (max 20);
+  overridable via $maxXPathTransforms / $maxXPathNamespaces
+- Fail closed on unresolved, external, and duplicate-Id Reference URIs
+- Reject unknown CanonicalizationMethod algorithms
+- Use hash_equals for digest and HMAC compares; HMAC verify returns 1/0
+- Validate ISO 10126 pad length on CBC decrypt
+- Harden decrypted XML parsing (LIBXML_NONET); restrict certificate URL fetches
+- Use random_bytes for GUID generation
 
 Features:
 - Remove support for PHP < 8.0
@@ -10,8 +60,20 @@ Features:
   (Julius Türich and joonlabs)
 - use phpseclib for all crypto (symmetric, RSA-1.5, RSA signatures,
   X.509); OpenSSL extension is now optional
+- Add enableLegacyMode() on XMLSecurityDSig and XMLSecEnc: one call restores
+  pre-4.0 interoperability defaults (accept DOCTYPE, allow XPath transforms
+  without count caps, allow RSA-1.5 key transport). Does not undo always-on
+  cryptographic hardening (algorithm/key binding, uniform decrypt errors,
+  hash_equals, decrypted-XML DOCTYPE rejection, etc.). Temporary migration aid.
 
-12, Dec 2026, 3.1.5
+Notes:
+- Prefer RSA-OAEP and AES-GCM for new deployments; RSA-1.5 and CBC remain
+  for legacy XML Encryption interoperability
+- Always check verify() === 1; use getValidatedNodes() for SAML/WS-Security
+- Do not trust KeyInfo certificates alone — pin or validate against a trust store
+- Prefer secure defaults; use enableLegacyMode() only while migrating peers
+
+12, Dec 2025, 3.1.5
 Security:
 - Validate AES-GCM Authentication Tag (Sideni)
 

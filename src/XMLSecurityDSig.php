@@ -63,6 +63,35 @@ class XMLSecurityDSig
     const EXC_C14N = 'http://www.w3.org/2001/10/xml-exc-c14n#';
     const EXC_C14N_COMMENTS = 'http://www.w3.org/2001/10/xml-exc-c14n#WithComments';
 
+    /** Default maximum XPath transforms allowed per Reference (DoS protection). */
+    const MAX_XPATH_TRANSFORMS = 5;
+
+    /** Default maximum namespaces allowed on a single XPath transform (DoS protection). */
+    const MAX_XPATH_NAMESPACES = 20;
+
+    /**
+     * Safe-by-default SignatureMethod allowlist applied by verifyDocument().
+     * SHA-1 based signatures (rsa-sha1, dsa-sha1, hmac-sha1) are intentionally
+     * excluded; callers that must interoperate with legacy peers can opt in by
+     * populating $allowedSignatureAlgorithms explicitly.
+     */
+    const DEFAULT_SIGNATURE_ALGORITHMS = array(
+        XMLSecurityKey::RSA_SHA256,
+        XMLSecurityKey::RSA_SHA384,
+        XMLSecurityKey::RSA_SHA512,
+        XMLSecurityKey::RSA_SHA256_MGF1,
+    );
+
+    /**
+     * Safe-by-default DigestMethod allowlist applied by verifyDocument().
+     * SHA-1 and RIPEMD-160 are intentionally excluded.
+     */
+    const DEFAULT_DIGEST_ALGORITHMS = array(
+        self::SHA256,
+        self::SHA384,
+        self::SHA512,
+    );
+
     const template = '<ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
   <ds:SignedInfo>
     <ds:SignatureMethod />
@@ -83,6 +112,79 @@ class XMLSecurityDSig
 
     /** @var array */
     public $idNS = array();
+
+    /**
+     * Maximum XPath transforms allowed per Reference (DoS protection).
+     * Defaults to MAX_XPATH_TRANSFORMS; override for stricter or more relaxed limits.
+     * @var int
+     */
+    public $maxXPathTransforms = self::MAX_XPATH_TRANSFORMS;
+
+    /**
+     * Maximum namespaces allowed on a single XPath transform (DoS protection).
+     * Defaults to MAX_XPATH_NAMESPACES; override for stricter or more relaxed limits.
+     * @var int
+     */
+    public $maxXPathNamespaces = self::MAX_XPATH_NAMESPACES;
+
+    /**
+     * Allow XPath (REC-xpath-19991116) Transforms while verifying references.
+     *
+     * The XPath Filtering Transform evaluates an arbitrary, document-supplied
+     * XPath expression during validateReference() -- before any signature
+     * cryptography runs. The expression is an arbitrary XPath by design, so it 
+     * cannot be sanitized without breaking the feature.
+     * The maxXPath* caps only bound the count, not the cost of a single expression.
+     *
+     * SAML and WS-Security do not use XPath transforms, so this defaults to
+     * false (reject them on the verification path). Set to true only if you
+     * must verify signatures that legitimately rely on XPath transforms and you
+     * trust the document source. Signing is unaffected (the transforms are
+     * caller-supplied, not attacker-controlled).
+     *
+     * @var bool
+     */
+    public $allowXPathTransforms = false;
+
+    /**
+     * Allowlist of acceptable SignatureMethod algorithm URIs.
+     *
+     * When null (the default), the low-level verify() primitive imposes no
+     * restriction, preserving backward compatibility. verifyDocument() applies
+     * DEFAULT_SIGNATURE_ALGORITHMS when this is null. Set explicitly (e.g.
+     * add XMLSecurityKey::RSA_SHA1) to widen or narrow the accepted set.
+     *
+     * @var array|null
+     */
+    public $allowedSignatureAlgorithms = null;
+
+    /**
+     * Allowlist of acceptable Reference DigestMethod algorithm URIs.
+     *
+     * When null (the default), no restriction is imposed by the low-level
+     * primitives. verifyDocument() applies DEFAULT_DIGEST_ALGORITHMS when null.
+     *
+     * @var array|null
+     */
+    public $allowedDigestAlgorithms = null;
+
+    /**
+     * Reject documents that carry a DOCTYPE when locating a Signature.
+     *
+     * A DOCTYPE has no legitimate role in a signed XML document, but it enables
+     * a class of signature-verification bypasses: entity references in ID
+     * attributes (e.g. Id="&e;") are resolved by getAttribute() yet are
+     * invisible to the XPath "//*[@Id=...]" reference lookup, due to a libxml2
+     * hashing bug (same root cause as CVE-2025-23369). The signature then
+     * validates against one node while the application reads another. Rejecting
+     * any DOCTYPE closes this vector (and entity-expansion DoS) outright.
+     *
+     * Defaults to true (secure). Set to false ONLY if you fully trust the
+     * document source and require DTD support.
+     *
+     * @var bool
+     */
+    public $forbidDoctype = true;
 
     /** @var string|null */
     private $signedInfo = null;
@@ -123,6 +225,29 @@ class XMLSecurityDSig
     }
 
     /**
+     * Restore pre-4.0 interoperability defaults for signature verification.
+     *
+     * Use this only when you must accept documents/peers that rely on
+     * behaviours 4.0 rejects by default (DOCTYPE, XPath Filtering Transforms,
+     * uncapped XPath transform counts). Prefer migrating peers and then
+     * removing the call.
+     *
+     * This does NOT weaken cryptographic checks that are always enforced in
+     * 4.0 (SignatureMethod/key algorithm binding, hash_equals compares,
+     * fail-closed Reference handling, unknown C14N rejection).
+     *
+     * @return $this
+     */
+    public function enableLegacyMode()
+    {
+        $this->forbidDoctype = false;
+        $this->allowXPathTransforms = true;
+        $this->maxXPathTransforms = PHP_INT_MAX;
+        $this->maxXPathNamespaces = PHP_INT_MAX;
+        return $this;
+    }
+
+    /**
      * Reset the XPathObj to null
      */
     private function resetXPathObj()
@@ -154,7 +279,7 @@ class XMLSecurityDSig
      */
     public static function generateGUID($prefix='pfx')
     {
-        $uuid = md5(uniqid(mt_rand(), true));
+        $uuid = bin2hex(random_bytes(16));
         $guid = $prefix.substr($uuid, 0, 8)."-".
                 substr($uuid, 8, 4)."-".
                 substr($uuid, 12, 4)."-".
@@ -190,6 +315,9 @@ class XMLSecurityDSig
             $doc = $objDoc->ownerDocument;
         }
         if ($doc) {
+            if ($this->forbidDoctype && $doc->doctype !== null) {
+                throw new Exception('A DOCTYPE is not allowed in a document being verified');
+            }
             $xpath = new DOMXPath($doc);
             $xpath->registerNamespace('secdsig', self::XMLDSIGNS);
             $query = ".//secdsig:Signature";
@@ -278,6 +406,8 @@ class XMLSecurityDSig
                 $exclusive = true;
                 $withComments = true;
                 break;
+            default:
+                throw new Exception('Invalid CanonicalizationMethod: '.$canonicalmethod);
         }
 
         if (is_null($arXPath) && ($node instanceof DOMNode) && ($node->ownerDocument !== null) && $node->isSameNode($node->ownerDocument->documentElement)) {
@@ -389,10 +519,14 @@ class XMLSecurityDSig
         $xpath->registerNamespace('secdsig', self::XMLDSIGNS);
         $query = 'string(./secdsig:DigestMethod/@Algorithm)';
         $digestAlgorithm = $xpath->evaluate($query, $refNode);
+        if ($this->allowedDigestAlgorithms !== null
+            && ! in_array($digestAlgorithm, $this->allowedDigestAlgorithms, true)) {
+            throw new Exception("DigestMethod algorithm is not allowed: '$digestAlgorithm'");
+        }
         $digValue = $this->calculateDigest($digestAlgorithm, $data, false);
         $query = 'string(./secdsig:DigestValue)';
         $digestValue = $xpath->evaluate($query, $refNode);
-        return ($digValue === base64_decode($digestValue));
+        return ($digValue !== false && hash_equals($digValue, base64_decode($digestValue)));
     }
 
     /**
@@ -400,8 +534,9 @@ class XMLSecurityDSig
      * @param DOMNode $objData
      * @param bool $includeCommentNodes
      * @return string
+     * @throws Exception
      */
-    public function processTransforms($refNode, $objData, $includeCommentNodes = true)
+    public function processTransforms($refNode, $objData, $includeCommentNodes = true, $signing = false)
     {
         $data = $objData;
         $xpath = new DOMXPath($refNode->ownerDocument);
@@ -411,6 +546,7 @@ class XMLSecurityDSig
         $canonicalMethod = 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315';
         $arXPath = null;
         $prefixList = null;
+        $xpathTransformCount = 0;
         foreach ($nodelist AS $transform) {
             $algorithm = $transform->getAttribute("Algorithm");
             switch ($algorithm) {
@@ -460,6 +596,23 @@ class XMLSecurityDSig
 
                     break;
                 case 'http://www.w3.org/TR/1999/REC-xpath-19991116':
+                    /*
+                     * Reject attacker-controlled XPath transforms on the
+                     * verification path unless explicitly allowed. Signing uses
+                     * caller-supplied transforms and is always permitted.
+                     */
+                    if (! $signing && ! $this->allowXPathTransforms) {
+                        throw new Exception(
+                            'XPath Transforms are not allowed during verification; set '
+                            . 'XMLSecurityDSig::$allowXPathTransforms = true to enable them'
+                        );
+                    }
+                    $xpathTransformCount++;
+                    if ($xpathTransformCount > $this->maxXPathTransforms) {
+                        throw new Exception(
+                            'Too many XPath Transformations found ('.$nodelist->length.') with a max allowed of '.$this->maxXPathTransforms
+                        );
+                    }
                     $node = $transform->firstChild;
                     while ($node) {
                         if ($node->localName == 'XPath') {
@@ -468,9 +621,16 @@ class XMLSecurityDSig
                             $arXPath['namespaces'] = array();
                             $nslist = $xpath->query('./namespace::*', $node);
                             foreach ($nslist AS $nsnode) {
-                                if ($nsnode->localName != "xml") {
+                                /* Exclude xml and the default xmlns (empty prefix). */
+                                if ($nsnode->localName != "xml" && $nsnode->localName !== '' && $nsnode->localName !== 'xmlns') {
                                     $arXPath['namespaces'][$nsnode->localName] = $nsnode->nodeValue;
                                 }
+                            }
+                            $nsCount = count($arXPath['namespaces']);
+                            if ($nsCount > $this->maxXPathNamespaces) {
+                                throw new Exception(
+                                    'Too many namespaces in XPath Transformation found ('.$nsCount.')  with a max allowed of '.$this->maxXPathNamespaces
+                                );
                             }
                             break;
                         }
@@ -488,10 +648,12 @@ class XMLSecurityDSig
     /**
      * @param DOMNode $refNode
      * @return bool
+     * @throws Exception
      */
     public function processRefNode($refNode)
     {
         $dataObject = null;
+        $identifier = null;
 
         /*
          * Depending on the URI, we may not want to include comments in the result
@@ -501,32 +663,40 @@ class XMLSecurityDSig
 
         if ($uri = $refNode->getAttribute("URI")) {
             $arUrl = parse_url($uri);
-            if (empty($arUrl['path'])) {
-                if ($identifier = $arUrl['fragment']) {
+            if (! empty($arUrl['path']) || ! empty($arUrl['host']) || ! empty($arUrl['scheme'])) {
+                throw new Exception('Reference URI must be a same-document reference');
+            }
+            if ($identifier = $arUrl['fragment'] ?? null) {
 
-                    /* This reference identifies a node with the given id by using
-                     * a URI on the form "#identifier". This should not include comments.
-                     */
-                    $includeCommentNodes = false;
+                /* This reference identifies a node with the given id by using
+                 * a URI on the form "#identifier". This should not include comments.
+                 */
+                $includeCommentNodes = false;
 
-                    $xPath = new DOMXPath($refNode->ownerDocument);
-                    if ($this->idNS && is_array($this->idNS)) {
-                        foreach ($this->idNS as $nspf => $ns) {
-                            $xPath->registerNamespace($nspf, $ns);
-                        }
+                $xPath = new DOMXPath($refNode->ownerDocument);
+                if ($this->idNS && is_array($this->idNS)) {
+                    foreach ($this->idNS as $nspf => $ns) {
+                        $xPath->registerNamespace($nspf, $ns);
                     }
-                    $iDlist = '@Id="'.XPath::filterAttrValue($identifier, XPath::DOUBLE_QUOTE).'"';
-                    if (is_array($this->idKeys)) {
-                        foreach ($this->idKeys as $idKey) {
-                            $iDlist .= " or @".XPath::filterAttrName($idKey).'="'.
-                                XPath::filterAttrValue($identifier, XPath::DOUBLE_QUOTE).'"';
-                        }
-                    }
-                    $query = '//*['.$iDlist.']';
-                    $dataObject = $xPath->query($query)->item(0);
-                } else {
-                    $dataObject = $refNode->ownerDocument;
                 }
+                $iDlist = '@Id="'.XPath::filterAttrValue($identifier, XPath::DOUBLE_QUOTE).'"';
+                if (is_array($this->idKeys)) {
+                    foreach ($this->idKeys as $idKey) {
+                        $iDlist .= " or @".XPath::filterAttrName($idKey).'="'.
+                            XPath::filterAttrValue($identifier, XPath::DOUBLE_QUOTE).'"';
+                    }
+                }
+                $query = '//*['.$iDlist.']';
+                $nodeset = $xPath->query($query);
+                if ($nodeset->length === 0) {
+                    throw new Exception('Reference URI does not identify a node');
+                }
+                if ($nodeset->length > 1) {
+                    throw new Exception('Reference URI identifies multiple nodes');
+                }
+                $dataObject = $nodeset->item(0);
+            } else {
+                $dataObject = $refNode->ownerDocument;
             }
         } else {
             /* This reference identifies the root node with an empty URI. This should
@@ -536,18 +706,21 @@ class XMLSecurityDSig
 
             $dataObject = $refNode->ownerDocument;
         }
+
+        if (! $dataObject instanceof DOMNode) {
+            throw new Exception('Reference URI could not be resolved');
+        }
+
         $data = $this->processTransforms($refNode, $dataObject, $includeCommentNodes);
         if (!$this->validateDigest($refNode, $data)) {
             return false;
         }
 
-        if ($dataObject instanceof DOMNode) {
-            /* Add this node to the list of validated nodes. */
-            if (! empty($identifier)) {
-                $this->validatedNodes[$identifier] = $dataObject;
-            } else {
-                $this->validatedNodes[] = $dataObject;
-            }
+        /* Add this node to the list of validated nodes. */
+        if (! empty($identifier)) {
+            $this->validatedNodes[$identifier] = $dataObject;
+        } else {
+            $this->validatedNodes[] = $dataObject;
         }
 
         return true;
@@ -695,7 +868,7 @@ class XMLSecurityDSig
             $transNode->setAttribute('Algorithm', $this->canonicalMethod);
         }
 
-        $canonicalData = $this->processTransforms($refNode, $node);
+        $canonicalData = $this->processTransforms($refNode, $node, true, true);
         $digValue = $this->calculateDigest($algorithm, $canonicalData);
 
         $digestMethod = $this->createNewSignNode('DigestMethod');
@@ -819,12 +992,93 @@ class XMLSecurityDSig
         $doc = $this->sigNode->ownerDocument;
         $xpath = new DOMXPath($doc);
         $xpath->registerNamespace('secdsig', self::XMLDSIGNS);
+
+        $query = "string(./secdsig:SignedInfo/secdsig:SignatureMethod/@Algorithm)";
+        $sigMethod = $xpath->evaluate($query, $this->sigNode);
+
+        /*
+         * Always bind the document's declared SignatureMethod to the algorithm
+         * of the caller-supplied key. The key's algorithm is fixed by the
+         * caller -- or, in the locateKey() flow, derived from the same document
+         * -- so a mismatch always signals tampering.
+         */
+        if ($objKey->type !== $sigMethod) {
+            throw new Exception('SignatureMethod algorithm does not match the supplied key type');
+        }
+
+        if ($this->allowedSignatureAlgorithms !== null
+            && ! in_array($sigMethod, $this->allowedSignatureAlgorithms, true)) {
+            throw new Exception("SignatureMethod algorithm is not allowed: '$sigMethod'");
+        }
+
         $query = "string(./secdsig:SignatureValue)";
         $sigValue = $xpath->evaluate($query, $this->sigNode);
         if (empty($sigValue)) {
             throw new Exception("Unable to locate SignatureValue");
         }
         return $objKey->verifySignature($this->signedInfo, base64_decode($sigValue));
+    }
+
+    /**
+     * Safe, high-level XML signature verification.
+     *
+     * This is the recommended entry point for relying parties (SAML,
+     * WS-Security, etc.). Unlike the low-level primitives, it is safe by
+     * default:
+     *
+     *  - The verification key MUST be supplied by the caller (a pinned key or
+     *    trust anchor). The key is NEVER derived from the document's KeyInfo,
+     *    so an attacker cannot both supply the message and the key that
+     *    verifies it.
+     *  - Both the SignatureMethod and every Reference DigestMethod are checked
+     *    against an algorithm allowlist. Strong defaults
+     *    (DEFAULT_SIGNATURE_ALGORITHMS / DEFAULT_DIGEST_ALGORITHMS) are applied
+     *    unless the caller has populated $allowedSignatureAlgorithms /
+     *    $allowedDigestAlgorithms explicitly.
+     *  - Success is only reported when the SignedInfo signature is valid AND
+     *    every Reference digest validated. The set of validated nodes is
+     *    returned so callers never have to re-query the document (which would
+     *    reintroduce XML Signature Wrapping).
+     *
+     * @param XMLSecurityKey       $objKey Trusted/pinned verification key.
+     * @param DOMDocument|DOMNode  $objDoc Document (or node) to verify.
+     * @param int                  $pos    Which Signature element to verify (default: first).
+     * @return array Associative array of validated nodes (id => node). Never empty on success.
+     * @throws Exception on any verification failure.
+     */
+    public function verifyDocument($objKey, $objDoc, $pos = 0)
+    {
+        if (! $objKey instanceof XMLSecurityKey) {
+            throw new Exception('A trusted key must be supplied to verifyDocument()');
+        }
+
+        if ($this->allowedSignatureAlgorithms === null) {
+            $this->allowedSignatureAlgorithms = self::DEFAULT_SIGNATURE_ALGORITHMS;
+        }
+        if ($this->allowedDigestAlgorithms === null) {
+            $this->allowedDigestAlgorithms = self::DEFAULT_DIGEST_ALGORITHMS;
+        }
+
+        $this->resetXPathObj();
+        if (! $this->locateSignature($objDoc, $pos)) {
+            throw new Exception('Cannot locate Signature Node');
+        }
+        if ($this->canonicalizeSignedInfo() === null) {
+            throw new Exception('Cannot canonicalize SignedInfo');
+        }
+
+        /* Throws on any unresolved/failed/duplicate reference (fail closed). */
+        $this->validateReference();
+
+        if ($this->verify($objKey) !== 1) {
+            throw new Exception('Signature validation failed');
+        }
+
+        $validatedNodes = $this->getValidatedNodes();
+        if (empty($validatedNodes)) {
+            throw new Exception('Signature verified but no signed nodes were validated');
+        }
+        return $validatedNodes;
     }
 
     /**
@@ -967,6 +1221,110 @@ class XMLSecurityDSig
     }
 
     /**
+     * Fetch a certificate from a URL with SSRF protections.
+     *
+     * Only http/https are permitted by default; file:// must be explicitly
+     * enabled via $options['allow_file_scheme']. For http/https the host is
+     * resolved and every resulting IP address is validated to be public
+     * (rejecting loopback, private, link-local, reserved and CGNAT ranges),
+     * and HTTP redirects are disabled so a public URL cannot bounce to an
+     * internal one.
+     *
+     * @param string $url
+     * @param null|array $options
+     * @return string
+     * @throws Exception
+     */
+    private static function fetchCertFromURL($url, $options = null)
+    {
+        $allowFile = is_array($options) && ! empty($options['allow_file_scheme']);
+        $parts = parse_url($url);
+        if ($parts === false || empty($parts['scheme'])) {
+            throw new Exception('Invalid certificate URL');
+        }
+        $scheme = strtolower($parts['scheme']);
+
+        if ($scheme === 'file') {
+            if (! $allowFile) {
+                throw new Exception('file:// certificate URLs are disabled');
+            }
+            $data = file_get_contents($url);
+            if ($data === false) {
+                throw new Exception('Unable to load certificate from URL');
+            }
+            return $data;
+        }
+
+        if ($scheme !== 'http' && $scheme !== 'https') {
+            throw new Exception('Unsupported certificate URL scheme');
+        }
+
+        $host = isset($parts['host']) ? trim($parts['host'], '[]') : '';
+        if ($host === '') {
+            throw new Exception('Certificate URL host is not allowed');
+        }
+        self::assertPublicHost($host);
+
+        $streamOpts = array('follow_location' => 0, 'max_redirects' => 0, 'timeout' => 10);
+        $context = stream_context_create(array('http' => $streamOpts, 'https' => $streamOpts));
+        $data = file_get_contents($url, false, $context);
+        if ($data === false) {
+            throw new Exception('Unable to load certificate from URL');
+        }
+        return $data;
+    }
+
+    /**
+     * Ensure a host resolves only to public IP addresses (SSRF guard).
+     *
+     * @param string $host Hostname or IP literal (IPv6 without brackets).
+     * @throws Exception when the host cannot be resolved or maps to a
+     *                   non-public address.
+     */
+    private static function assertPublicHost($host)
+    {
+        $ips = array();
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            $ips[] = $host;
+        } else {
+            $records = @dns_get_record($host, DNS_A | DNS_AAAA);
+            if (is_array($records)) {
+                foreach ($records as $record) {
+                    if (! empty($record['ip'])) {
+                        $ips[] = $record['ip'];
+                    }
+                    if (! empty($record['ipv6'])) {
+                        $ips[] = $record['ipv6'];
+                    }
+                }
+            }
+            if (empty($ips)) {
+                $resolved = gethostbyname($host);
+                if ($resolved !== $host) {
+                    $ips[] = $resolved;
+                }
+            }
+        }
+
+        if (empty($ips)) {
+            throw new Exception('Unable to resolve certificate URL host');
+        }
+
+        foreach ($ips as $ip) {
+            if (! filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+                throw new Exception('Certificate URL host is not allowed');
+            }
+            /* PHP's reserved-range flag misses CGNAT (100.64.0.0/10). */
+            if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_IPV4)) {
+                $long = ip2long($ip);
+                if ($long !== false && ($long & 0xffc00000) === (ip2long('100.64.0.0') & 0xffc00000)) {
+                    throw new Exception('Certificate URL host is not allowed');
+                }
+            }
+        }
+    }
+
+    /**
      * @param DOMElement $parentRef
      * @param string $cert
      * @param bool $isPEMFormat
@@ -978,7 +1336,7 @@ class XMLSecurityDSig
     public static function staticAdd509Cert($parentRef, $cert, $isPEMFormat=true, $isURL=false, $xpath=null, $options=null)
     {
         if ($isURL) {
-            $cert = file_get_contents($cert);
+            $cert = self::fetchCertFromURL($cert, $options);
         }
         if (! $parentRef instanceof DOMElement) {
             throw new Exception('Invalid parent Node parameter');

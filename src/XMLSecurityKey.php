@@ -66,10 +66,18 @@ class XMLSecurityKey
     const RSA_SHA256 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256';
     const RSA_SHA384 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha384';
     const RSA_SHA512 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha512';
-    const ECDSA_SHA256 = 'http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256';
     const HMAC_SHA1 = 'http://www.w3.org/2000/09/xmldsig#hmac-sha1';
     const RSA_SHA256_MGF1 = 'http://www.w3.org/2007/05/xmldsig-more#sha256-rsa-MGF1';
     const AUTHTAG_LENGTH = 16;
+
+    /**
+     * Generic decryption failure message.
+     *
+     * All decryption failures (bad padding, wrong key, cipher error, failed
+     * RSA unwrap) must surface the same message so callers cannot build a
+     * padding / ciphertext-validity oracle from distinguishable errors.
+     */
+    const DECRYPTION_FAILURE = 'Failure decrypting Data';
 
     /** @var array */
     private $cryptParams = array();
@@ -251,17 +259,6 @@ class XMLSecurityKey
                     }
                 }
                 throw new Exception('Certificate "type" (private/public) must be passed via parameters');
-            case (self::ECDSA_SHA256):
-                $this->cryptParams['library'] = 'phpseclib';
-                $this->cryptParams['method'] = 'http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256';
-                $this->cryptParams['digest'] = 'SHA256';
-                if (is_array($params) && ! empty($params['type'])) {
-                    if ($params['type'] == 'public' || $params['type'] == 'private') {
-                        $this->cryptParams['type'] = $params['type'];
-                        break;
-                    }
-                }
-                throw new Exception('Certificate "type" (private/public) must be passed via parameters');
             case (self::RSA_SHA384):
                 $this->cryptParams['library'] = 'phpseclib';
                 $this->cryptParams['method'] = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha384';
@@ -406,6 +403,23 @@ class XMLSecurityKey
         } else {
             $this->key = $key;
         }
+
+        /*
+         * Prevent signature key/algorithm confusion: an HMAC (shared-secret)
+         * key must never be created from asymmetric public material such as an
+         * X.509 certificate or a PEM public key. Otherwise an attacker who can
+         * choose the SignatureMethod (e.g. downgrading rsa-sha1 to hmac-sha1)
+         * can forge signatures using the public certificate as the HMAC secret.
+         */
+        if (($this->cryptParams['library'] ?? null) === self::HMAC_SHA1) {
+            if ($isCert) {
+                throw new Exception('An X.509 certificate cannot be used as an HMAC key');
+            }
+            if (is_string($this->key) && strpos($this->key, '-----BEGIN') !== false) {
+                throw new Exception('Asymmetric key material cannot be used as an HMAC key');
+            }
+        }
+
         if ($isCert) {
             $x509 = new X509();
             $certData = $x509->loadX509($this->key);
@@ -423,9 +437,11 @@ class XMLSecurityKey
             $this->x509Certificate = null;
         }
         if (($this->cryptParams['type'] ?? null) === 'symmetric') {
-            if (strlen($this->key) < $this->cryptParams['keysize']) {
-                throw new Exception('Key must contain at least '.$this->cryptParams['keysize'].' characters for this cipher, contains '.strlen($this->key));
+            $keysize = $this->cryptParams['keysize'];
+            if (strlen($this->key) < $keysize) {
+                throw new Exception('Key must contain at least '.$keysize.' characters for this cipher, contains '.strlen($this->key));
             }
+            /* Overlong keys (e.g. RSA-unwrapped session keys) are truncated at use time. */
         }
     }
 
@@ -452,12 +468,37 @@ class XMLSecurityKey
      *
      * @param string $data
      * @return string
+     * @throws Exception
      */
     private function unpadISO10126($data)
     {
-        $padChr = substr($data, -1);
-        $padLen = ord($padChr);
+        $len = strlen($data);
+        if ($len === 0) {
+            /*
+             * Use a single, generic error for every decryption failure. Do not
+             * reveal whether the padding (as opposed to the ciphertext) was the
+             * cause: distinguishable padding errors turn unauthenticated CBC
+             * decryption into a padding oracle (plaintext recovery).
+             */
+            throw new Exception(self::DECRYPTION_FAILURE);
+        }
+        $padLen = ord($data[$len - 1]);
+        $blockSize = $this->cryptParams['blocksize'] ?? 16;
+        if ($padLen < 1 || $padLen > $blockSize || $padLen > $len) {
+            throw new Exception(self::DECRYPTION_FAILURE);
+        }
         return substr($data, 0, -$padLen);
+    }
+
+    /**
+     * Whether this key represents a symmetric (data-encryption) cipher rather
+     * than an asymmetric (key-transport) algorithm.
+     *
+     * @return bool
+     */
+    public function isSymmetricCipher()
+    {
+        return ($this->cryptParams['type'] ?? null) === 'symmetric';
     }
 
     /**
@@ -474,7 +515,7 @@ class XMLSecurityKey
         } else {
             throw new Exception('Unknown symmetric cipher');
         }
-        /* Match OpenSSL behaviour: truncate overlong keys to the algorithm size. */
+        /* Truncate overlong keys to the algorithm size (legacy RSA-unwrapped keys). */
         $key = $this->key;
         if (isset($this->cryptParams['keysize']) && strlen($key) > $this->cryptParams['keysize']) {
             $key = substr($key, 0, $this->cryptParams['keysize']);
@@ -532,7 +573,7 @@ class XMLSecurityKey
             $offset = 0 - self::AUTHTAG_LENGTH;
             $authTag = substr($data, $offset);
             if (strlen($authTag) !== self::AUTHTAG_LENGTH) {
-                throw new Exception('Authentication tag length is invalid');
+                throw new Exception(self::DECRYPTION_FAILURE);
             }
             $data = substr($data, 0, $offset);
             $cipher->setNonce($this->iv);
@@ -545,7 +586,7 @@ class XMLSecurityKey
         }
 
         if ($decrypted === false) {
-            throw new Exception('Failure decrypting Data (phpseclib symmetric)');
+            throw new Exception(self::DECRYPTION_FAILURE);
         }
         return null !== $authTag ? $decrypted : $this->unpadISO10126($decrypted);
     }
@@ -588,7 +629,11 @@ class XMLSecurityKey
                 return $this->encryptSymmetric($data);
             case 'public':
                 $public = PublicKeyLoader::load($this->key);
-                return $this->configureRSAKey($public)->encrypt($data);
+                $encrypted = $this->configureRSAKey($public)->encrypt($data);
+                if ($encrypted === false) {
+                    throw new Exception('Failure encrypting Data (phpseclib)');
+                }
+                return $encrypted;
             case 'private':
                 throw new Exception('Encrypting with a private key is not supported');
         }
@@ -614,7 +659,11 @@ class XMLSecurityKey
             case 'private':
                 $passphrase = $this->passphrase !== '' ? $this->passphrase : false;
                 $private = PublicKeyLoader::load($this->key, $passphrase);
-                return $this->configureRSAKey($private)->decrypt($data);
+                $decrypted = $this->configureRSAKey($private)->decrypt($data);
+                if ($decrypted === false) {
+                    throw new Exception(self::DECRYPTION_FAILURE);
+                }
+                return $decrypted;
         }
     }
 
@@ -623,6 +672,7 @@ class XMLSecurityKey
      *
      * @param string $data
      * @return mixed|string
+     * @throws Exception
      */
     public function signData($data)
     {
@@ -630,13 +680,11 @@ class XMLSecurityKey
             case 'phpseclib':
                 $passphrase = $this->passphrase !== '' ? $this->passphrase : false;
                 $private = PublicKeyLoader::load($this->key, $passphrase);
-                if ($this->type === self::ECDSA_SHA256) {
-                    return $private
-                        ->withHash($this->cryptParams['digest'])
-                        ->withSignatureFormat('IEEE')
-                        ->sign($data);
+                $signature = $this->configureRSAKey($private)->sign($data);
+                if ($signature === false) {
+                    throw new Exception('Failure Signing Data');
                 }
-                return $this->configureRSAKey($private)->sign($data);
+                return $signature;
             case (self::HMAC_SHA1):
                 return hash_hmac("sha1", $data, $this->key, true);
         }
@@ -656,7 +704,7 @@ class XMLSecurityKey
      *
      * @param string $data
      * @param string $signature
-     * @return bool|int
+     * @return int
      */
     public function verifySignature($data, $signature)
     {
@@ -664,22 +712,21 @@ class XMLSecurityKey
             case 'phpseclib':
                 try {
                     $public = PublicKeyLoader::load($this->key);
-                    if ($this->type === self::ECDSA_SHA256) {
-                        $result = $public
-                            ->withHash($this->cryptParams['digest'])
-                            ->withSignatureFormat('IEEE')
-                            ->verify($data, $signature);
-                        return $result === true ? 1 : 0;
-                    }
                     $result = $this->configureRSAKey($public)->verify($data, $signature);
                     return $result === true ? 1 : 0;
                 } catch (Exception $e) {
                     return -1;
                 }
             case (self::HMAC_SHA1):
+                /* Defense in depth against key/algorithm confusion: refuse to
+                 * HMAC with asymmetric public material (see loadKey()). */
+                if (is_string($this->key) && strpos($this->key, '-----BEGIN') !== false) {
+                    return -1;
+                }
                 $expectedSignature = hash_hmac("sha1", $data, $this->key, true);
-                return strcmp($signature, $expectedSignature) == 0;
+                return hash_equals($expectedSignature, $signature) ? 1 : 0;
         }
+        return -1;
     }
 
     /**
@@ -804,17 +851,18 @@ class XMLSecurityKey
      *
      * @return XMLSecurityKey The new key.
      */
-    public static function fromEncryptedKeyElement(DOMElement $element)
+    public static function fromEncryptedKeyElement(DOMElement $element, $depth = 0, $allowRSA15 = false)
     {
 
         $objenc = new XMLSecEnc();
+        $objenc->allowRSA15KeyTransport = $allowRSA15;
         $objenc->setNode($element);
         if (! $objKey = $objenc->locateKey()) {
             throw new Exception("Unable to locate algorithm for this Encrypted Key");
         }
         $objKey->isEncrypted = true;
         $objKey->encryptedCtx = $objenc;
-        XMLSecEnc::staticLocateKeyInfo($objKey, $element);
+        XMLSecEnc::staticLocateKeyInfo($objKey, $element, $depth, $allowRSA15);
         return $objKey;
     }
 
