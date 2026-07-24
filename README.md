@@ -34,6 +34,43 @@ xmlseclibs requires PHP version 8.0 or greater. OpenSSL is optional (phpseclib i
 
 * **Legacy interoperability (temporary):** if you must accept documents/peers that rely on pre-4.0 behaviour, call `$objDSig->enableLegacyMode()` and/or `$objenc->enableLegacyMode()` once after construction. That restores the interoperability settings in one place (DOCTYPE allowed on verify, XPath transforms allowed without count caps, RSA-1.5 key transport allowed). It does **not** undo always-on hardening such as SignatureMethod/key binding, uniform decryption errors, or DOCTYPE rejection in *decrypted* XML. Prefer migrating peers and removing the call.
 
+## Breaking changes (3.1 → 4.0)
+
+### Platform
+- **PHP 8.0+ required** (was 5.4+)
+- **`phpseclib/phpseclib` ~3.0 required**; `ext-openssl` is now optional
+
+### Signature verification
+- **DOCTYPE rejected by default** during verification (`locateSignature` / `verifyDocument`). Opt out: `$dsig->forbidDoctype = false` or `enableLegacyMode()`
+- **XPath Filtering Transforms rejected by default** on verify. Opt in: `$dsig->allowXPathTransforms = true` or `enableLegacyMode()`. Signing unchanged
+- **XPath caps** when enabled: max 5 transforms / 20 namespaces per transform (`$maxXPathTransforms` / `$maxXPathNamespaces`; raised by `enableLegacyMode()`)
+- **`verify()` always requires SignatureMethod === key algorithm**; mismatch throws (not restored by legacy mode)
+- **HMAC keys cannot be loaded from certs/PEM**
+- **References fail closed**: unresolved, external, or duplicate-Id URIs throw; same-document only
+- **Unknown CanonicalizationMethod rejected**
+- **HMAC verify returns `1`/`0`** — always check `=== 1`
+
+### Encryption / decryption
+- **RSA-1.5 key transport denied by default**. Opt in: `$enc->allowRSA15KeyTransport = true` or `enableLegacyMode()`
+- **Single decrypt error message**: `Failure decrypting Data` (do not branch on exception text)
+- **DOCTYPE rejected in decrypted XML** (not restored by legacy mode)
+- **EncryptedKey/RetrievalMethod depth capped**
+- **ISO 10126 pad length validated** on CBC decrypt
+
+### Certificate URL fetch (`add509Cert`)
+- Only `http`/`https` by default; `file://` needs `['allow_file_scheme' => true]`
+- Private/loopback/link-local/reserved/CGNAT targets rejected; redirects disabled
+
+### API signature changes (defaults preserve most callers)
+- `processTransforms(..., $signing = false)`
+- `staticLocateKeyInfo(..., $depth = 0, $allowRSA15 = false)`
+- `fromEncryptedKeyElement(..., $depth = 0, $allowRSA15 = false)`
+
+### Legacy mode
+`$dsig->enableLegacyMode()` / `$enc->enableLegacyMode()` restores **DOCTYPE (verify), XPath transforms + uncapped limits, and RSA-1.5** only. It does **not** undo algorithm/key binding, uniform decrypt errors, decrypted-XML DOCTYPE rejection, Reference fail-closed behavior, SSRF rules, or the PHP/phpseclib requirements.
+
+**Migration tip:** Prefer `verifyDocument()` with a pinned key. Use legacy mode only while updating peers.
+
 ### Verifying a signature (recommended)
 
 ```php
