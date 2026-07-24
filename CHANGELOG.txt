@@ -1,6 +1,6 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
-??, ??? ????, 4.0.0
+24, Jul 2026, 4.0.0-beta1
 Security Improvements:
 - Harden add509Cert() URL fetching against SSRF: only http/https by default
   (file:// requires options['allow_file_scheme']); resolve the host and reject
@@ -73,7 +73,7 @@ Notes:
 - Do not trust KeyInfo certificates alone — pin or validate against a trust store
 - Prefer secure defaults; use enableLegacyMode() only while migrating peers
 
-12, Dec 2026, 3.1.5
+12, Dec 2025, 3.1.5
 Security:
 - Validate AES-GCM Authentication Tag (Sideni)
 
