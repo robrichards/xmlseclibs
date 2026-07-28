@@ -797,7 +797,7 @@ class XMLSecurityDSig
 
     /**
      * @param DOMNode $sinfoNode
-     * @param DOMDocument $node
+     * @param DOMDocument|DOMElement $node
      * @param string $algorithm
      * @param null|array $arTransforms
      * @param null|array $options
@@ -880,7 +880,7 @@ class XMLSecurityDSig
     }
 
     /**
-     * @param DOMDocument $node
+     * @param DOMDocument|DOMElement $node
      * @param string $algorithm
      * @param null|array $arTransforms
      * @param null|array $options
