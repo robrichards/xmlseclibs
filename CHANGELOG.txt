@@ -75,6 +75,7 @@ Notes:
 
 Improvements:
 - Fix deprecation notice in makeAsnSegment() under PHP 8.5
+- Update parameter type in XMLSecurityDSig::addReference() and addRefInternal()
 
 12, Dec 2025, 3.1.5
 Security:
