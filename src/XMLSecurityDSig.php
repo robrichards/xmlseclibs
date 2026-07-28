@@ -205,12 +205,16 @@ class XMLSecurityDSig
 
     /**
      * @param string $prefix
-     * @param bool $stripWhitespace When true, use a compact signature template with no whitespace
+     * @param null|array $options Optional flags; use 'stripWhitespace' => true for a compact template
      */
-    public function __construct($prefix='ds', $stripWhitespace=false)
+    public function __construct($prefix='ds', $options=null)
     {
+        $stripWhitespace = false;
+        if (is_array($options)) {
+            $stripWhitespace = !isset($options['stripWhitespace']) ? false : (bool) $options['stripWhitespace'];
+        }
         $template = $stripWhitespace ? self::BASE_TEMPLATE_NOWS : self::BASE_TEMPLATE;
-
+        
         if (! empty($prefix)) {
             $this->prefix = $prefix.':';
             $search = array("<S", "</S", "xmlns=");

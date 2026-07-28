@@ -68,9 +68,9 @@ Features:
   cryptographic hardening (algorithm/key binding, uniform decrypt errors,
   hash_equals, decrypted-XML DOCTYPE rejection, etc.). Temporary migration aid.
 - Make transforms element configurable with options array, default true
-- Add optional $stripWhitespace constructor argument on XMLSecurityDSig
-  (default false) to build signatures from a compact template with no
-  whitespace between elements (BASE_TEMPLATE_NOWS)
+- Add optional $options constructor argument on XMLSecurityDSig; pass
+  'stripWhitespace' => true (default false) to build signatures from a
+  compact template with no whitespace between elements (BASE_TEMPLATE_NOWS)
 
 Notes:
 - Prefer RSA-OAEP and AES-GCM for new deployments; RSA-1.5 and CBC remain
