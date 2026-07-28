@@ -757,7 +757,7 @@ class XMLSecurityKey
     {
         switch ($type) {
             case 0x02:
-                if (ord($string) > 0x7f)
+                if (ord($string[0]) > 0x7f)
                     $string = chr(0).$string;
                 break;
             case 0x03:

@@ -225,6 +225,18 @@ class XMLSecurityDSig
     }
 
     /**
+     * Set an Id attribute on the Signature element.
+     *
+     * @param string $id
+     * @return $this
+     */
+    public function setSignatureId($id)
+    {
+        $this->sigNode->setAttribute('Id', $id);
+        return $this;
+    }
+
+    /**
      * Restore pre-4.0 interoperability defaults for signature verification.
      *
      * Use this only when you must accept documents/peers that rely on
@@ -797,7 +809,7 @@ class XMLSecurityDSig
 
     /**
      * @param DOMNode $sinfoNode
-     * @param DOMDocument $node
+     * @param DOMDocument|DOMElement $node
      * @param string $algorithm
      * @param null|array $arTransforms
      * @param null|array $options
@@ -884,7 +896,7 @@ class XMLSecurityDSig
     }
 
     /**
-     * @param DOMDocument $node
+     * @param DOMDocument|DOMElement $node
      * @param string $algorithm
      * @param null|array $arTransforms
      * @param null|array $options
