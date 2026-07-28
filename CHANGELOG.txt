@@ -67,6 +67,7 @@ Features:
   without count caps, allow RSA-1.5 key transport). Does not undo always-on
   cryptographic hardening (algorithm/key binding, uniform decrypt errors,
   hash_equals, decrypted-XML DOCTYPE rejection, etc.). Temporary migration aid.
+- Make transforms element configurable with options array, default true
 
 Notes:
 - Prefer RSA-OAEP and AES-GCM for new deployments; RSA-1.5 and CBC remain
