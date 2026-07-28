@@ -92,17 +92,13 @@ class XMLSecurityDSig
         self::SHA512,
     );
 
-    const template = '<ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
-  <ds:SignedInfo>
-    <ds:SignatureMethod />
-  </ds:SignedInfo>
-</ds:Signature>';
-
     const BASE_TEMPLATE = '<Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
   <SignedInfo>
     <SignatureMethod />
   </SignedInfo>
 </Signature>';
+
+    const BASE_TEMPLATE_NOWS = '<Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><SignatureMethod /></SignedInfo></Signature>';
 
     /** @var DOMElement|null */
     public $sigNode = null;
@@ -209,10 +205,12 @@ class XMLSecurityDSig
 
     /**
      * @param string $prefix
+     * @param bool $stripWhitespace When true, use a compact signature template with no whitespace
      */
-    public function __construct($prefix='ds')
+    public function __construct($prefix='ds', $stripWhitespace=false)
     {
-        $template = self::BASE_TEMPLATE;
+        $template = $stripWhitespace ? self::BASE_TEMPLATE_NOWS : self::BASE_TEMPLATE;
+
         if (! empty($prefix)) {
             $this->prefix = $prefix.':';
             $search = array("<S", "</S", "xmlns=");
