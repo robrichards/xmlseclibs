@@ -73,6 +73,9 @@ Notes:
 - Do not trust KeyInfo certificates alone — pin or validate against a trust store
 - Prefer secure defaults; use enableLegacyMode() only while migrating peers
 
+Improvements:
+- Fix deprecation notice in makeAsnSegment() under PHP 8.5
+
 12, Dec 2025, 3.1.5
 Security:
 - Validate AES-GCM Authentication Tag (Sideni)
