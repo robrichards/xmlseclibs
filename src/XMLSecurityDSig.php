@@ -823,6 +823,7 @@ class XMLSecurityDSig
         $id_name = 'Id';
         $overwrite_id  = true;
         $force_uri = false;
+        $omit_uri = false;
         $transforms_elem = true;
 
         if (is_array($options)) {
@@ -831,6 +832,7 @@ class XMLSecurityDSig
             $id_name = empty($options['id_name']) ? 'Id' : $options['id_name'];
             $overwrite_id = !isset($options['overwrite']) ? true : (bool) $options['overwrite'];
             $force_uri = !isset($options['force_uri']) ? false : (bool) $options['force_uri'];
+            $omit_uri = !isset($options['omit_uri']) ? false : (bool) $options['omit_uri'];
             $transforms_elem = !isset($options['transforms_elem']) ? true : (bool) $options['transforms_elem'];
         }
 
@@ -842,18 +844,20 @@ class XMLSecurityDSig
         $refNode = $this->createNewSignNode('Reference');
         $sinfoNode->appendChild($refNode);
 
-        if (! $node instanceof DOMDocument) {
-            $uri = null;
-            if (! $overwrite_id) {
-                $uri = $prefix_ns ? $node->getAttributeNS($prefix_ns, $id_name) : $node->getAttribute($id_name);
+        if (! $omit_uri) {
+            if (! $node instanceof DOMDocument) {
+                $uri = null;
+                if (! $overwrite_id) {
+                    $uri = $prefix_ns ? $node->getAttributeNS($prefix_ns, $id_name) : $node->getAttribute($id_name);
+                }
+                if (empty($uri)) {
+                    $uri = self::generateGUID();
+                    $node->setAttributeNS($prefix_ns, $attname, $uri);
+                }
+                $refNode->setAttribute("URI", '#'.$uri);
+            } elseif ($force_uri) {
+                $refNode->setAttribute("URI", '');
             }
-            if (empty($uri)) {
-                $uri = self::generateGUID();
-                $node->setAttributeNS($prefix_ns, $attname, $uri);
-            }
-            $refNode->setAttribute("URI", '#'.$uri);
-        } elseif ($force_uri) {
-            $refNode->setAttribute("URI", '');
         }
 
         if ($transforms_elem) {
