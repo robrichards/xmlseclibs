@@ -71,6 +71,9 @@ Features:
 - Add optional $options constructor argument on XMLSecurityDSig; pass
   'stripWhitespace' => true (default false) to build signatures from a
   compact template with no whitespace between elements (BASE_TEMPLATE_NOWS)
+- Add optional $options constructor argument on XMLSecEnc; pass
+  'stripWhitespace' => true (default false) to build EncryptedData from a
+  compact template with no whitespace between elements (template_NOWS)
 
 Notes:
 - Prefer RSA-OAEP and AES-GCM for new deployments; RSA-1.5 and CBC remain
@@ -87,6 +90,9 @@ Bug Fixes:
 - Compact signature template (XMLSecurityDSig 'stripWhitespace' option) removes
   inter-element whitespace that caused signature mismatch with C# SignedXml and
   Python signxml.
+- Compact encryption template (XMLSecEnc 'stripWhitespace' option) removes
+  inter-element whitespace from EncryptedData for peers that reject significant
+  whitespace between elements.
 
 12, Dec 2025, 3.1.5
 Security:

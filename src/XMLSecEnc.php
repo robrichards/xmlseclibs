@@ -56,6 +56,8 @@ class XMLSecEnc
    </xenc:CipherData>
 </xenc:EncryptedData>";
 
+    const template_NOWS = "<xenc:EncryptedData xmlns:xenc='http://www.w3.org/2001/04/xmlenc#'><xenc:CipherData><xenc:CipherValue></xenc:CipherValue></xenc:CipherData></xenc:EncryptedData>";
+
     const Element = 'http://www.w3.org/2001/04/xmlenc#Element';
     const Content = 'http://www.w3.org/2001/04/xmlenc#Content';
     const URI = 3;
@@ -130,8 +132,19 @@ class XMLSecEnc
     /** @var array */
     private $references = array();
 
-    public function __construct()
+    /** @var string */
+    private $activeTemplate;
+
+    /**
+     * @param null|array $options Optional flags; use 'stripWhitespace' => true for a compact template
+     */
+    public function __construct($options=null)
     {
+        $stripWhitespace = false;
+        if (is_array($options)) {
+            $stripWhitespace = !isset($options['stripWhitespace']) ? false : (bool) $options['stripWhitespace'];
+        }
+        $this->activeTemplate = $stripWhitespace ? self::template_NOWS : self::template;
         $this->_resetTemplate();
     }
 
@@ -157,7 +170,7 @@ class XMLSecEnc
     private function _resetTemplate()
     {
         $this->encdoc = new DOMDocument();
-        $this->encdoc->loadXML(self::template);
+        $this->encdoc->loadXML($this->activeTemplate);
     }
 
     /**
