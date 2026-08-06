@@ -383,7 +383,7 @@ class XMLSecurityDSig
             $query = './'.$this->searchpfx.':SignedInfo';
             $nodeset = $xpath->query($query, $this->sigNode);
             if ($sinfo = $nodeset->item(0)) {
-                $query = './'.$this->searchpfx.'CanonicalizationMethod';
+                $query = './'.$this->searchpfx.':CanonicalizationMethod';
                 $nodeset = $xpath->query($query, $sinfo);
                 if (! ($canonNode = $nodeset->item(0))) {
                     $canonNode = $this->createNewSignNode('CanonicalizationMethod');
@@ -748,8 +748,8 @@ class XMLSecurityDSig
     {
         if ($uri = $refNode->getAttribute("URI")) {
             $arUrl = parse_url($uri);
-            if (empty($arUrl['path'])) {
-                if ($identifier = $arUrl['fragment']) {
+            if (is_array($arUrl) && empty($arUrl['path'])) {
+                if ($identifier = $arUrl['fragment'] ?? null) {
                     return $identifier;
                 }
             }
@@ -990,10 +990,8 @@ class XMLSecurityDSig
     }
 
     /**
-     * Returns:
-     *  Bool when verifying HMAC_SHA1;
-     *  Int otherwise, with following meanings:
-     *    1 on succesful signature verification,
+     * Returns an int for all signature algorithms (including HMAC-SHA1):
+     *    1 on successful signature verification,
      *    0 when signature verification failed,
      *   -1 if an error occurred during processing.
      *
@@ -1002,7 +1000,7 @@ class XMLSecurityDSig
      * return value in a strictly typed way, e.g. "$obj->verify(...) === 1".
      *
      * @param XMLSecurityKey $objKey
-     * @return bool|int
+     * @return int
      * @throws Exception
      */
     public function verify($objKey)
@@ -1281,11 +1279,46 @@ class XMLSecurityDSig
         if ($host === '') {
             throw new Exception('Certificate URL host is not allowed');
         }
-        self::assertPublicHost($host);
+        $ips = self::assertPublicHost($host);
 
-        $streamOpts = array('follow_location' => 0, 'max_redirects' => 0, 'timeout' => 10);
-        $context = stream_context_create(array('http' => $streamOpts, 'https' => $streamOpts));
-        $data = file_get_contents($url, false, $context);
+        /*
+         * Pin the connection to an already-validated IP so a DNS rebinding
+         * between the SSRF check and the fetch cannot reach a private address.
+         * Preserve the original Host / TLS peer name for virtual hosting and
+         * certificate verification.
+         */
+        $pinnedIp = $ips[0];
+        $port = isset($parts['port']) ? (int) $parts['port'] : ($scheme === 'https' ? 443 : 80);
+        $path = isset($parts['path']) ? $parts['path'] : '/';
+        if (isset($parts['query'])) {
+            $path .= '?'.$parts['query'];
+        }
+        if (strpos($pinnedIp, ':') !== false) {
+            $authority = '['.$pinnedIp.']:'.$port;
+        } else {
+            $authority = $pinnedIp.':'.$port;
+        }
+        $fetchUrl = $scheme.'://'.$authority.$path;
+
+        $headers = 'Host: '.$host."\r\n";
+        $streamOpts = array(
+            'follow_location' => 0,
+            'max_redirects' => 0,
+            'timeout' => 10,
+            'header' => $headers,
+        );
+        $sslOpts = array(
+            'peer_name' => $host,
+            'SNI_enabled' => true,
+            'verify_peer' => true,
+            'verify_peer_name' => true,
+        );
+        $context = stream_context_create(array(
+            'http' => $streamOpts,
+            'https' => $streamOpts,
+            'ssl' => $sslOpts,
+        ));
+        $data = file_get_contents($fetchUrl, false, $context);
         if ($data === false) {
             throw new Exception('Unable to load certificate from URL');
         }
@@ -1296,6 +1329,7 @@ class XMLSecurityDSig
      * Ensure a host resolves only to public IP addresses (SSRF guard).
      *
      * @param string $host Hostname or IP literal (IPv6 without brackets).
+     * @return string[] Validated public IP addresses for this host.
      * @throws Exception when the host cannot be resolved or maps to a
      *                   non-public address.
      */
@@ -1340,6 +1374,8 @@ class XMLSecurityDSig
                 }
             }
         }
+
+        return array_values(array_unique($ips));
     }
 
     /**

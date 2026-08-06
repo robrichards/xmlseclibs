@@ -83,6 +83,11 @@ Improvements:
 - Fix deprecation notice in makeAsnSegment() under PHP 8.5
 - Update parameter type in XMLSecurityDSig::addReference() and addRefInternal()
 
+Bug Fixes:
+- Compact signature template (XMLSecurityDSig 'stripWhitespace' option) removes
+  inter-element whitespace that caused signature mismatch with C# SignedXml and
+  Python signxml.
+
 12, Dec 2025, 3.1.5
 Security:
 - Validate AES-GCM Authentication Tag (Sideni)
@@ -244,7 +249,7 @@ Improvements:
 Features:
 - Add param to append sig to node when signing. Fixes a problem when using 
   inclusive canonicalization to append a signature within a namespaced subtree.
-  ex. $objDSig->sign($objKey, $appendToNode); 
+  ex. $objDSig->sign($objKey, $appendToNode);
 - Add ability to encrypt by reference
 - Add support for refences within an encrypted key
 - Add thumbprint generation capability (XMLSecurityKey->getX509Thumbprint() and 
@@ -320,7 +325,7 @@ Features:
 - Add addObject method for enveloping signatures.
 - Add staticGet509XCerts method. Chained certificates within a PEM file can
   now be added within the X509Data node.
-- Add xpath support within transformations
+- Add xpath support within transformations.
 - Add InclusiveNamespaces prefix list support within exclusive transformations.
 
 Bug Fixes:

@@ -124,6 +124,9 @@ class XMLSecEnc
     /** @var null|DOMElement */
     public $encKey = null;
 
+    /** @var null|string Optional Id when embedding EncryptedKey in a Security header */
+    public $guid = null;
+
     /** @var array */
     private $references = array();
 
@@ -594,10 +597,10 @@ class XMLSecEnc
                             case 'RSAKeyValue':
                                 $modulus = null;
                                 $exponent = null;
-                                if ($modulusNode = $keyval->getElementsByTagName('Modulus')->item(0)) {
+                                if ($modulusNode = $keyval->getElementsByTagNameNS(XMLSecurityDSig::XMLDSIGNS, 'Modulus')->item(0)) {
                                     $modulus = base64_decode($modulusNode->nodeValue);
                                 }
-                                if ($exponentNode = $keyval->getElementsByTagName('Exponent')->item(0)) {
+                                if ($exponentNode = $keyval->getElementsByTagNameNS(XMLSecurityDSig::XMLDSIGNS, 'Exponent')->item(0)) {
                                     $exponent = base64_decode($exponentNode->nodeValue);
                                 }
                                 if (empty($modulus) || empty($exponent)) {
@@ -616,7 +619,7 @@ class XMLSecEnc
                         break;
                     }
                     $uri = $child->getAttribute('URI');
-                    if ($uri[0] !== '#') {
+                    if ($uri === '' || $uri[0] !== '#') {
                         /* URI not a reference - unsupported. */
                         break;
                     }
