@@ -183,25 +183,25 @@ class XMLSecurityDSig
     public $forbidDoctype = true;
 
     /** @var string|null */
-    private $signedInfo = null;
+    protected $signedInfo = null;
 
     /** @var DomXPath|null */
-    private $xPathCtx = null;
+    protected $xPathCtx = null;
 
     /** @var string|null */
-    private $canonicalMethod = null;
+    protected $canonicalMethod = null;
 
     /** @var string */
-    private $prefix = '';
+    protected $prefix = '';
 
     /** @var string */
-    private $searchpfx = 'secdsig';
+    protected $searchpfx = 'secdsig';
 
     /**
      * This variable contains an associative array of validated nodes.
      * @var array|null
      */
-    private $validatedNodes = null;
+    protected $validatedNodes = null;
 
     /**
      * @param string $prefix
@@ -264,7 +264,7 @@ class XMLSecurityDSig
     /**
      * Reset the XPathObj to null
      */
-    private function resetXPathObj()
+    protected function resetXPathObj()
     {
         $this->xPathCtx = null;
     }
@@ -274,7 +274,7 @@ class XMLSecurityDSig
      *
      * @return DOMXPath|null
      */
-    private function getXPathObj()
+    protected function getXPathObj()
     {
         if (empty($this->xPathCtx) && ! empty($this->sigNode)) {
             $xpath = new DOMXPath($this->sigNode->ownerDocument);
@@ -401,7 +401,7 @@ class XMLSecurityDSig
      * @param null|array $prefixList
      * @return string
      */
-    private function canonicalizeData($node, $canonicalmethod, $arXPath=null, $prefixList=null)
+    protected function canonicalizeData($node, $canonicalmethod, $arXPath=null, $prefixList=null)
     {
         $exclusive = false;
         $withComments = false;
@@ -816,7 +816,7 @@ class XMLSecurityDSig
      * @param null|array $arTransforms
      * @param null|array $options
      */
-    private function addRefInternal($sinfoNode, $node, $algorithm, $arTransforms=null, $options=null)
+    protected function addRefInternal($sinfoNode, $node, $algorithm, $arTransforms=null, $options=null)
     {
         $prefix = null;
         $prefix_ns = null;
