@@ -604,30 +604,41 @@ class XMLSecurityKey
         if (! isset($this->cryptParams['ivsize'], $this->cryptParams['mode'])) {
             throw new Exception('Unknown symmetric cipher parameters');
         }
-        $iv_length = $this->cryptParams['ivsize'];
-        $this->iv = substr($data, 0, $iv_length);
-        $data = substr($data, $iv_length);
-        $cipher = $this->createSymmetricCipher();
-        $authTag = null;
 
-        if ($this->cryptParams['mode'] === 'gcm') {
-            $offset = 0 - self::AUTHTAG_LENGTH;
-            $authTag = substr($data, $offset);
-            if (strlen($authTag) !== self::AUTHTAG_LENGTH) {
-                throw new Exception(self::DECRYPTION_FAILURE);
+        /*
+         * Catch every crypto/padding failure and rethrow the same generic
+         * exception. Distinct phpseclib types/messages (LengthException,
+         * BadDecryptionException, etc.) would otherwise form a ciphertext-
+         * validity oracle.
+         */
+        try {
+            $iv_length = $this->cryptParams['ivsize'];
+            $this->iv = substr($data, 0, $iv_length);
+            $data = substr($data, $iv_length);
+            $cipher = $this->createSymmetricCipher();
+            $authTag = null;
+
+            if ($this->cryptParams['mode'] === 'gcm') {
+                $offset = 0 - self::AUTHTAG_LENGTH;
+                $authTag = substr($data, $offset);
+                if (strlen($authTag) !== self::AUTHTAG_LENGTH) {
+                    throw new Exception(self::DECRYPTION_FAILURE);
+                }
+                $data = substr($data, 0, $offset);
+                $cipher->setNonce($this->iv);
+                $cipher->setTag($authTag);
+                $decrypted = $cipher->decrypt($data);
+            } else {
+                $cipher->disablePadding();
+                $cipher->setIV($this->iv);
+                $decrypted = $cipher->decrypt($data);
             }
-            $data = substr($data, 0, $offset);
-            $cipher->setNonce($this->iv);
-            $cipher->setTag($authTag);
-            $decrypted = $cipher->decrypt($data);
-        } else {
-            $cipher->disablePadding();
-            $cipher->setIV($this->iv);
-            $decrypted = $cipher->decrypt($data);
-        }
 
-        $decrypted = self::requireString($decrypted, self::DECRYPTION_FAILURE);
-        return null !== $authTag ? $decrypted : $this->unpadISO10126($decrypted);
+            $decrypted = self::requireString($decrypted, self::DECRYPTION_FAILURE);
+            return null !== $authTag ? $decrypted : $this->unpadISO10126($decrypted);
+        } catch (\Throwable $e) {
+            throw new Exception(self::DECRYPTION_FAILURE);
+        }
     }
 
     /**
@@ -746,10 +757,14 @@ class XMLSecurityKey
                 if (! $private instanceof RSAPrivateKey) {
                     throw new Exception('Expected an RSA private key');
                 }
-                return self::requireString(
-                    $private->decrypt($data),
-                    self::DECRYPTION_FAILURE
-                );
+                try {
+                    return self::requireString(
+                        $private->decrypt($data),
+                        self::DECRYPTION_FAILURE
+                    );
+                } catch (\Throwable $e) {
+                    throw new Exception(self::DECRYPTION_FAILURE);
+                }
             default:
                 throw new Exception('Unsupported key type for decryption');
         }
@@ -862,7 +877,7 @@ class XMLSecurityKey
     {
         switch ($type) {
             case 0x02:
-                if (ord($string[0]) > 0x7f)
+                if ($string === '' || ord($string[0]) > 0x7f)
                     $string = chr(0).$string;
                 break;
             case 0x03:
@@ -894,6 +909,9 @@ class XMLSecurityKey
      */
     public static function convertRSA($modulus, $exponent)
     {
+        if ($modulus === '' || $exponent === '') {
+            throw new Exception('Unable to convert RSA key');
+        }
         /* make an ASN publicKeyInfo */
         $exponentEncoding = self::makeAsnSegment(0x02, $exponent);
         $modulusEncoding = self::makeAsnSegment(0x02, $modulus);

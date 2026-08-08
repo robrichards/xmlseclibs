@@ -27,7 +27,10 @@ Security Improvements:
   DEFAULT_KEY_ALGORITHMS / DEFAULT_DATA_ALGORITHMS presets)
 - Use a single generic "Failure decrypting Data" error for all decryption
   failures (bad padding, cipher error, failed RSA unwrap) so callers cannot
-  build a CBC padding oracle from distinguishable errors
+  build a CBC padding oracle from distinguishable errors. Catch and normalize
+  phpseclib throws (LengthException, BadDecryptionException, RuntimeException,
+  etc.) on symmetric and RSA decrypt paths so exception type/message cannot
+  form a ciphertext-validity oracle either.
 - Add verifyDocument(): safe-by-default signature verification that requires a
   caller-pinned key (never trusts KeyInfo), enforces a SignatureMethod/DigestMethod
   algorithm allowlist, fails closed on unvalidated references, and returns the
