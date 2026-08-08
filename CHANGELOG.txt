@@ -1,6 +1,6 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
-??, ??? 2026, 4.0.0-beta2
+08, Aug 2026, 4.0.0-beta2
 Features:
 - Add reference option omit_uri to skip adding a URI attribute on Reference
   (also skips Id assignment on the referenced element, which exists only to
