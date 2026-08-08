@@ -92,6 +92,8 @@ Notes:
 Improvements:
 - Fix deprecation notice in makeAsnSegment() under PHP 8.5
 - Update parameter type in XMLSecurityDSig::addReference() and addRefInternal()
+- Tighten XMLSecEnc PHPDoc types for algorithm allowlists, references, and
+  encrypt/decrypt return values
 
 Bug Fixes:
 - Compact signature template (XMLSecurityDSig 'stripWhitespace' option) removes
@@ -100,6 +102,9 @@ Bug Fixes:
 - Compact encryption template (XMLSecEnc 'stripWhitespace' option) removes
   inter-element whitespace from EncryptedData for peers that reject significant
   whitespace between elements.
+- Guard XMLSecEnc encrypt/decrypt and EncryptedKey construction against null
+  DOM nodes, uninitialized templates, and non-string crypto results that could
+  fatal under PHP 8; prefer getAlgorithm() when writing EncryptionMethod
 
 12, Dec 2025, 3.1.5
 Security:
