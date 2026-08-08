@@ -5,6 +5,8 @@ Features:
 - Add reference option omit_uri to skip adding a URI attribute on Reference
   (also skips Id assignment on the referenced element, which exists only to
   support the URI fragment)
+- Change selected XMLSecurityDSig private properties and methods to protected
+  so the class can be extended (gdespirito). refs #152
 
 Security Improvements:
 - Harden add509Cert() URL fetching against SSRF: only http/https by default
