@@ -7,11 +7,38 @@ Features:
   support the URI fragment)
 - Change selected XMLSecurityDSig private properties and methods to protected
   so the class can be extended (gdespirito). refs #152
+- Add XMLSecurityDSig::ENVELOPED constant for the enveloped-signature Transform
+  URI; deprecate empty appendCert() stub (use add509Cert())
 
 Security Improvements:
 - Harden add509Cert() URL fetching against SSRF: only http/https by default
   (file:// requires options['allow_file_scheme']); resolve the host and reject
   loopback/private/link-local/reserved/CGNAT addresses; disable HTTP redirects
+- Reject IPv4-mapped / IPv4-compatible IPv6 certificate URL hosts (e.g.
+  ::ffff:127.0.0.1, ::ffff:169.254.169.254): unwrap the embedded IPv4 and apply
+  the same private/reserved/CGNAT checks (PHP's FILTER_FLAG_NO_* treats mapped
+  addresses as public)
+- Fail closed on unknown Reference Transform algorithms; recognize
+  enveloped-signature explicitly. validateReference() no longer always detaches
+  the Signature from the caller DOM (that broke C14N of ds:Object targets and
+  left half-mutated trees on failure); enveloped-signature removes Signature
+  only when it is a proper descendant of the node being digested
+- Tighten same-document Reference URIs to empty URI and "#id" only (reject
+  "?query", bare "#", and external URIs); share parsing between processRefNode()
+  and getRefNodeID(). Same-document refs always omit comments
+- Reject hostile idKeys attribute names (no whitespace / XPath operators) via
+  Utils\XPath::filterAttrName; invalid names throw
+- Reject duplicate CanonicalizationMethod / SignatureMethod under SignedInfo and
+  duplicate DigestMethod / DigestValue / SignatureValue during verify
+- Reset the cached DOMXPath in locateSignature() so instance reuse across
+  documents cannot fatal with "Node from wrong document"
+- verifyDocument() no longer permanently overwrites instance algorithm
+  allowlists (restored in finally)
+- addReference() / addReferenceList() / sign() / add509Cert() throw instead of
+  silently no-oping when SignedInfo / signature context is missing; sign()
+  requires setCanonicalMethod() and a SignatureMethod element
+- Require correct namespace URIs for InclusiveNamespaces (exc-c14n) and XPath
+  transform children (not localName alone)
 - Reject a DOCTYPE in decrypted XML (defense against entity-expansion / XXE in
   attacker-crafted encrypted content)
 - Reject a DOCTYPE in documents being signature-verified (locateSignature). Closes
@@ -97,6 +124,10 @@ Improvements:
 - Update parameter type in XMLSecurityDSig::addReference() and addRefInternal()
 - Tighten XMLSecEnc PHPDoc types for algorithm allowlists, references, and
   encrypt/decrypt return values
+- Harden XMLSecurityDSig DOM handling for static analysis: require DOMElement
+  before attribute access on XPath results, correct locateSignature /
+  reference / staticAdd509Cert PHPDocs, guard failed XPath queries and missing
+  SignatureMethod nodes, and remove dead null comparisons
 
 Bug Fixes:
 - Compact signature template (XMLSecurityDSig 'stripWhitespace' option) removes
