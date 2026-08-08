@@ -17,6 +17,9 @@ $cases = array(
     'PRIVATE'     => 'http://10.0.0.5/cert.pem',
     'IPV6LOOP'    => 'http://[::1]/cert.pem',
     'CGNAT'       => 'http://100.64.1.1/cert.pem',
+    'MAPPEDLOOP'  => 'http://[::ffff:127.0.0.1]/cert.pem',
+    'MAPPEDPRIV'  => 'http://[::ffff:10.0.0.1]/cert.pem',
+    'MAPPEDMETA'  => 'http://[::ffff:169.254.169.254]/cert.pem',
 );
 
 foreach ($cases as $label => $url) {
@@ -47,4 +50,7 @@ LINKLOCAL: Certificate URL host is not allowed
 PRIVATE: Certificate URL host is not allowed
 IPV6LOOP: Certificate URL host is not allowed
 CGNAT: Certificate URL host is not allowed
+MAPPEDLOOP: Certificate URL host is not allowed
+MAPPEDPRIV: Certificate URL host is not allowed
+MAPPEDMETA: Certificate URL host is not allowed
 FILE_OPTIN: OK
