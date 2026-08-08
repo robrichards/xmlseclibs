@@ -1229,7 +1229,7 @@ class XMLSecurityDSig
      *    returned so callers never have to re-query the document (which would
      *    reintroduce XML Signature Wrapping).
      *
-     * @param XMLSecurityKey       $objKey Trusted/pinned verification key.
+     * @param XMLSecurityKey|null  $objKey Trusted/pinned verification key.
      * @param DOMDocument|DOMNode  $objDoc Document (or node) to verify.
      * @param int                  $pos    Which Signature element to verify (default: first).
      * @return array Associative array of validated nodes (id => node). Never empty on success.
@@ -1237,6 +1237,10 @@ class XMLSecurityDSig
      */
     public function verifyDocument($objKey, $objDoc, $pos = 0)
     {
+        if (! $objKey instanceof XMLSecurityKey) {
+            throw new Exception('A trusted key must be supplied to verifyDocument()');
+        }
+
         $prevSigAlgs = $this->allowedSignatureAlgorithms;
         $prevDigAlgs = $this->allowedDigestAlgorithms;
         if ($this->allowedSignatureAlgorithms === null) {
