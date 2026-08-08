@@ -587,6 +587,7 @@ class XMLSecurityDSig
         $arXPath = null;
         $prefixList = null;
         $xpathTransformCount = 0;
+        $enveloped = false;
         foreach ($nodelist AS $transform) {
             $algorithm = $transform->getAttribute("Algorithm");
             switch ($algorithm) {
@@ -637,29 +638,7 @@ class XMLSecurityDSig
 
                     break;
                 case self::ENVELOPED:
-                    /*
-                     * Enveloped-signature: remove the Signature from the nodeset.
-                     * validateReference() strips sigNode from the document when any
-                     * Reference declares this transform; when signing, the Signature
-                     * is typically not yet attached. If it is still a proper descendant
-                     * of the data node, detach it here so C14N matches verification.
-                     */
-                    if ($data instanceof DOMNode) {
-                        $sig = $this->sigNode;
-                        if ($sig instanceof DOMNode && $sig->parentNode !== null) {
-                            $ancestor = $data instanceof DOMDocument ? $data->documentElement : $data;
-                            if ($ancestor !== null && ! $sig->isSameNode($ancestor)) {
-                                $walk = $sig->parentNode;
-                                while ($walk !== null) {
-                                    if ($walk->isSameNode($ancestor)) {
-                                        $sig->parentNode->removeChild($sig);
-                                        break;
-                                    }
-                                    $walk = $walk->parentNode;
-                                }
-                            }
-                        }
-                    }
+                    $enveloped = true;
                     break;
                 case 'http://www.w3.org/TR/1999/REC-xpath-19991116':
                     /*
@@ -709,7 +688,42 @@ class XMLSecurityDSig
             }
         }
         if ($data instanceof DOMNode) {
-            $data = $this->canonicalizeData($objData, $canonicalMethod, $arXPath, $prefixList);
+            $sig = null;
+            $sigParent = null;
+            $sigNextSibling = null;
+
+            /*
+             * Temporarily detach an enveloped Signature for canonicalization,
+             * then restore it so validation does not mutate the caller's DOM.
+             */
+            if ($enveloped) {
+                $candidate = $this->sigNode;
+                $ancestor = $data instanceof DOMDocument ? $data->documentElement : $data;
+                if ($candidate instanceof DOMNode
+                    && $candidate->parentNode !== null
+                    && $ancestor !== null
+                    && ! $candidate->isSameNode($ancestor)) {
+                    $walk = $candidate->parentNode;
+                    while ($walk !== null) {
+                        if ($walk->isSameNode($ancestor)) {
+                            $sig = $candidate;
+                            $sigParent = $sig->parentNode;
+                            $sigNextSibling = $sig->nextSibling;
+                            $sigParent->removeChild($sig);
+                            break;
+                        }
+                        $walk = $walk->parentNode;
+                    }
+                }
+            }
+
+            try {
+                $data = $this->canonicalizeData($objData, $canonicalMethod, $arXPath, $prefixList);
+            } finally {
+                if ($sig !== null && $sig->parentNode === null) {
+                    $sigParent->insertBefore($sig, $sigNextSibling);
+                }
+            }
         }
         return $data;
     }
