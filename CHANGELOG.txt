@@ -124,6 +124,10 @@ Improvements:
 - Update parameter type in XMLSecurityDSig::addReference() and addRefInternal()
 - Tighten XMLSecEnc PHPDoc types for algorithm allowlists, references, and
   encrypt/decrypt return values
+- Harden XMLSecurityDSig DOM handling for static analysis: require DOMElement
+  before attribute access on XPath results, correct locateSignature /
+  reference / staticAdd509Cert PHPDocs, guard failed XPath queries and missing
+  SignatureMethod nodes, and remove dead null comparisons
 
 Bug Fixes:
 - Compact signature template (XMLSecurityDSig 'stripWhitespace' option) removes
