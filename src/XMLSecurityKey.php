@@ -74,6 +74,12 @@ class XMLSecurityKey
     const AUTHTAG_LENGTH = 16;
 
     /**
+     * Substituted session-key length when RSA PKCS#1 v1.5 padding check fails
+     * (RFC 3218 §2.3.2 Bleichenbacher countermeasure).
+     */
+    const RSA15_SESSION_KEY_SIZE = 32;
+
+    /**
      * Generic decryption failure message.
      *
      * All decryption failures (bad padding, wrong key, cipher error, failed
@@ -728,6 +734,32 @@ class XMLSecurityKey
     }
 
     /**
+     * RSA private-key decryption with a PKCS#1 v1.5 padding-oracle countermeasure.
+     *
+     * On PKCS#1 v1.5 padding failure, return random bytes of the expected
+     * session-key length (RFC 3218 §2.3.2) so callers cannot distinguish
+     * invalid padding from a valid unwrap with wrong key material.
+     *
+     * @throws Exception
+     */
+    private function decryptPrivateRsa(RSAPrivateKey $private, string $data): string
+    {
+        $decrypted = false;
+        try {
+            $decrypted = $private->decrypt($data);
+        } catch (\Throwable $e) {
+            $decrypted = false;
+        }
+        if (is_string($decrypted) && $decrypted !== '') {
+            return $decrypted;
+        }
+        if (($this->cryptParams['padding'] ?? null) === RSA::ENCRYPTION_PKCS1) {
+            return random_bytes(self::RSA15_SESSION_KEY_SIZE);
+        }
+        throw new Exception(self::DECRYPTION_FAILURE);
+    }
+
+    /**
      * Decrypts the given data (string) using phpseclib.
      *
      * @param string $data
@@ -757,14 +789,7 @@ class XMLSecurityKey
                 if (! $private instanceof RSAPrivateKey) {
                     throw new Exception('Expected an RSA private key');
                 }
-                try {
-                    return self::requireString(
-                        $private->decrypt($data),
-                        self::DECRYPTION_FAILURE
-                    );
-                } catch (\Throwable $e) {
-                    throw new Exception(self::DECRYPTION_FAILURE);
-                }
+                return $this->decryptPrivateRsa($private, $data);
             default:
                 throw new Exception('Unsupported key type for decryption');
         }

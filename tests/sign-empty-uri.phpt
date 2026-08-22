@@ -39,7 +39,7 @@ $sign_output_def = file_get_contents(dirname(__FILE__) . '/sign-empty-uri.res');
 if ($sign_output != $sign_output_def) {
 	echo "NOT THE SAME";
 }
-echo "DONE";
+echo "DONE\n";
 ?>
 --CLEAN--
 <?php

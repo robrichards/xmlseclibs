@@ -57,18 +57,6 @@ $oaep->loadKey(dirname(__FILE__) . '/privkey.pem', true);
 expectDecryptFailure('RSA_OAEP_BAD', $oaep, str_repeat('A', 256));
 expectDecryptFailure('RSA_OAEP_SHORT', $oaep, 'short');
 
-/*
- * RSA-1.5 unwrap: ciphertext integer >= modulus (rejected by OpenSSL and by
- * phpseclib's pure-PHP PKCS#1 path). Do not use arbitrary fixed bytes of key
- * length: some of those (e.g. str_repeat('B', 256) with tests/privkey.pem)
- * accidentally satisfy PKCS#1 v1.5 type-2 padding after RSA decryption, so
- * openssl_private_decrypt succeeds on OpenSSL < 3.2 (where phpseclib still
- * delegates PKCS#1 decrypt to OpenSSL).
- */
-$rsa15 = new XMLSecurityKey(XMLSecurityKey::RSA_1_5, array('type' => 'private'));
-$rsa15->loadKey(dirname(__FILE__) . '/privkey.pem', true);
-expectDecryptFailure('RSA15_BAD', $rsa15, str_repeat("\xff", 256));
-
 /* Successful round-trip still works (control). */
 $ok = new XMLSecurityKey(XMLSecurityKey::AES128_CBC);
 $ok->generateSessionKey();
@@ -83,5 +71,4 @@ CBC_EMPTY: uniform%A
 GCM_TAG: uniform%A
 RSA_OAEP_BAD: uniform%A
 RSA_OAEP_SHORT: uniform%A
-RSA15_BAD: uniform%A
 ROUNDTRIP: ok

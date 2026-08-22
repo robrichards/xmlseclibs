@@ -10,7 +10,7 @@ while IFS= read -r file; do
     result="$(php -r '
         $file = $argv[1];
         $source = file_get_contents($file);
-        if (!preg_match("/--FILE--\n(.*)\n\\?>\\n--EXPECTF--\\n(.*)$/s", $source, $matches)) {
+        if (!preg_match("/--FILE--\r?\n(.*?)\r?\n\?>\r?\n(?:--CLEAN--.*?\r?\n)?--EXPECTF--\r?\n(.*)\s*$/s", $source, $matches)) {
             fwrite(STDERR, "invalid phpt format\n");
             exit(2);
         }
@@ -18,11 +18,16 @@ while IFS= read -r file; do
         ob_start();
         eval("?>" . $matches[1]);
         $output = ob_get_clean();
-        if ($output === $matches[2]) {
+        $expected = $matches[2];
+        $output = str_replace("\r\n", "\n", $output);
+        $expected = str_replace("\r\n", "\n", $expected);
+        $pattern = preg_quote($expected, "/");
+        $pattern = str_replace(preg_quote("%A", "/"), ".*", $pattern);
+        if (preg_match("/^" . $pattern . "$/s", $output)) {
             echo "PASS";
             exit(0);
         }
-        echo "FAIL\nexpected:\n" . $matches[2] . "got:\n" . $output;
+        echo "FAIL\nexpected:\n" . $expected . "got:\n" . $output;
         exit(1);
     ' "$file" 2>&1)" || true
 
