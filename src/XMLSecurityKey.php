@@ -469,7 +469,7 @@ class XMLSecurityKey
             }
             $keysize = $this->cryptParams['keysize'];
             if (strlen($this->key) < $keysize) {
-                throw new Exception('Key must contain at least '.$keysize.' characters for this cipher, contains '.strlen($this->key));
+                throw new Exception(self::DECRYPTION_FAILURE);
             }
             /* Overlong keys (e.g. RSA-unwrapped session keys) are truncated at use time. */
         }
@@ -751,12 +751,24 @@ class XMLSecurityKey
             $decrypted = false;
         }
         if (is_string($decrypted) && $decrypted !== '') {
+            if (($this->cryptParams['padding'] ?? null) === RSA::ENCRYPTION_PKCS1
+                && ! self::isPlausibleSessionKeyLength(strlen($decrypted))) {
+                return random_bytes(self::RSA15_SESSION_KEY_SIZE);
+            }
             return $decrypted;
         }
         if (($this->cryptParams['padding'] ?? null) === RSA::ENCRYPTION_PKCS1) {
             return random_bytes(self::RSA15_SESSION_KEY_SIZE);
         }
         throw new Exception(self::DECRYPTION_FAILURE);
+    }
+
+    /**
+     * Lengths used by XML Encryption session keys (AES-128/192/256, 3DES).
+     */
+    private static function isPlausibleSessionKeyLength(int $len): bool
+    {
+        return $len === 16 || $len === 24 || $len === 32;
     }
 
     /**
