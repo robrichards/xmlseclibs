@@ -1,5 +1,10 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Unreleased
+- Accept phpseclib 3 and 4 (`^3.0 || ^4.0`). Shared crypto classes are aliased
+  onto one internal namespace. X.509 load/save/DN goes through a wrapper because
+  phpseclib 4 replaced loadX509(), saveX509() and getDN().
+
 22, Aug 2026, 4.0.0
 Features:
 - Add reference option omit_uri to skip adding a URI attribute on Reference

@@ -3,14 +3,17 @@ namespace RobRichards\XMLSecLibs;
 
 use DOMElement;
 use Exception;
-use phpseclib3\Crypt\AES;
-use phpseclib3\Crypt\Common\AsymmetricKey;
-use phpseclib3\Crypt\PublicKeyLoader;
-use phpseclib3\Crypt\RSA;
-use phpseclib3\Crypt\RSA\PrivateKey as RSAPrivateKey;
-use phpseclib3\Crypt\RSA\PublicKey as RSAPublicKey;
-use phpseclib3\Crypt\TripleDES;
-use phpseclib3\File\X509;
+use RobRichards\XMLSecLibs\PhpSecLib\AES;
+use RobRichards\XMLSecLibs\PhpSecLib\AsymmetricKey;
+use RobRichards\XMLSecLibs\PhpSecLib\Bootstrap;
+use RobRichards\XMLSecLibs\PhpSecLib\PublicKeyLoader;
+use RobRichards\XMLSecLibs\PhpSecLib\RSA;
+use RobRichards\XMLSecLibs\PhpSecLib\RSAPrivateKey;
+use RobRichards\XMLSecLibs\PhpSecLib\RSAPublicKey;
+use RobRichards\XMLSecLibs\PhpSecLib\TripleDES;
+use RobRichards\XMLSecLibs\PhpSecLib\X509;
+
+Bootstrap::boot();
 
 /**
  * xmlseclibs.php
