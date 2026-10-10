@@ -79,17 +79,17 @@ final class Bootstrap
      */
     public static function boot(): void
     {
-        if (self::$booted) {
+        if (true === self::$booted) {
             return;
         }
         self::$booted = true;
 
-        if (class_exists('phpseclib4\\Crypt\\AES')) {
+        if (true === class_exists('phpseclib4\\Crypt\\AES')) {
             self::$version4 = true;
             self::aliasVersion4();
             return;
         }
-        if (class_exists('phpseclib3\\Crypt\\AES')) {
+        if (true === class_exists('phpseclib3\\Crypt\\AES')) {
             self::aliasVersion3();
             return;
         }
@@ -155,7 +155,7 @@ final class Bootstrap
     private static function aliasClass(string $source, string $shortName): void
     {
         $target = __NAMESPACE__ . '\\' . $shortName;
-        if (class_exists($target, false)) {
+        if (true === class_exists($target, false)) {
             return;
         }
         class_alias($source, $target);

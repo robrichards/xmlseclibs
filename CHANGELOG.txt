@@ -4,6 +4,11 @@ Unreleased
 - Accept phpseclib 3 and 4 (`^3.0 || ^4.0`). Shared crypto classes are aliased
   onto one internal namespace. X.509 load/save/DN goes through a wrapper because
   phpseclib 4 replaced loadX509(), saveX509() and getDN().
+- Normalize phpseclib key-load and cipher failures to library exceptions.
+  phpseclib 4 throws PasswordNeededException when an encrypted key has no
+  password; phpseclib 3 throws NoKeyLoadedException. Callers now see
+  Exception "Unable to load key" on both majors. Cipher throws on sign and
+  encrypt are likewise collapsed to the existing failure messages.
 
 22, Aug 2026, 4.0.0
 Features:

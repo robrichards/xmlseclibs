@@ -77,7 +77,7 @@ class X509
      */
     public function loadX509($cert)
     {
-        if (Bootstrap::isVersion4()) {
+        if (true === Bootstrap::isVersion4()) {
             return $this->loadVersion4($cert);
         }
         return $this->loadVersion3($cert);
@@ -95,10 +95,10 @@ class X509
      */
     public function saveX509($certData)
     {
-        if ($this->inner === null) {
+        if (is_null($this->inner)) {
             return false;
         }
-        if (Bootstrap::isVersion4()) {
+        if (true === Bootstrap::isVersion4()) {
             return $this->saveVersion4();
         }
         return $this->inner->saveX509($certData);
@@ -116,10 +116,10 @@ class X509
      */
     public function getDN($format = self::DN_OPENSSL)
     {
-        if ($this->inner === null) {
+        if (is_null($this->inner)) {
             return false;
         }
-        if (Bootstrap::isVersion4()) {
+        if (true === Bootstrap::isVersion4()) {
             return $this->inner->getSubjectDN($format);
         }
         return $this->inner->getDN($format);
@@ -134,7 +134,7 @@ class X509
      */
     public function getIssuerDN($format = self::DN_OPENSSL)
     {
-        if ($this->inner === null) {
+        if (is_null($this->inner)) {
             return false;
         }
         return $this->inner->getIssuerDN($format);
@@ -156,7 +156,7 @@ class X509
             $this->inner = null;
             return false;
         }
-        if (!is_array($decoded)) {
+        if (false === is_array($decoded)) {
             $this->inner = null;
             return false;
         }
