@@ -6,8 +6,11 @@ use DOMElement;
 use DOMNode;
 use DOMXPath;
 use Exception;
-use phpseclib3\File\X509;
+use RobRichards\XMLSecLibs\PhpSecLib\Bootstrap;
+use RobRichards\XMLSecLibs\PhpSecLib\X509;
 use RobRichards\XMLSecLibs\Utils\XPath as XPath;
+
+Bootstrap::boot();
 
 /**
  * xmlseclibs.php

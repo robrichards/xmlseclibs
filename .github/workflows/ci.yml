@@ -90,3 +90,25 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./clover.xml
+
+  tests-phpseclib3:
+    name: PHP 8.4 phpseclib 3
+    runs-on: ubuntu-latest
+    steps:
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: phpunit/phpunit:9.6
+
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Install Composer packages
+        uses: ramsey/composer-install@v3
+
+      - name: Pin phpseclib 3
+        run: composer require "phpseclib/phpseclib:^3.0" --update-with-dependencies --no-interaction
+
+      - name: Run tests
+        run: phpunit tests

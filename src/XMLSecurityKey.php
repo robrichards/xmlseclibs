@@ -3,14 +3,17 @@ namespace RobRichards\XMLSecLibs;
 
 use DOMElement;
 use Exception;
-use phpseclib3\Crypt\AES;
-use phpseclib3\Crypt\Common\AsymmetricKey;
-use phpseclib3\Crypt\PublicKeyLoader;
-use phpseclib3\Crypt\RSA;
-use phpseclib3\Crypt\RSA\PrivateKey as RSAPrivateKey;
-use phpseclib3\Crypt\RSA\PublicKey as RSAPublicKey;
-use phpseclib3\Crypt\TripleDES;
-use phpseclib3\File\X509;
+use RobRichards\XMLSecLibs\PhpSecLib\AES;
+use RobRichards\XMLSecLibs\PhpSecLib\AsymmetricKey;
+use RobRichards\XMLSecLibs\PhpSecLib\Bootstrap;
+use RobRichards\XMLSecLibs\PhpSecLib\PublicKeyLoader;
+use RobRichards\XMLSecLibs\PhpSecLib\RSA;
+use RobRichards\XMLSecLibs\PhpSecLib\RSAPrivateKey;
+use RobRichards\XMLSecLibs\PhpSecLib\RSAPublicKey;
+use RobRichards\XMLSecLibs\PhpSecLib\TripleDES;
+use RobRichards\XMLSecLibs\PhpSecLib\X509;
+
+Bootstrap::boot();
 
 /**
  * xmlseclibs.php
@@ -581,21 +584,67 @@ class XMLSecurityKey
         $authTag = null;
 
         if ($this->cryptParams['mode'] === 'gcm') {
-            $cipher->setNonce($this->iv);
-            $encrypted = $cipher->encrypt($data);
-            $authTag = $cipher->getTag(self::AUTHTAG_LENGTH);
+            list($encrypted, $authTag) = $this->encryptGcm($cipher, $data);
         } else {
             if (! isset($this->cryptParams['blocksize'])) {
                 throw new Exception('Unknown block size for type "' . $this->type . '".');
             }
             $data = $this->padISO10126($data, $this->cryptParams['blocksize']);
-            $cipher->disablePadding();
-            $cipher->setIV($this->iv);
-            $encrypted = $cipher->encrypt($data);
+            $encrypted = $this->encryptCbc($cipher, $data);
         }
 
         $encrypted = self::requireString($encrypted, 'Failure encrypting Data (phpseclib symmetric)');
         return $this->iv . $encrypted . $authTag;
+    }
+
+    /**
+     * Encrypt with AES-GCM and return the ciphertext plus its authentication tag.
+     *
+     * phpseclib 4 throws on cipher failure where 3 returned false. Both become
+     * the same library exception.
+     *
+     * @param AES $cipher
+     * @param string $data
+     *
+     * @return array{0: string, 1: string}
+     * @throws Exception
+     */
+    private function encryptGcm($cipher, $data): array
+    {
+        try {
+            $cipher->setNonce($this->iv);
+            $encrypted = $cipher->encrypt($data);
+            $authTag = $cipher->getTag(self::AUTHTAG_LENGTH);
+        } catch (\Throwable $e) {
+            throw new Exception('Failure encrypting Data (phpseclib symmetric)');
+        }
+        $encrypted = self::requireString($encrypted, 'Failure encrypting Data (phpseclib symmetric)');
+        $authTag = self::requireString($authTag, 'Failure encrypting Data (phpseclib symmetric)');
+        return array($encrypted, $authTag);
+    }
+
+    /**
+     * Encrypt with CBC after ISO 10126 padding has been applied.
+     *
+     * phpseclib 4 throws on cipher failure where 3 returned false. Both become
+     * the same library exception.
+     *
+     * @param AES|TripleDES $cipher
+     * @param string $data
+     *
+     * @return string
+     * @throws Exception
+     */
+    private function encryptCbc($cipher, $data): string
+    {
+        try {
+            $cipher->disablePadding();
+            $cipher->setIV($this->iv);
+            $encrypted = $cipher->encrypt($data);
+        } catch (\Throwable $e) {
+            throw new Exception('Failure encrypting Data (phpseclib symmetric)');
+        }
+        return self::requireString($encrypted, 'Failure encrypting Data (phpseclib symmetric)');
     }
 
     /**
@@ -665,6 +714,29 @@ class XMLSecurityKey
     }
 
     /**
+     * Load the current PEM key through phpseclib.
+     *
+     * phpseclib 3 reports a missing password on an encrypted key as
+     * NoKeyLoadedException. phpseclib 4 reports that same case as
+     * PasswordNeededException, and a wrong password as NoKeyLoadedException.
+     * Callers of this library see one exception either way.
+     *
+     * @return AsymmetricKey
+     * @throws Exception When the key cannot be read, or the password is missing or wrong.
+     */
+    private function loadAsymmetricKey(): AsymmetricKey
+    {
+        try {
+            if ($this->passphrase !== '') {
+                return PublicKeyLoader::load($this->key, $this->passphrase);
+            }
+            return PublicKeyLoader::load($this->key);
+        } catch (\Throwable $e) {
+            throw new Exception('Unable to load key');
+        }
+    }
+
+    /**
      * Apply padding / digest options to a phpseclib RSA key.
      *
      * @throws Exception
@@ -718,19 +790,61 @@ class XMLSecurityKey
             case 'symmetric':
                 return $this->encryptSymmetric($data);
             case 'public':
-                $public = $this->configureRSAKey(PublicKeyLoader::load($this->key));
+                $public = $this->configureRSAKey($this->loadAsymmetricKey());
                 if (! $public instanceof RSAPublicKey) {
                     throw new Exception('Expected an RSA public key');
                 }
-                return self::requireString(
-                    $public->encrypt($data),
-                    'Failure encrypting Data (phpseclib)'
-                );
+                return $this->encryptWithPublicKey($public, $data);
             case 'private':
                 throw new Exception('Encrypting with a private key is not supported');
             default:
                 throw new Exception('Unsupported key type for encryption');
         }
+    }
+
+    /**
+     * Encrypt with an RSA public key.
+     *
+     * phpseclib 4 throws on failure where 3 could return false. Both become
+     * the same library exception.
+     *
+     * @param RSAPublicKey $public
+     * @param string $data
+     *
+     * @return string
+     * @throws Exception
+     */
+    private function encryptWithPublicKey(RSAPublicKey $public, $data): string
+    {
+        try {
+            $encrypted = $public->encrypt($data);
+        } catch (\Throwable $e) {
+            throw new Exception('Failure encrypting Data (phpseclib)');
+        }
+        return self::requireString($encrypted, 'Failure encrypting Data (phpseclib)');
+    }
+
+    /**
+     * Sign with an RSA private key.
+     *
+     * phpseclib 4 throws on failure where 3 could return false. Both become
+     * the same library exception. Raw byte signing is unchanged between the
+     * two majors; this only normalizes the failure.
+     *
+     * @param RSAPrivateKey $private
+     * @param string $data
+     *
+     * @return string
+     * @throws Exception
+     */
+    private function signWithPrivateKey(RSAPrivateKey $private, $data): string
+    {
+        try {
+            $signature = $private->sign($data);
+        } catch (\Throwable $e) {
+            throw new Exception('Failure Signing Data');
+        }
+        return self::requireString($signature, 'Failure Signing Data');
     }
 
     /**
@@ -792,12 +906,7 @@ class XMLSecurityKey
             case 'public':
                 throw new Exception('Decrypting with a public key is not supported');
             case 'private':
-                if ($this->passphrase !== '') {
-                    $private = PublicKeyLoader::load($this->key, $this->passphrase);
-                } else {
-                    $private = PublicKeyLoader::load($this->key);
-                }
-                $private = $this->configureRSAKey($private);
+                $private = $this->configureRSAKey($this->loadAsymmetricKey());
                 if (! $private instanceof RSAPrivateKey) {
                     throw new Exception('Expected an RSA private key');
                 }
@@ -821,19 +930,11 @@ class XMLSecurityKey
         }
         switch ($this->cryptParams['library'] ?? null) {
             case 'phpseclib':
-                if ($this->passphrase !== '') {
-                    $private = PublicKeyLoader::load($this->key, $this->passphrase);
-                } else {
-                    $private = PublicKeyLoader::load($this->key);
-                }
-                $private = $this->configureRSAKey($private);
+                $private = $this->configureRSAKey($this->loadAsymmetricKey());
                 if (! $private instanceof RSAPrivateKey) {
                     throw new Exception('Expected an RSA private key');
                 }
-                return self::requireString(
-                    $private->sign($data),
-                    'Failure Signing Data'
-                );
+                return $this->signWithPrivateKey($private, $data);
             case (self::HMAC_SHA1):
                 return hash_hmac("sha1", $data, $this->key, true);
             default:
@@ -865,13 +966,13 @@ class XMLSecurityKey
                     if (! is_string($this->key)) {
                         return -1;
                     }
-                    $public = $this->configureRSAKey(PublicKeyLoader::load($this->key));
+                    $public = $this->configureRSAKey($this->loadAsymmetricKey());
                     if (! $public instanceof RSAPublicKey) {
                         return -1;
                     }
                     $result = $public->verify($data, $signature);
                     return $result === true ? 1 : 0;
-                } catch (Exception $e) {
+                } catch (\Throwable $e) {
                     return -1;
                 }
             case (self::HMAC_SHA1):

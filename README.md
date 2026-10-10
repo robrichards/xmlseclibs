@@ -14,7 +14,7 @@ Master is currently the only actively maintained branch.
 
 # Requirements
 
-xmlseclibs requires PHP version 8.0 or greater. OpenSSL is optional (phpseclib is used for crypto).
+xmlseclibs requires PHP version 8.0 or greater. OpenSSL is optional (phpseclib is used for crypto). phpseclib 3 (`^3.0`) and phpseclib 4 (`^4.0`) are both supported. phpseclib 4 requires PHP 8.1 or greater, so PHP 8.0 installs resolve to phpseclib 3.
 
 ## Security notes
 
@@ -38,7 +38,7 @@ xmlseclibs requires PHP version 8.0 or greater. OpenSSL is optional (phpseclib i
 
 ### Platform
 - **PHP 8.0+ required** (was 5.4+)
-- **`phpseclib/phpseclib` ~3.0 required**; `ext-openssl` is now optional
+- **`phpseclib/phpseclib` `^3.0` or `^4.0` required**; `ext-openssl` is now optional
 
 ### Signature verification
 - **DOCTYPE rejected by default** during verification (`locateSignature` / `verifyDocument`). Opt out: `$dsig->forbidDoctype = false` or `enableLegacyMode()`
