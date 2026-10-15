@@ -5,8 +5,12 @@ use DOMElement;
 use Exception;
 use phpseclib3\Crypt\AES;
 use phpseclib3\Crypt\Common\AsymmetricKey;
+use phpseclib3\Crypt\DSA;
+use phpseclib3\Crypt\EC;
 use phpseclib3\Crypt\PublicKeyLoader;
+use phpseclib3\Exception\NoKeyLoadedException;
 use phpseclib3\Crypt\RSA;
+use phpseclib3\Crypt\RSA\Formats\Keys\PKCS8 as PKCS8Format;
 use phpseclib3\Crypt\RSA\PrivateKey as RSAPrivateKey;
 use phpseclib3\Crypt\RSA\PublicKey as RSAPublicKey;
 use phpseclib3\Crypt\TripleDES;
@@ -435,16 +439,19 @@ class XMLSecurityKey
 
         /*
          * Prevent signature key/algorithm confusion: an HMAC (shared-secret)
-         * key must never be created from asymmetric public material such as an
-         * X.509 certificate or a PEM public key. Otherwise an attacker who can
+         * key must never be created from asymmetric material such as an X.509
+         * certificate or a public/private key. Otherwise an attacker who can
          * choose the SignatureMethod (e.g. downgrading rsa-sha1 to hmac-sha1)
-         * can forge signatures using the public certificate as the HMAC secret.
+         * can forge signatures using that public material as the HMAC secret.
+         *
+         * Recognition is by parsing the bytes (PEM, DER, bare base64, and the
+         * other encodings phpseclib accepts), not by looking for PEM armor.
          */
         if (($this->cryptParams['library'] ?? null) === self::HMAC_SHA1) {
             if ($isCert) {
                 throw new Exception('An X.509 certificate cannot be used as an HMAC key');
             }
-            if (strpos($this->key, '-----BEGIN') !== false) {
+            if (is_string($this->key) && self::isAsymmetricKeyMaterial($this->key)) {
                 throw new Exception('Asymmetric key material cannot be used as an HMAC key');
             }
         }
@@ -473,6 +480,141 @@ class XMLSecurityKey
             }
             /* Overlong keys (e.g. RSA-unwrapped session keys) are truncated at use time. */
         }
+    }
+
+    /**
+     * Whether $key is asymmetric key material and therefore unsafe as an HMAC secret.
+     *
+     * phpseclib parses PEM, DER, and bare base64 (plus the other formats it
+     * supports) as a public key, private key, or X.509 certificate. Password-
+     * protected PKCS#8 is recognized as EncryptedPrivateKeyInfo without
+     * decrypting it. OpenSSL traditional encrypted PEM (Proc-Type / DEK-Info),
+     * OpenSSH private keys, and PuTTY key files are recognized from their
+     * defined headers, because that ciphertext is not itself a key.
+     *
+     * A failed parse is not key material. Arbitrary binary and base64 strings
+     * that are not valid keys remain usable as HMAC secrets.
+     *
+     * @param string $key
+     * @return bool
+     */
+    private static function isAsymmetricKeyMaterial($key)
+    {
+        if ($key === '') {
+            return false;
+        }
+
+        /*
+         * Garbage input makes phpseclib's ASN.1 parser emit warnings.
+         * Keep those from escaping loadKey() / verifySignature().
+         */
+        set_error_handler(static function () {
+            return true;
+        });
+        try {
+            if (self::parsesAsPublicKeyOrCertificate($key)) {
+                return true;
+            }
+
+            try {
+                PKCS8Format::extractEncryptionAlgorithm($key);
+                return true;
+            } catch (\Throwable $e) {
+            }
+        } finally {
+            restore_error_handler();
+        }
+
+        if (self::isTraditionalEncryptedPem($key)
+            || self::isOpenSshPrivateKey($key)
+            || self::isPuttyKey($key)
+        ) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * True when phpseclib can read $key as a public key, private key, or certificate.
+     *
+     * PublicKeyLoader tries EC, then RSA, then DSA, then X.509, but an error
+     * that is not NoKeyLoadedException (phpseclib's ASN.1 parser can throw
+     * ValueError on garbage) aborts that sequence early. On that kind of
+     * failure each algorithm is tried on its own, so a fault while inspecting
+     * one format cannot hide a key or certificate of another.
+     *
+     * @param string $key
+     * @return bool
+     */
+    private static function parsesAsPublicKeyOrCertificate($key)
+    {
+        try {
+            PublicKeyLoader::load($key);
+            return true;
+        } catch (NoKeyLoadedException $e) {
+            return false;
+        } catch (\Throwable $e) {
+        }
+
+        foreach (array(EC::class, RSA::class, DSA::class) as $algorithm) {
+            try {
+                $algorithm::load($key);
+                return true;
+            } catch (\Throwable $e) {
+            }
+        }
+
+        try {
+            $x509 = new X509();
+            return is_array($x509->loadX509($key));
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    /**
+     * OpenSSL traditional PEM encryption (RFC 1421 Proc-Type / DEK-Info).
+     *
+     * @param string $key
+     * @return bool
+     */
+    private static function isTraditionalEncryptedPem($key)
+    {
+        return preg_match('/(?:^|\R)Proc-Type:[ \t]*4,ENCRYPTED\b/i', $key) === 1
+            && preg_match('/(?:^|\R)DEK-Info:[ \t]*\S+/i', $key) === 1;
+    }
+
+    /**
+     * OpenSSH private key (unencrypted or bcrypt-encrypted), PEM or raw/base64.
+     *
+     * @param string $key
+     * @return bool
+     */
+    private static function isOpenSshPrivateKey($key)
+    {
+        $magic = "openssh-key-v1\0";
+        if (strpos($key, $magic) !== false) {
+            return true;
+        }
+
+        $compact = preg_replace('/-----(?:BEGIN|END) [^-]+-----|\s+/', '', $key);
+        if (! is_string($compact) || preg_match('/^[A-Za-z0-9+\/=]+$/', $compact) !== 1) {
+            return false;
+        }
+        $decoded = base64_decode($compact, true);
+        return is_string($decoded) && strncmp($decoded, $magic, strlen($magic)) === 0;
+    }
+
+    /**
+     * PuTTY private-key file (v2 or v3), encrypted or not.
+     *
+     * @param string $key
+     * @return bool
+     */
+    private static function isPuttyKey($key)
+    {
+        return strncmp(ltrim($key), 'PuTTY-User-Key-File-', 20) === 0;
     }
 
     /**
@@ -835,6 +977,9 @@ class XMLSecurityKey
                     'Failure Signing Data'
                 );
             case (self::HMAC_SHA1):
+                if (self::isAsymmetricKeyMaterial($this->key)) {
+                    throw new Exception('Asymmetric key material cannot be used as an HMAC key');
+                }
                 return hash_hmac("sha1", $data, $this->key, true);
             default:
                 throw new Exception('Unsupported key type for signing');
@@ -876,8 +1021,9 @@ class XMLSecurityKey
                 }
             case (self::HMAC_SHA1):
                 /* Defense in depth against key/algorithm confusion: refuse to
-                 * HMAC with asymmetric public material (see loadKey()). */
-                if (! is_string($this->key) || strpos($this->key, '-----BEGIN') !== false) {
+                 * HMAC with asymmetric material even if it was assigned to
+                 * $key without loadKey() (see loadKey()). */
+                if (! is_string($this->key) || self::isAsymmetricKeyMaterial($this->key)) {
                     return -1;
                 }
                 $expectedSignature = hash_hmac("sha1", $data, $this->key, true);
