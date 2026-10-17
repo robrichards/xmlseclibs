@@ -538,11 +538,19 @@ class XMLSecurityKey
     /**
      * True when phpseclib can read $key as a public key, private key, or certificate.
      *
-     * PublicKeyLoader tries EC, then RSA, then DSA, then X.509, but an error
-     * that is not NoKeyLoadedException (phpseclib's ASN.1 parser can throw
-     * ValueError on garbage) aborts that sequence early. On that kind of
-     * failure each algorithm is tried on its own, so a fault while inspecting
-     * one format cannot hide a key or certificate of another.
+     * PublicKeyLoader tries EC, then RSA, then DSA, then X.509. Two failure
+     * modes need extra work:
+     *
+     * 1. An error other than NoKeyLoadedException (phpseclib's ASN.1 parser
+     *    can throw ValueError on garbage) aborts that sequence early. Each
+     *    algorithm is tried on its own so a fault while inspecting one format
+     *    cannot hide a key or certificate of another.
+     * 2. NoKeyLoadedException after PublicKeyLoader has already tried X.509
+     *    still happens when the certificate parses but its public-key
+     *    algorithm is unsupported (e.g. X25519). PublicKeyLoader only returns
+     *    success when getPublicKey() yields a usable key. A standalone
+     *    X509::loadX509() check always runs after unsuccessful key loading so
+     *    certificate recognition does not depend on algorithm support.
      *
      * @param string $key
      * @return bool
@@ -553,15 +561,14 @@ class XMLSecurityKey
             PublicKeyLoader::load($key);
             return true;
         } catch (NoKeyLoadedException $e) {
-            return false;
+            /* Fall through to the standalone X.509 check. */
         } catch (\Throwable $e) {
-        }
-
-        foreach (array(EC::class, RSA::class, DSA::class) as $algorithm) {
-            try {
-                $algorithm::load($key);
-                return true;
-            } catch (\Throwable $e) {
+            foreach (array(EC::class, RSA::class, DSA::class) as $algorithm) {
+                try {
+                    $algorithm::load($key);
+                    return true;
+                } catch (\Throwable $ignored) {
+                }
             }
         }
 
