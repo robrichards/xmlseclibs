@@ -14,6 +14,8 @@ use phpseclib3\Crypt\RSA\Formats\Keys\PKCS8 as PKCS8Format;
 use phpseclib3\Crypt\RSA\PrivateKey as RSAPrivateKey;
 use phpseclib3\Crypt\RSA\PublicKey as RSAPublicKey;
 use phpseclib3\Crypt\TripleDES;
+use phpseclib3\File\ASN1;
+use phpseclib3\File\ASN1\Maps;
 use phpseclib3\File\X509;
 
 /**
@@ -485,12 +487,21 @@ class XMLSecurityKey
     /**
      * Whether $key is asymmetric key material and therefore unsafe as an HMAC secret.
      *
-     * phpseclib parses PEM, DER, and bare base64 (plus the other formats it
-     * supports) as a public key, private key, or X.509 certificate. Password-
-     * protected PKCS#8 is recognized as EncryptedPrivateKeyInfo without
-     * decrypting it. OpenSSL traditional encrypted PEM (Proc-Type / DEK-Info),
-     * OpenSSH private keys, and PuTTY key files are recognized from their
-     * defined headers, because that ciphertext is not itself a key.
+     * Recognition does not depend on whether phpseclib can instantiate the
+     * key's algorithm:
+     *
+     * - Any PEM-armored blob (`-----BEGIN`) is rejected, matching the original
+     *   guard and covering algorithms the library does not support.
+     * - Values that parse as a public/private key or X.509 certificate are
+     *   rejected (PEM, DER, bare base64, and the other encodings phpseclib
+     *   accepts).
+     * - ASN.1 SubjectPublicKeyInfo and PKCS#8 / OneAsymmetricKey containers
+     *   are recognized by structure alone, so unsupported standalone keys
+     *   (e.g. SM2, Diffie–Hellman) are still rejected as DER or bare base64.
+     * - Password-protected PKCS#8 is recognized as EncryptedPrivateKeyInfo
+     *   without decrypting it. OpenSSL traditional encrypted PEM
+     *   (Proc-Type / DEK-Info), OpenSSH private keys, and PuTTY key files are
+     *   recognized from their defined headers.
      *
      * A failed parse is not key material. Arbitrary binary and base64 strings
      * that are not valid keys remain usable as HMAC secrets.
@@ -502,6 +513,14 @@ class XMLSecurityKey
     {
         if ($key === '') {
             return false;
+        }
+
+        /*
+         * Preserve the original PEM rejection. Algorithms phpseclib cannot
+         * load still arrive as -----BEGIN PUBLIC KEY----- (and similar).
+         */
+        if (strpos($key, '-----BEGIN') !== false) {
+            return true;
         }
 
         /*
@@ -520,6 +539,10 @@ class XMLSecurityKey
                 PKCS8Format::extractEncryptionAlgorithm($key);
                 return true;
             } catch (\Throwable $e) {
+            }
+
+            if (self::parsesAsAsn1KeyContainer($key)) {
+                return true;
             }
         } finally {
             restore_error_handler();
@@ -578,6 +601,42 @@ class XMLSecurityKey
         } catch (\Throwable $e) {
             return false;
         }
+    }
+
+    /**
+     * True when $key is an ASN.1 public- or private-key container, regardless
+     * of whether the algorithm OID is supported.
+     *
+     * SubjectPublicKeyInfo covers SPKI public keys (including SM2 and
+     * Diffie–Hellman). OneAsymmetricKey covers PKCS#8 private keys (v1 and
+     * v2). AlgorithmIdentifiers are matched by structure; unknown OIDs still
+     * parse.
+     *
+     * @param string $key
+     * @return bool
+     */
+    private static function parsesAsAsn1KeyContainer($key)
+    {
+        try {
+            $ber = ASN1::extractBER($key);
+            if ($ber === false) {
+                $ber = $key;
+            }
+            $decoded = ASN1::decodeBER($ber);
+            if (! $decoded) {
+                return false;
+            }
+
+            if (is_array(ASN1::asn1map($decoded[0], Maps\SubjectPublicKeyInfo::MAP))) {
+                return true;
+            }
+            if (is_array(ASN1::asn1map($decoded[0], Maps\OneAsymmetricKey::MAP))) {
+                return true;
+            }
+        } catch (\Throwable $e) {
+        }
+
+        return false;
     }
 
     /**
