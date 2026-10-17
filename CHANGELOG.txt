@@ -1,5 +1,20 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Unreleased
+Security Improvements:
+- Reject asymmetric keys and X.509 certificates used as HMAC secrets by parsing
+  the material (PEM, DER, bare base64, and the other encodings phpseclib
+  accepts), instead of only when $isCert is set or the string contains a PEM
+  header. PEM armor (`-----BEGIN`) is still rejected outright. ASN.1
+  SubjectPublicKeyInfo and PKCS#8 / OneAsymmetricKey containers are recognized
+  by structure so unsupported standalone keys (e.g. SM2, Diffie–Hellman) are
+  rejected as DER or bare base64 as well. Password-protected PKCS#8, OpenSSL
+  traditional encrypted PEM, OpenSSH private keys, and PuTTY key files are
+  rejected too. Certificate recognition uses a standalone X.509 parse so
+  certificates whose public-key algorithm is unsupported (e.g. X25519) are
+  still rejected. Arbitrary binary and non-key base64 HMAC secrets still load.
+
+|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 22, Aug 2026, 4.0.0
 Features:
 - Add reference option omit_uri to skip adding a URI attribute on Reference
