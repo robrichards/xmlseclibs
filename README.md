@@ -45,7 +45,7 @@ xmlseclibs requires PHP version 8.0 or greater. OpenSSL is optional (phpseclib i
 - **XPath Filtering Transforms rejected by default** on verify. Opt in: `$dsig->allowXPathTransforms = true` or `enableLegacyMode()`. Signing unchanged
 - **XPath caps** when enabled: max 5 transforms / 20 namespaces per transform (`$maxXPathTransforms` / `$maxXPathNamespaces`; raised by `enableLegacyMode()`)
 - **`verify()` always requires SignatureMethod === key algorithm**; mismatch throws (not restored by legacy mode)
-- **HMAC keys cannot be loaded from certificates or asymmetric keys** (PEM, DER, bare base64, or any other encoding that parses as a key or X.509 certificate)
+- **HMAC keys cannot be loaded from certificates or asymmetric keys**
 - **References fail closed**: unresolved, external, or duplicate-Id URIs throw; same-document only
 - **Unknown CanonicalizationMethod rejected**
 - **HMAC verify returns `1`/`0`** — always check `=== 1`
