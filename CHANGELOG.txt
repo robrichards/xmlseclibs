@@ -1,6 +1,6 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
-22, Oct 2026, 4.0.1
+19, Oct 2026, 4.0.1
 Security Improvements:
 - Harden HMAC key loading so asymmetric material cannot be used as an HMAC
   secret. The same check applies when signing or verifying. Ordinary HMAC
