@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doc:Documento xmlns:doc="urn:prise:interop:doc" ID="doc1">
+  <doc:Emisor>PRiSE</doc:Emisor>
+  <ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+    <ds:SignedInfo>
+      <ds:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+      <ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256"/>
+      <ds:Reference URI="#doc1">
+        <ds:Transforms>
+          <ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+          <ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+        </ds:Transforms>
+        <ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+        <ds:DigestValue>6LjvUBu5PdGGCy2cLpIOY/15fAOwfDcg4mswSeen2jk=</ds:DigestValue>
+      </ds:Reference>
+    </ds:SignedInfo>
+    <ds:SignatureValue>53QVxBwhqHt6h0V2xoKIOwM6zCACKelKSR5Zjh/ubFnDG6l9n8X9o0J7OAmg9Ro7
+i0owCmz6WVG0p8X0K0nNxA==</ds:SignatureValue>
+    <ds:KeyInfo>
+      <ds:X509Data>
+        <ds:X509Certificate>MIICBzCCAY2gAwIBAgIUTHptoLWu1HrAgy+Lz2Bf2W418GQwCgYIKoZIzj0EAwMw
+RTEmMCQGA1UECgwdWE1MU2VjTGlicyBFQ0RTQSBJbnRlcm9wIFRlc3QxGzAZBgNV
+BAMMEkVDIFRlc3QgQ0EgKFAtMzg0KTAeFw0yNjEwMDUwODI3MjRaFw0zMTEwMDQw
+ODI3MjRaMEAxJjAkBgNVBAoMHVhNTFNlY0xpYnMgRUNEU0EgSW50ZXJvcCBUZXN0
+MRYwFAYDVQQDDA1FQyBQLTI1NiBUZXN0MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcD
+QgAEwCbjDOlySwCFTSMJJ9HZ8bvB7sc61ywVzSresRN1tR/mdSDGF0Qfno9EeLmz
+J+OcAb5ZjJc0QWh1hnvje5liraNgMF4wDAYDVR0TAQH/BAIwADAOBgNVHQ8BAf8E
+BAMCB4AwHQYDVR0OBBYEFOf9f0/M/j+lMxPWvwX/qnXs+37OMB8GA1UdIwQYMBaA
+FG+ElSIClEXhkn8NinzLZlr91Mm0MAoGCCqGSM49BAMDA2gAMGUCMHc5LPGs/1KH
+wkhYz4KKazMuulyzZCvV6zkGvVPQpeoetb2oTC8DhvWQXp93XaQwygIxAJ9A1txX
+qBNrFCtaprAfeIY9YXJmMQLJbBwEH23zU5981E0mc332E4aHk+nVW4PZ6Q==</ds:X509Certificate>
+      </ds:X509Data>
+    </ds:KeyInfo>
+  </ds:Signature>
+  <doc:Fecha>2026-10-06</doc:Fecha>
+  <doc:Cuerpo>Prueba de interoperabilidad ECDSA: acentos áéíóú, eñe ñ, símbolos € &amp; &lt;&gt;.</doc:Cuerpo>
+</doc:Documento>

@@ -52,6 +52,7 @@ use RobRichards\XMLSecLibs\Utils\XPath as XPath;
 class XMLSecurityDSig
 {
     const XMLDSIGNS = 'http://www.w3.org/2000/09/xmldsig#';
+    const XMLDSIG11NS = 'http://www.w3.org/2009/xmldsig11#';
     const SHA1 = 'http://www.w3.org/2000/09/xmldsig#sha1';
     const SHA256 = 'http://www.w3.org/2001/04/xmlenc#sha256';
     const SHA384 = 'http://www.w3.org/2001/04/xmldsig-more#sha384';
@@ -81,6 +82,9 @@ class XMLSecurityDSig
         XMLSecurityKey::RSA_SHA384,
         XMLSecurityKey::RSA_SHA512,
         XMLSecurityKey::RSA_SHA256_MGF1,
+        XMLSecurityKey::ECDSA_SHA256,
+        XMLSecurityKey::ECDSA_SHA384,
+        XMLSecurityKey::ECDSA_SHA512,
     );
 
     /**
@@ -1774,6 +1778,35 @@ class XMLSecurityDSig
             throw new Exception('Cannot locate signature context for add509Cert');
         }
         static::staticAdd509Cert($this->sigNode, $cert, $isPEMFormat, $isURL, $xpath, $options);
+    }
+
+    /**
+     * Add an ECKeyValue element (XML Signature 1.1) holding the public key of
+     * an EC key to the KeyInfo.
+     *
+     * The KeyInfo element will be created if one does not exist in the document.
+     *
+     * @param XMLSecurityKey $objKey EC certificate, public key or private key.
+     * @return DOMNode The KeyInfo element node
+     * @throws Exception
+     */
+    public function addECKeyValue($objKey)
+    {
+        $ecData = $objKey->getECPublicKeyData();
+        $baseDoc = $this->sigNode->ownerDocument;
+
+        $keyValue = $this->createNewSignNode('KeyValue');
+        $ecKeyValue = $baseDoc->createElementNS(self::XMLDSIG11NS, 'dsig11:ECKeyValue');
+        $keyValue->appendChild($ecKeyValue);
+
+        $namedCurve = $baseDoc->createElementNS(self::XMLDSIG11NS, 'dsig11:NamedCurve');
+        $namedCurve->setAttribute('URI', 'urn:oid:'.$ecData['oid']);
+        $ecKeyValue->appendChild($namedCurve);
+
+        $publicKey = $baseDoc->createElementNS(self::XMLDSIG11NS, 'dsig11:PublicKey', base64_encode($ecData['point']));
+        $ecKeyValue->appendChild($publicKey);
+
+        return $this->appendToKeyInfo($keyValue);
     }
 
     /**
