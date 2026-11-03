@@ -101,8 +101,8 @@ class XMLSecurityKey
     const DECRYPTION_FAILURE = 'Failure decrypting Data';
 
     /**
-     * Named curves supported for ECDSA keys carried in an ECKeyValue element,
-     * indexed by phpseclib curve name.
+     * Default allowlist of named curves for ECDSA keys (sign, verify and
+     * ECKeyValue), as phpseclib curve name => OID. See $allowedECCurves.
      */
     const EC_CURVE_OIDS = array(
         'secp256r1' => '1.2.840.10045.3.1.7',
@@ -152,6 +152,21 @@ class XMLSecurityKey
 
     /** @var mixed|null */
     public $guid = null;
+
+    /**
+     * Allowlist of named curves accepted for ECDSA keys, as phpseclib curve
+     * name => OID (without the "urn:oid:" prefix).
+     *
+     * When null (the default), only EC_CURVE_OIDS (P-256, P-384 and P-521) are
+     * accepted. Keys on any other curve are rejected when signing, verifying,
+     * and reading or writing ECKeyValue. To accept another curve, add it
+     * explicitly, e.g.
+     * $objKey->allowedECCurves = XMLSecurityKey::EC_CURVE_OIDS + array('brainpoolP256r1' => '1.3.36.3.3.2.8.1.1.7');
+     * Set it before loading the key from KeyInfo (XMLSecEnc::staticLocateKeyInfo()).
+     *
+     * @var array<string, string>|null
+     */
+    public $allowedECCurves = null;
 
     /**
      * This variable contains the certificate as a string if this key represents an X509-certificate.
@@ -969,14 +984,44 @@ class XMLSecurityKey
     }
 
     /**
+     * The curves accepted for ECDSA keys: $allowedECCurves, or EC_CURVE_OIDS
+     * when it is not set.
+     *
+     * @return array<string, string>
+     */
+    private function getAllowedECCurves(): array
+    {
+        return is_array($this->allowedECCurves) ? $this->allowedECCurves : self::EC_CURVE_OIDS;
+    }
+
+    /**
+     * Reject keys whose curve is not in the ECDSA curve allowlist.
+     *
+     * EdDSA and Montgomery keys are also EC instances in phpseclib but are not
+     * valid ECDSA keys, so they are rejected even if they are allowlisted.
+     *
+     * @param mixed $curve Curve name (string), or array for explicit curve parameters
+     * @throws Exception
+     */
+    private function assertAllowedECCurve($curve): void
+    {
+        if (! is_string($curve)
+            || in_array($curve, array('Ed25519', 'Ed448', 'Curve25519', 'Curve448'), true)) {
+            throw new Exception('ECDSA requires a key on a named prime curve');
+        }
+        if (! isset($this->getAllowedECCurves()[$curve])) {
+            throw new Exception("EC curve is not allowed: '$curve'");
+        }
+    }
+
+    /**
      * Apply digest and signature encoding options to a phpseclib EC key.
      *
      * XML Signature encodes ECDSA signatures as the concatenation r || s of
      * two integers, each as wide as the curve order (IEEE P1363), not as the
      * ASN.1 DER sequence produced by default.
      *
-     * Only named Weierstrass curves are accepted: EdDSA and Montgomery keys
-     * are also EC instances in phpseclib but are not valid ECDSA keys.
+     * Only keys on an allowlisted curve are accepted (see $allowedECCurves).
      *
      * @throws Exception
      */
@@ -985,11 +1030,7 @@ class XMLSecurityKey
         if (! $key instanceof EC) {
             throw new Exception('Expected an EC key');
         }
-        $curve = $key->getCurve();
-        if (! is_string($curve)
-            || in_array($curve, array('Ed25519', 'Ed448', 'Curve25519', 'Curve448'), true)) {
-            throw new Exception('ECDSA requires a key on a named prime curve');
-        }
+        $this->assertAllowedECCurve($key->getCurve());
         if (empty($this->cryptParams['digest'])) {
             throw new Exception('ECDSA digest is not configured');
         }
@@ -1321,16 +1362,24 @@ class XMLSecurityKey
      * Hint: the point must already be base64 decoded
      * @param string $curveOID Named curve OID, without the "urn:oid:" prefix
      * @param string $point Uncompressed EC point (0x04 || X || Y)
+     * @param array<string, string>|null $allowedCurves Curve allowlist (phpseclib name => OID); null for EC_CURVE_OIDS
      * @return string
      * @throws Exception
      */
-    public static function convertEC($curveOID, $point)
+    public static function convertEC($curveOID, $point, $allowedCurves = null)
     {
-        $curveName = array_search($curveOID, self::EC_CURVE_OIDS, true);
-        if ($curveName === false) {
+        if (! is_array($allowedCurves)) {
+            $allowedCurves = self::EC_CURVE_OIDS;
+        }
+        $curveName = array_search($curveOID, $allowedCurves, true);
+        if (! is_string($curveName)
+            || in_array($curveName, array('Ed25519', 'Ed448', 'Curve25519', 'Curve448'), true)) {
             throw new Exception('Unsupported ECKeyValue curve');
         }
         $curveClass = '\\phpseclib3\\Crypt\\EC\\Curves\\'.$curveName;
+        if (! class_exists($curveClass)) {
+            throw new Exception('Unsupported ECKeyValue curve');
+        }
         $curve = new $curveClass();
         $pointLength = 1 + 2 * $curve->getLengthInBytes();
         if (strlen($point) !== $pointLength || $point[0] !== "\x04") {
@@ -1370,11 +1419,9 @@ class XMLSecurityKey
             throw new Exception('Expected an EC key');
         }
         $curve = $key->getCurve();
-        if (! is_string($curve) || ! isset(self::EC_CURVE_OIDS[$curve])) {
-            throw new Exception('Unsupported ECKeyValue curve');
-        }
+        $this->assertAllowedECCurve($curve);
         return array(
-            'oid' => self::EC_CURVE_OIDS[$curve],
+            'oid' => $this->getAllowedECCurves()[$curve],
             'point' => $key->getEncodedCoordinates(),
         );
     }

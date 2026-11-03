@@ -15,7 +15,7 @@ $verifier = new XMLSecurityKey(XMLSecurityKey::ECDSA_SHA256, array('type' => 'pu
 $verifier->loadKey(dirname(__FILE__) . '/ec-p521-cert.pem', true, true);
 
 /* Generated signatures are always 2 x 66 bytes, even when r or s is
- * shorter (requires phpseclib >= 3.0.40). */
+ * shorter (phpseclib < 3.0.40 produced 130/131-byte P-521 signatures). */
 $lengths = array();
 $signature = null;
 for ($i = 0; $i < 200; $i++) {

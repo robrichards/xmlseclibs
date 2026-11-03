@@ -820,7 +820,7 @@ class XMLSecEnc
                                 if ($objBaseKey === null) {
                                     throw new Exception('Cannot load KeyValue without a base key');
                                 }
-                                $publicKey = XMLSecurityKey::convertEC(substr($curveURI, 8), $point);
+                                $publicKey = XMLSecurityKey::convertEC(substr($curveURI, 8), $point, $objBaseKey->allowedECCurves);
                                 $objBaseKey->loadKey($publicKey);
                                 break;
                         }

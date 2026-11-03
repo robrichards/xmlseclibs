@@ -76,9 +76,13 @@ $arInvalid = array(
     'truncated point' => array('PublicKey', base64_encode(substr($point, 0, 64))),
     'unsupported curve' => array('URI', 'urn:oid:1.3.132.0.10'),
     'not an OID URI' => array('URI', 'http://example.com/curve'),
+    'invalid base64' => array('PublicKey', '!not base64!'),
+    'missing PublicKey' => array('Element', ''),
 );
 foreach ($arInvalid AS $label => $change) {
-    if ($change[0] === 'URI') {
+    if ($change[0] === 'Element') {
+        $xml = preg_replace('#<dsig11:PublicKey>[^<]*</dsig11:PublicKey>#', '', $signedP256);
+    } elseif ($change[0] === 'URI') {
         $xml = str_replace('URI="urn:oid:1.2.840.10045.3.1.7"', 'URI="' . $change[1] . '"', $signedP256);
     } else {
         $xml = str_replace($publicKey, $change[1], $signedP256);
@@ -110,4 +114,6 @@ compressed point: Unable to convert EC key
 truncated point: Unable to convert EC key
 unsupported curve: Unsupported ECKeyValue curve
 not an OID URI: Unsupported NamedCurve URI
+invalid base64: Invalid ECKeyValue PublicKey
+missing PublicKey: Missing NamedCurve or PublicKey
 RSA key: Expected an EC key
