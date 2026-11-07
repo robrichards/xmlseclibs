@@ -7,6 +7,9 @@ use phpseclib3\Crypt\AES;
 use phpseclib3\Crypt\Common\AsymmetricKey;
 use phpseclib3\Crypt\DSA;
 use phpseclib3\Crypt\EC;
+use phpseclib3\Crypt\EC\Formats\Keys\PKCS8 as ECPKCS8Format;
+use phpseclib3\Crypt\EC\PrivateKey as ECPrivateKey;
+use phpseclib3\Crypt\EC\PublicKey as ECPublicKey;
 use phpseclib3\Crypt\PublicKeyLoader;
 use phpseclib3\Exception\NoKeyLoadedException;
 use phpseclib3\Crypt\RSA;
@@ -75,6 +78,9 @@ class XMLSecurityKey
     const RSA_SHA256 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256';
     const RSA_SHA384 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha384';
     const RSA_SHA512 = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha512';
+    const ECDSA_SHA256 = 'http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256';
+    const ECDSA_SHA384 = 'http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha384';
+    const ECDSA_SHA512 = 'http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha512';
     const HMAC_SHA1 = 'http://www.w3.org/2000/09/xmldsig#hmac-sha1';
     const RSA_SHA256_MGF1 = 'http://www.w3.org/2007/05/xmldsig-more#sha256-rsa-MGF1';
     const AUTHTAG_LENGTH = 16;
@@ -93,6 +99,16 @@ class XMLSecurityKey
      * padding / ciphertext-validity oracle from distinguishable errors.
      */
     const DECRYPTION_FAILURE = 'Failure decrypting Data';
+
+    /**
+     * Default allowlist of named curves for ECDSA keys (sign, verify and
+     * ECKeyValue), as phpseclib curve name => OID. See $allowedECCurves.
+     */
+    const EC_CURVE_OIDS = array(
+        'secp256r1' => '1.2.840.10045.3.1.7',
+        'secp384r1' => '1.3.132.0.34',
+        'secp521r1' => '1.3.132.0.35',
+    );
 
     /**
      * @var array{
@@ -136,6 +152,21 @@ class XMLSecurityKey
 
     /** @var mixed|null */
     public $guid = null;
+
+    /**
+     * Allowlist of named curves accepted for ECDSA keys, as phpseclib curve
+     * name => OID (without the "urn:oid:" prefix).
+     *
+     * When null (the default), only EC_CURVE_OIDS (P-256, P-384 and P-521) are
+     * accepted. Keys on any other curve are rejected when signing, verifying,
+     * and reading or writing ECKeyValue. To accept another curve, add it
+     * explicitly, e.g.
+     * $objKey->allowedECCurves = XMLSecurityKey::EC_CURVE_OIDS + array('brainpoolP256r1' => '1.3.36.3.3.2.8.1.1.7');
+     * Set it before loading the key from KeyInfo (XMLSecEnc::staticLocateKeyInfo()).
+     *
+     * @var array<string, string>|null
+     */
+    public $allowedECCurves = null;
 
     /**
      * This variable contains the certificate as a string if this key represents an X509-certificate.
@@ -303,6 +334,39 @@ class XMLSecurityKey
                 $this->cryptParams['library'] = 'phpseclib';
                 $this->cryptParams['method'] = 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha512';
                 $this->cryptParams['padding'] = RSA::SIGNATURE_PKCS1;
+                $this->cryptParams['digest'] = 'sha512';
+                if (is_array($params) && ! empty($params['type'])) {
+                    if ($params['type'] == 'public' || $params['type'] == 'private') {
+                        $this->cryptParams['type'] = $params['type'];
+                        break;
+                    }
+                }
+                throw new Exception('Certificate "type" (private/public) must be passed via parameters');
+            case (self::ECDSA_SHA256):
+                $this->cryptParams['library'] = 'phpseclib';
+                $this->cryptParams['method'] = 'http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha256';
+                $this->cryptParams['digest'] = 'sha256';
+                if (is_array($params) && ! empty($params['type'])) {
+                    if ($params['type'] == 'public' || $params['type'] == 'private') {
+                        $this->cryptParams['type'] = $params['type'];
+                        break;
+                    }
+                }
+                throw new Exception('Certificate "type" (private/public) must be passed via parameters');
+            case (self::ECDSA_SHA384):
+                $this->cryptParams['library'] = 'phpseclib';
+                $this->cryptParams['method'] = 'http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha384';
+                $this->cryptParams['digest'] = 'sha384';
+                if (is_array($params) && ! empty($params['type'])) {
+                    if ($params['type'] == 'public' || $params['type'] == 'private') {
+                        $this->cryptParams['type'] = $params['type'];
+                        break;
+                    }
+                }
+                throw new Exception('Certificate "type" (private/public) must be passed via parameters');
+            case (self::ECDSA_SHA512):
+                $this->cryptParams['library'] = 'phpseclib';
+                $this->cryptParams['method'] = 'http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha512';
                 $this->cryptParams['digest'] = 'sha512';
                 if (is_array($params) && ! empty($params['type'])) {
                     if ($params['type'] == 'public' || $params['type'] == 'private') {
@@ -908,6 +972,80 @@ class XMLSecurityKey
     }
 
     /**
+     * Whether this key represents an ECDSA signature algorithm.
+     *
+     * @return bool
+     */
+    private function isECDSA()
+    {
+        return $this->type === self::ECDSA_SHA256
+            || $this->type === self::ECDSA_SHA384
+            || $this->type === self::ECDSA_SHA512;
+    }
+
+    /**
+     * The curves accepted for ECDSA keys: $allowedECCurves, or EC_CURVE_OIDS
+     * when it is not set.
+     *
+     * @return array<string, string>
+     */
+    private function getAllowedECCurves(): array
+    {
+        return is_array($this->allowedECCurves) ? $this->allowedECCurves : self::EC_CURVE_OIDS;
+    }
+
+    /**
+     * Reject keys whose curve is not in the ECDSA curve allowlist.
+     *
+     * EdDSA and Montgomery keys are also EC instances in phpseclib but are not
+     * valid ECDSA keys, so they are rejected even if they are allowlisted.
+     *
+     * @param mixed $curve Curve name (string), or array for explicit curve parameters
+     * @throws Exception
+     */
+    private function assertAllowedECCurve($curve): void
+    {
+        if (! is_string($curve)
+            || in_array($curve, array('Ed25519', 'Ed448', 'Curve25519', 'Curve448'), true)) {
+            throw new Exception('ECDSA requires a key on a named prime curve');
+        }
+        if (! isset($this->getAllowedECCurves()[$curve])) {
+            throw new Exception("EC curve is not allowed: '$curve'");
+        }
+    }
+
+    /**
+     * Apply digest and signature encoding options to a phpseclib EC key.
+     *
+     * XML Signature encodes ECDSA signatures as the concatenation r || s of
+     * two integers, each as wide as the curve order (IEEE P1363), not as the
+     * ASN.1 DER sequence produced by default.
+     *
+     * Only keys on an allowlisted curve are accepted (see $allowedECCurves).
+     *
+     * @throws Exception
+     */
+    private function configureECKey(AsymmetricKey $key): EC
+    {
+        if (! $key instanceof EC) {
+            throw new Exception('Expected an EC key');
+        }
+        $this->assertAllowedECCurve($key->getCurve());
+        if (empty($this->cryptParams['digest'])) {
+            throw new Exception('ECDSA digest is not configured');
+        }
+        $configured = $key->withHash($this->cryptParams['digest']);
+        if (! $configured instanceof EC) {
+            throw new Exception('Expected an EC key');
+        }
+        $configured = $configured->withSignatureFormat('IEEE');
+        if (! $configured instanceof EC) {
+            throw new Exception('Expected an EC key');
+        }
+        return $configured;
+    }
+
+    /**
      * Encrypts the given data (string) using phpseclib.
      *
      * @param string $data
@@ -1034,9 +1172,16 @@ class XMLSecurityKey
                 } else {
                     $private = PublicKeyLoader::load($this->key);
                 }
-                $private = $this->configureRSAKey($private);
-                if (! $private instanceof RSAPrivateKey) {
-                    throw new Exception('Expected an RSA private key');
+                if ($this->isECDSA()) {
+                    $private = $this->configureECKey($private);
+                    if (! $private instanceof ECPrivateKey) {
+                        throw new Exception('Expected an EC private key');
+                    }
+                } else {
+                    $private = $this->configureRSAKey($private);
+                    if (! $private instanceof RSAPrivateKey) {
+                        throw new Exception('Expected an RSA private key');
+                    }
                 }
                 return self::requireString(
                     $private->sign($data),
@@ -1075,6 +1220,25 @@ class XMLSecurityKey
                 try {
                     if (! is_string($this->key)) {
                         return -1;
+                    }
+                    if ($this->isECDSA()) {
+                        $public = $this->configureECKey(PublicKeyLoader::load($this->key));
+                        if (! $public instanceof ECPublicKey) {
+                            return -1;
+                        }
+                        /*
+                         * r || s must not be wider than twice the curve size.
+                         * Shorter values are accepted on purpose: some signers
+                         * (e.g. Apache Santuario) strip leading zero bytes, so
+                         * about 1 in 4 of their P-521 signatures are 130 bytes
+                         * instead of 132. phpseclib splits the value in half.
+                         */
+                        $maxLength = 2 * (int) ceil($public->getLength() / 8);
+                        if (strlen($signature) > $maxLength) {
+                            return 0;
+                        }
+                        $result = $public->verify($data, $signature);
+                        return $result === true ? 1 : 0;
                     }
                     $public = $this->configureRSAKey(PublicKeyLoader::load($this->key));
                     if (! $public instanceof RSAPublicKey) {
@@ -1190,6 +1354,76 @@ class XMLSecurityKey
             $offset += 64;
         }
         return $encoding."-----END PUBLIC KEY-----\n";
+    }
+
+    /**
+     * Convert the content of an ECKeyValue element to a PEM public key.
+     *
+     * Hint: the point must already be base64 decoded
+     * @param string $curveOID Named curve OID, without the "urn:oid:" prefix
+     * @param string $point Uncompressed EC point (0x04 || X || Y)
+     * @param array<string, string>|null $allowedCurves Curve allowlist (phpseclib name => OID); null for EC_CURVE_OIDS
+     * @return string
+     * @throws Exception
+     */
+    public static function convertEC($curveOID, $point, $allowedCurves = null)
+    {
+        if (! is_array($allowedCurves)) {
+            $allowedCurves = self::EC_CURVE_OIDS;
+        }
+        $curveName = array_search($curveOID, $allowedCurves, true);
+        if (! is_string($curveName)
+            || in_array($curveName, array('Ed25519', 'Ed448', 'Curve25519', 'Curve448'), true)) {
+            throw new Exception('Unsupported ECKeyValue curve');
+        }
+        $curveClass = '\\phpseclib3\\Crypt\\EC\\Curves\\'.$curveName;
+        if (! class_exists($curveClass)) {
+            throw new Exception('Unsupported ECKeyValue curve');
+        }
+        $curve = new $curveClass();
+        $pointLength = 1 + 2 * $curve->getLengthInBytes();
+        if (strlen($point) !== $pointLength || $point[0] !== "\x04") {
+            throw new Exception('Unable to convert EC key');
+        }
+        try {
+            /* extractPoint() rejects points that are not on the curve. */
+            $publicPoint = ECPKCS8Format::extractPoint("\0".$point, $curve);
+            return ECPKCS8Format::savePublicKey($curve, $publicPoint)."\n";
+        } catch (\Throwable $e) {
+            throw new Exception('Unable to convert EC key');
+        }
+    }
+
+    /**
+     * Return the data needed to write an ECKeyValue element for this key.
+     *
+     * The key may be a certificate, a public key or a private key.
+     *
+     * @return array{oid: string, point: string} Named curve OID and uncompressed EC point
+     * @throws Exception
+     */
+    public function getECPublicKeyData(): array
+    {
+        if (! is_string($this->key)) {
+            throw new Exception('Key is not loaded');
+        }
+        if ($this->passphrase !== '') {
+            $key = PublicKeyLoader::load($this->key, $this->passphrase);
+        } else {
+            $key = PublicKeyLoader::load($this->key);
+        }
+        if ($key instanceof ECPrivateKey) {
+            $key = $key->getPublicKey();
+        }
+        if (! $key instanceof ECPublicKey) {
+            throw new Exception('Expected an EC key');
+        }
+        $curve = $key->getCurve();
+        $this->assertAllowedECCurve($curve);
+        return array(
+            'oid' => $this->getAllowedECCurves()[$curve],
+            'point' => $key->getEncodedCoordinates(),
+        );
     }
 
     /**

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doc:Documento xmlns:doc="urn:prise:interop:doc" ID="doc1">
+  <doc:Emisor>PRiSE</doc:Emisor>
+  <ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+    <ds:SignedInfo>
+      <ds:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+      <ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha384"/>
+      <ds:Reference URI="#doc1">
+        <ds:Transforms>
+          <ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+          <ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+        </ds:Transforms>
+        <ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#sha384"/>
+        <ds:DigestValue>x6Y4j+LBNSuA0SXBfmzr9a/h4Iq78TEyH3M2V/QixieK6jDnrqsRkZBDIZdGJGs8</ds:DigestValue>
+      </ds:Reference>
+    </ds:SignedInfo>
+    <ds:SignatureValue>KTyif8iTDRb3WLX1Zp1tPZJiOZNtvDdY9uYIGK6ad9hVh2hJ9WtbHr047ueKpm3A
+4WOQSBakI7EIwJ4619tU6+A5QfEXh9hWGNimo/Cd/QHUJkizdu44qEk6z/jH56EC</ds:SignatureValue>
+    <ds:KeyInfo>
+      <ds:X509Data>
+        <ds:X509Certificate>MIICIzCCAaqgAwIBAgIUAKiER9Wq6x5jBcGz/2bcsIbBQ1kwCgYIKoZIzj0EAwMw
+RTEmMCQGA1UECgwdWE1MU2VjTGlicyBFQ0RTQSBJbnRlcm9wIFRlc3QxGzAZBgNV
+BAMMEkVDIFRlc3QgQ0EgKFAtMzg0KTAeFw0yNjEwMDUwODI3MjRaFw0zMTEwMDQw
+ODI3MjRaMEAxJjAkBgNVBAoMHVhNTFNlY0xpYnMgRUNEU0EgSW50ZXJvcCBUZXN0
+MRYwFAYDVQQDDA1FQyBQLTM4NCBUZXN0MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAE
+JrHnf+5Q9QfPi4XjQoyDQtu05I2L47Jdx5F3lS1K2vIc3bs8uZGW0NoxZEMTbWKf
+pC+zZHqsfXnFS09gNd+NLzE5EoeqO2iIcY2rEWXCt7nhugvuyflxzf5ryos+Mas+
+o2AwXjAMBgNVHRMBAf8EAjAAMA4GA1UdDwEB/wQEAwIHgDAdBgNVHQ4EFgQUTwNx
+DHCPc661X3M6Fqq9s+lDUrYwHwYDVR0jBBgwFoAUb4SVIgKUReGSfw2KfMtmWv3U
+ybQwCgYIKoZIzj0EAwMDZwAwZAIwVa5gpDtwO0KiBY3WuJOLPtdw1i+3eSqmwmR7
+8BF9xZ1o2wiFTulYHXD10MGPn57MAjBgrptHc88pAbnqDefb4r5a7Jco3GCZzi9q
+GiAwh1vMEyincA4dFMW9Bz3O2guIKRs=</ds:X509Certificate>
+      </ds:X509Data>
+    </ds:KeyInfo>
+  </ds:Signature>
+  <doc:Fecha>2026-10-06</doc:Fecha>
+  <doc:Cuerpo>Prueba de interoperabilidad ECDSA: acentos áéíóú, eñe ñ, símbolos € &amp; &lt;&gt;.</doc:Cuerpo>
+</doc:Documento>

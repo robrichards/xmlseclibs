@@ -802,6 +802,27 @@ class XMLSecEnc
                                 $publicKey = XMLSecurityKey::convertRSA($modulus, $exponent);
                                 $objBaseKey->loadKey($publicKey);
                                 break;
+                            case 'ECKeyValue':
+                                $namedCurveNode = $keyval->getElementsByTagNameNS(XMLSecurityDSig::XMLDSIG11NS, 'NamedCurve')->item(0);
+                                $publicKeyNode = $keyval->getElementsByTagNameNS(XMLSecurityDSig::XMLDSIG11NS, 'PublicKey')->item(0);
+                                if (! $namedCurveNode instanceof DOMElement || ! $publicKeyNode) {
+                                    /* ECParameters (explicit curve parameters) are not supported. */
+                                    throw new Exception("Missing NamedCurve or PublicKey");
+                                }
+                                $curveURI = $namedCurveNode->getAttribute('URI');
+                                if (strncmp($curveURI, 'urn:oid:', 8) !== 0) {
+                                    throw new Exception("Unsupported NamedCurve URI");
+                                }
+                                $point = base64_decode(preg_replace('/\s+/', '', (string) $publicKeyNode->textContent), true);
+                                if (empty($point)) {
+                                    throw new Exception("Invalid ECKeyValue PublicKey");
+                                }
+                                if ($objBaseKey === null) {
+                                    throw new Exception('Cannot load KeyValue without a base key');
+                                }
+                                $publicKey = XMLSecurityKey::convertEC(substr($curveURI, 8), $point, $objBaseKey->allowedECCurves);
+                                $objBaseKey->loadKey($publicKey);
+                                break;
                         }
                     }
                     break;

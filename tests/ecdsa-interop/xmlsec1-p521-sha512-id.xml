@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<doc:Documento xmlns:doc="urn:prise:interop:doc" ID="doc1">
+  <doc:Emisor>PRiSE</doc:Emisor>
+  <ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+    <ds:SignedInfo>
+      <ds:CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+      <ds:SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#ecdsa-sha512"/>
+      <ds:Reference URI="#doc1">
+        <ds:Transforms>
+          <ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+          <ds:Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/>
+        </ds:Transforms>
+        <ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha512"/>
+        <ds:DigestValue>Evotp4x38lJ3DrOSidw4tANPd7kmnsVleLkL/ml40KEHOSsYF06azaQkf8LCW+zz
+PGphhbokJz59L8MVPOdRUg==</ds:DigestValue>
+      </ds:Reference>
+    </ds:SignedInfo>
+    <ds:SignatureValue>AaRgP6pxXyt2JwLTJby+r2JzqXXLhiEk0cIPGOVkJGqGSLKycnCxd1NS3Ctb+jRW
+jxWfcZZMzF5MnLmuWotB7ZScAFVY6uAGAVJgFOnUdoX/HbQhDnKLTNtA7Aq1xSV7
+2YYIjUISGMWltbEaZoQpmgXBl5PNKuK+nT3p5PbToxhsbKd1</ds:SignatureValue>
+    <ds:KeyInfo>
+      <ds:X509Data>
+        <ds:X509Certificate>MIICSjCCAdCgAwIBAgIUVdnEeWycKB94XjpftZ3ruy5ssoYwCgYIKoZIzj0EAwMw
+RTEmMCQGA1UECgwdWE1MU2VjTGlicyBFQ0RTQSBJbnRlcm9wIFRlc3QxGzAZBgNV
+BAMMEkVDIFRlc3QgQ0EgKFAtMzg0KTAeFw0yNjEwMDUwODI3MjRaFw0zMTEwMDQw
+ODI3MjRaMEAxJjAkBgNVBAoMHVhNTFNlY0xpYnMgRUNEU0EgSW50ZXJvcCBUZXN0
+MRYwFAYDVQQDDA1FQyBQLTUyMSBUZXN0MIGbMBAGByqGSM49AgEGBSuBBAAjA4GG
+AAQAd0r2Y4tnMkVAUi76wkkl4gZ1RU8luiDL7u9E29RmHeff0WXUGBwgxBTjbW4c
+x+ICfY4RL/E9JWkbiypbi5jpFgUAYhdwSxLBNo5d/f8gTGtrC8m5UW1hkXDuYbh7
+lGnfemnoe9nexXjT1XVOERwRZllhJ1xx2eHxNObsfUuynVuGm0KjYDBeMAwGA1Ud
+EwEB/wQCMAAwDgYDVR0PAQH/BAQDAgeAMB0GA1UdDgQWBBSDPOJNCMltLa+v8tu+
+C0jw3Ap7bzAfBgNVHSMEGDAWgBRvhJUiApRF4ZJ/DYp8y2Za/dTJtDAKBggqhkjO
+PQQDAwNoADBlAjEA9xTy8WujcoWQsLf9/fSY3xzV2/Dw2zaZ/S2BER1uYUuYIiIB
+K94oG1h86zBX5iFrAjB2WWT7N/sPU1idX8RQsmY/ADM5hVCX+PHY8YqXot2uTKfF
+8dO/kOI03fa+wp9Y4Kc=</ds:X509Certificate>
+      </ds:X509Data>
+    </ds:KeyInfo>
+  </ds:Signature>
+  <doc:Fecha>2026-10-06</doc:Fecha>
+  <doc:Cuerpo>Prueba de interoperabilidad ECDSA: acentos áéíóú, eñe ñ, símbolos € &amp; &lt;&gt;.</doc:Cuerpo>
+</doc:Documento>
