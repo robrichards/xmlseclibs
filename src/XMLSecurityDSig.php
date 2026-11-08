@@ -1297,6 +1297,8 @@ class XMLSecurityDSig
      */
     public function sign($objKey, $appendToNode = null)
     {
+        // Check before appending a Signature or emitting its SignatureMethod.
+        $objKey->assertSignatureKey();
         // If we have a parent node append it now so C14N properly works
         if ($appendToNode != null) {
             $this->resetXPathObj();

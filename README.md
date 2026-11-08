@@ -34,6 +34,10 @@ xmlseclibs requires PHP version 8.0 or greater. OpenSSL is optional (phpseclib i
 
 * **Legacy interoperability (temporary):** if you must accept documents/peers that rely on pre-4.0 behaviour, call `$objDSig->enableLegacyMode()` and/or `$objenc->enableLegacyMode()` once after construction. That restores the interoperability settings in one place (DOCTYPE allowed on verify, XPath transforms allowed without count caps, RSA-1.5 key transport allowed). It does **not** undo always-on hardening such as SignatureMethod/key binding, uniform decryption errors, or DOCTYPE rejection in *decrypted* XML. Prefer migrating peers and removing the call.
 
+## Unreleased compatibility note
+
+Signing requires a signature key type (for example, `XMLSecurityKey::RSA_SHA256` or `XMLSecurityKey::ECDSA_SHA256`), not an encryption/key-transport type such as `RSA_1_5` or `RSA_OAEP`. `signData()` and `XMLSecurityDSig::sign()` now throw for this misuse, before emitting a SignatureMethod; `verifySignature()` returns `-1`. This also applies in legacy mode. Encryption/key transport is unchanged.
+
 ## Breaking changes (3.1 → 4.0)
 
 ### Platform

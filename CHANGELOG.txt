@@ -1,5 +1,11 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Unreleased
+  - Reject encryption-only key types for signatures before emitting SignatureMethod.
+    Signing throws an actionable exception; verifySignature() returns -1. Use an
+    RSA-SHA*, ECDSA-SHA*, or HMAC signature key type; encryption/key transport is
+    unchanged.
+
 19, Oct 2026, 4.0.1
 Security Improvements:
 - Harden HMAC key loading so asymmetric material cannot be used as an HMAC
