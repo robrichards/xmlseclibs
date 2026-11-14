@@ -1154,6 +1154,36 @@ class XMLSecurityKey
     }
 
     /**
+     * Reject encryption keys before using or emitting a signature algorithm.
+     *
+     * This is a capability check, not the verification policy allowlist: legacy
+     * signature algorithms remain usable when explicitly selected by the caller.
+     *
+     * @throws Exception
+     */
+    public function assertSignatureKey(): void
+    {
+        $algorithm = $this->getAlgorithm();
+        if ($this->type === $algorithm && in_array($algorithm, [
+            self::RSA_SHA1,
+            self::RSA_SHA256,
+            self::RSA_SHA384,
+            self::RSA_SHA512,
+            self::RSA_SHA256_MGF1,
+            self::ECDSA_SHA256,
+            self::ECDSA_SHA384,
+            self::ECDSA_SHA512,
+            self::HMAC_SHA1,
+        ], true)) {
+            return;
+        }
+        throw new Exception(
+            "Key type '" . $this->type . "' cannot be used for signatures; " .
+            'use a signature key type such as XMLSecurityKey::RSA_SHA256 or XMLSecurityKey::HMAC_SHA1'
+        );
+    }
+
+    /**
      * Signs the data (string) using the extension assigned to the type in the constructor.
      *
      * @param string $data
@@ -1162,6 +1192,7 @@ class XMLSecurityKey
      */
     public function signData($data)
     {
+        $this->assertSignatureKey();
         if (! is_string($this->key)) {
             throw new Exception('Key is not loaded');
         }
@@ -1203,7 +1234,7 @@ class XMLSecurityKey
      * Returns:
      *  1 on succesful signature verification,
      *  0 when signature verification failed,
-     *  -1 if an error occurred during processing.
+     *  -1 if an error occurred during processing (including a non-signature key type).
      *
      * NOTE: be very careful when checking the return value, because in PHP,
      * -1 will be cast to True when in boolean context. So always check the
@@ -1215,6 +1246,12 @@ class XMLSecurityKey
      */
     public function verifySignature($data, $signature)
     {
+        // Preserve the integer return contract for unsupported key algorithms.
+        try {
+            $this->assertSignatureKey();
+        } catch (Exception $e) {
+            return -1;
+        }
         switch ($this->cryptParams['library'] ?? null) {
             case 'phpseclib':
                 try {

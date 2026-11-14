@@ -1,5 +1,11 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+Unreleased
+  - Reject encryption-only key types for signatures before emitting SignatureMethod.
+    Signing throws an actionable exception; verifySignature() returns -1. Use an
+    RSA-SHA*, ECDSA-SHA*, or HMAC signature key type; encryption/key transport is
+    unchanged.
+
 14, Nov 2026, 4.0.2
 Bug Fixes:
 - Restore and extend ECDSA support (ecdsa-sha256/384/512, ECKeyValue) 
