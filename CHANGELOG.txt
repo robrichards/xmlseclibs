@@ -1,10 +1,41 @@
 xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
-Unreleased
-  - Reject encryption-only key types for signatures before emitting SignatureMethod.
-    Signing throws an actionable exception; verifySignature() returns -1. Use an
-    RSA-SHA*, ECDSA-SHA*, or HMAC signature key type; encryption/key transport is
-    unchanged.
+XX, Nov 2026, 4.1.0
+Bug Fixes:
+- Parse RSA-OAEP parameters (ds:DigestMethod, xenc11:MGF, xenc:OAEPparams)
+  from the EncryptionMethod of an EncryptedKey/EncryptedData, applying the
+  XML Encryption defaults (SHA-1/MGF1-SHA1, empty label) when absent. Restores
+  interoperability with senders such as Shibboleth IdP. Encryption now
+  serializes the OAEP parameters actually used. Adds
+  XMLSecurityKey::setOAEPParameters()/getOAEPParameters(). (#293) by @cmcfadden.
+- Accept a schema-valid xenc:KeySize in an RSA-OAEP EncryptionMethod instead
+  of rejecting it; other unknown elements are still rejected.
+
+Security Improvements:
+- Propagate algorithm allowlists to EncryptedKey resolution:
+  locateKeyInfo() passes allowedKeyAlgorithms and allowedDataAlgorithms
+  (alongside allowRSA15KeyTransport) to every EncryptedKey it resolves,
+  embedded or via RetrievalMethod. staticLocateKeyInfo() and
+  XMLSecurityKey::fromEncryptedKeyElement() accept them as optional arguments.
+
+BREAKING CHANGES:
+- Reject encryption-only key types for signatures before emitting SignatureMethod.
+  Signing throws an actionable exception; verifySignature() returns -1. Use an
+  RSA-SHA*, ECDSA-SHA*, or HMAC signature key type; encryption/key transport is
+  unchanged.
+- RSA_OAEP (xmlenc11#rsa-oaep) ciphertext produced by 4.0.0-4.0.2 used
+  SHA-256/MGF1-SHA256 without declaring them, so it no longer decrypts through
+  default key resolution (which applies the declared SHA-1 defaults). Regenerate
+  it, or configure the key explicitly with setOAEPParameters(). There is no
+  automatic fallback. Hand-built RSA_OAEP keys still default to SHA-256.
+- XMLSecEnc::locateKey() reads only the direct EncryptionMethod child of the
+  given node; passing an ancestor of EncryptedData/EncryptedKey now returns
+  null, and EncryptedData without its own EncryptionMethod no longer picks up
+  a nested EncryptedKey's algorithm.
+- XMLSecEnc::locateKey() throws when a node has more than one EncryptionMethod.
+- allowedKeyAlgorithms/allowedDataAlgorithms set on XMLSecEnc now also apply to
+  EncryptedKey elements resolved by locateKeyInfo(); documents whose
+  EncryptedKey uses an algorithm outside the configured list are rejected.
 
 14, Nov 2026, 4.0.2
 Bug Fixes:

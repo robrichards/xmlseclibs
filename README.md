@@ -218,7 +218,7 @@ These settings do not affect RSA-PSS signatures. `encryptKey()` and
 `encryptNode()` serialize the parameters actually used, including explicit
 SHA-256 declarations and any nonempty label.
 
-**Previously generated ciphertext:** 4.0.0/4.0.1 could encrypt with
+**Previously generated ciphertext:** 4.0.0 through 4.0.2 could encrypt with
 SHA-256/MGF1-SHA256 under `xmlenc11#rsa-oaep` while omitting the parameters.
 That XML declares SHA-1 defaults and is nonconforming; it no longer decrypts
 through specification-default key resolution. Regenerate it with explicit
