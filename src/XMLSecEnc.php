@@ -62,6 +62,7 @@ class XMLSecEnc
     const Content = 'http://www.w3.org/2001/04/xmlenc#Content';
     const URI = 3;
     const XMLENCNS = 'http://www.w3.org/2001/04/xmlenc#';
+    const XMLENC11NS = 'http://www.w3.org/2009/xmlenc11#';
 
     /** Maximum depth of EncryptedKey/RetrievalMethod resolution (DoS protection). */
     const MAX_KEYINFO_DEPTH = 10;
@@ -283,6 +284,7 @@ class XMLSecEnc
             throw new Exception('Error creating EncryptionMethod element');
         }
         $encMethod->setAttribute('Algorithm', $objKey->getAlgorithm());
+        $this->appendOAEPParameters($encMethod, $objKey);
         $root->appendChild($encMethod);
         $cipherData = $cipherValue->parentNode;
         if ($cipherData === null || $cipherData->parentNode === null) {
@@ -569,6 +571,7 @@ class XMLSecEnc
             throw new Exception('Error creating EncryptionMethod element');
         }
         $encMethod->setAttribute('Algorithm', $srcKey->getAlgorithm());
+        $this->appendOAEPParameters($encMethod, $srcKey);
         $encKey->appendChild($encMethod);
         if (! empty($srcKey->name)) {
             $keyInfo = $this->encdoc->createElementNS('http://www.w3.org/2000/09/xmldsig#', 'dsig:KeyInfo');
@@ -662,10 +665,13 @@ class XMLSecEnc
         if ($doc = $node->ownerDocument) {
             $xpath = new DOMXPath($doc);
             $xpath->registerNamespace('xmlsecenc', self::XMLENCNS);
-            $query = ".//xmlsecenc:EncryptionMethod";
+            $query = "./xmlsecenc:EncryptionMethod";
             $nodeset = $xpath->query($query, $node);
             if ($nodeset === false) {
                 return null;
+            }
+            if ($nodeset->length > 1) {
+                throw new Exception('Multiple EncryptionMethod elements');
             }
             if ($encmeth = $nodeset->item(0)) {
                 if (! $encmeth instanceof DOMElement) {
@@ -678,10 +684,103 @@ class XMLSecEnc
                     return null;
                 }
                 $this->enforceAlgorithmPolicy($objKey);
+                if ($objKey->getOAEPParameters() !== null) {
+                    $this->readOAEPParameters($encmeth, $objKey);
+                }
                 return $objKey;
             }
         }
         return null;
+    }
+
+    private function readOAEPParameters(DOMElement $encMethod, XMLSecurityKey $key): void
+    {
+        $digest = XMLSecurityDSig::SHA1;
+        $mgf = self::XMLENC11NS.'mgf1sha1';
+        $label = '';
+        $namespaces = array(
+            'DigestMethod' => XMLSecurityDSig::XMLDSIGNS,
+            'MGF' => self::XMLENC11NS,
+            'OAEPparams' => self::XMLENCNS,
+        );
+        $seen = array();
+        foreach ($encMethod->childNodes as $parameter) {
+            if (! $parameter instanceof DOMElement) {
+                if (($parameter->nodeType === XML_TEXT_NODE || $parameter->nodeType === XML_CDATA_SECTION_NODE)
+                    && trim($parameter->textContent) !== '') {
+                    throw new Exception('Invalid RSA-OAEP parameter content');
+                }
+                continue;
+            }
+            $name = $parameter->localName;
+            if (! isset($namespaces[$name]) || $parameter->namespaceURI !== $namespaces[$name]) {
+                throw new Exception('Unsupported RSA-OAEP parameter element');
+            }
+            if (isset($seen[$name])) {
+                throw new Exception('Duplicate RSA-OAEP parameter: '.$name);
+            }
+            $seen[$name] = true;
+            foreach ($parameter->childNodes as $child) {
+                if ($child instanceof DOMElement) {
+                    throw new Exception('Invalid RSA-OAEP parameter content');
+                }
+            }
+            if ($name === 'OAEPparams') {
+                $encoded = str_replace(array(' ', "\t", "\r", "\n"), '', $parameter->textContent);
+                $label = base64_decode($encoded, true);
+                if ($label === false || base64_encode($label) !== $encoded) {
+                    throw new Exception('Invalid RSA-OAEP label encoding');
+                }
+            } else {
+                if (trim($parameter->textContent) !== '') {
+                    throw new Exception('Invalid RSA-OAEP parameter content');
+                }
+                if ($name === 'DigestMethod') {
+                    $digest = $parameter->getAttribute('Algorithm');
+                } else {
+                    if ($key->getAlgorithm() === XMLSecurityKey::RSA_OAEP_MGF1P) {
+                        throw new Exception('rsa-oaep-mgf1p prohibits an MGF element');
+                    }
+                    $mgf = $parameter->getAttribute('Algorithm');
+                }
+            }
+        }
+        $key->setOAEPParameters($digest, $mgf, $label);
+    }
+
+    private function appendOAEPParameters(DOMElement $encMethod, XMLSecurityKey $key): void
+    {
+        $params = $key->getOAEPParameters();
+        if ($params === null) {
+            return;
+        }
+        $doc = $encMethod->ownerDocument;
+        if ($doc === null) {
+            throw new Exception('Cannot resolve owner document for encryption');
+        }
+        if ($params['label'] !== '') {
+            $label = $doc->createElementNS(
+                self::XMLENCNS, 'xenc:OAEPparams', base64_encode($params['label'])
+            );
+            if ($label === false) {
+                throw new Exception('Error creating OAEPparams element');
+            }
+            $encMethod->appendChild($label);
+        }
+        $digest = $doc->createElementNS(XMLSecurityDSig::XMLDSIGNS, 'dsig:DigestMethod');
+        if ($digest === false) {
+            throw new Exception('Error creating DigestMethod element');
+        }
+        $digest->setAttribute('Algorithm', $params['digest']);
+        $encMethod->appendChild($digest);
+        if ($key->getAlgorithm() === XMLSecurityKey::RSA_OAEP) {
+            $mgf = $doc->createElementNS(self::XMLENC11NS, 'xenc11:MGF');
+            if ($mgf === false) {
+                throw new Exception('Error creating MGF element');
+            }
+            $mgf->setAttribute('Algorithm', $params['mgf']);
+            $encMethod->appendChild($mgf);
+        }
     }
 
     /**

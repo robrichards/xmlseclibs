@@ -126,6 +126,25 @@ class XMLSecurityKey
      */
     private $cryptParams = array();
 
+    private const OAEP_DIGEST_ALGORITHMS = array(
+        'http://www.w3.org/2000/09/xmldsig#sha1' => 'sha1',
+        'http://www.w3.org/2001/04/xmldsig-more#sha224' => 'sha224',
+        'http://www.w3.org/2001/04/xmlenc#sha256' => 'sha256',
+        'http://www.w3.org/2001/04/xmldsig-more#sha384' => 'sha384',
+        'http://www.w3.org/2001/04/xmlenc#sha512' => 'sha512',
+    );
+
+    private const OAEP_MGF_ALGORITHMS = array(
+        'http://www.w3.org/2009/xmlenc11#mgf1sha1' => 'sha1',
+        'http://www.w3.org/2009/xmlenc11#mgf1sha224' => 'sha224',
+        'http://www.w3.org/2009/xmlenc11#mgf1sha256' => 'sha256',
+        'http://www.w3.org/2009/xmlenc11#mgf1sha384' => 'sha384',
+        'http://www.w3.org/2009/xmlenc11#mgf1sha512' => 'sha512',
+    );
+
+    /** @var array{digest: string, mgf: string, label: string}|null */
+    private $oaepParams = null;
+
     /** @var int|string */
     public $type = 0;
 
@@ -274,7 +293,7 @@ class XMLSecurityKey
                 $this->cryptParams['library'] = 'phpseclib';
                 $this->cryptParams['padding'] = RSA::ENCRYPTION_OAEP;
                 $this->cryptParams['method'] = 'http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p';
-                $this->cryptParams['digest'] = 'sha1';
+                $this->setOAEPParameters();
                 if (is_array($params) && ! empty($params['type'])) {
                     if ($params['type'] == 'public' || $params['type'] == 'private') {
                         $this->cryptParams['type'] = $params['type'];
@@ -286,7 +305,11 @@ class XMLSecurityKey
                 $this->cryptParams['library'] = 'phpseclib';
                 $this->cryptParams['padding'] = RSA::ENCRYPTION_OAEP;
                 $this->cryptParams['method'] = 'http://www.w3.org/2009/xmlenc11#rsa-oaep';
-                $this->cryptParams['digest'] = 'sha256';
+                // Preserve programmatic encryption defaults; XML declares these explicitly.
+                $this->setOAEPParameters(
+                    'http://www.w3.org/2001/04/xmlenc#sha256',
+                    'http://www.w3.org/2009/xmlenc11#mgf1sha256'
+                );
                 if (is_array($params) && ! empty($params['type'])) {
                     if ($params['type'] == 'public' || $params['type'] == 'private') {
                         $this->cryptParams['type'] = $params['type'];
@@ -395,6 +418,37 @@ class XMLSecurityKey
                 throw new Exception('Invalid Key Type');
         }
         $this->type = $type;
+    }
+
+    /**
+     * Configure OAEP using XML algorithm URIs and a decoded (binary) label.
+     * Defaults here are the XML Encryption defaults, not the RSA_OAEP constructor defaults.
+     */
+    public function setOAEPParameters(
+        string $digest = 'http://www.w3.org/2000/09/xmldsig#sha1',
+        string $mgf = 'http://www.w3.org/2009/xmlenc11#mgf1sha1',
+        string $label = ''
+    ): void {
+        $algorithm = $this->getAlgorithm();
+        if ($algorithm !== self::RSA_OAEP && $algorithm !== self::RSA_OAEP_MGF1P) {
+            throw new Exception('OAEP parameters require an RSA-OAEP key');
+        }
+        if (! isset(self::OAEP_DIGEST_ALGORITHMS[$digest])) {
+            throw new Exception('Unsupported RSA-OAEP digest algorithm: '.$digest);
+        }
+        if (! isset(self::OAEP_MGF_ALGORITHMS[$mgf])) {
+            throw new Exception('Unsupported RSA-OAEP MGF algorithm: '.$mgf);
+        }
+        if ($algorithm === self::RSA_OAEP_MGF1P && self::OAEP_MGF_ALGORITHMS[$mgf] !== 'sha1') {
+            throw new Exception('rsa-oaep-mgf1p requires MGF1-SHA1');
+        }
+        $this->oaepParams = array('digest' => $digest, 'mgf' => $mgf, 'label' => $label);
+    }
+
+    /** @return array{digest: string, mgf: string, label: string}|null */
+    public function getOAEPParameters(): ?array
+    {
+        return $this->oaepParams;
     }
 
     /**
@@ -958,14 +1012,20 @@ class XMLSecurityKey
             if (! $configured instanceof RSA) {
                 throw new Exception('Expected an RSA key');
             }
-            if (
-                $this->cryptParams['padding'] === RSA::ENCRYPTION_OAEP ||
-                $this->cryptParams['padding'] === RSA::SIGNATURE_PSS
-            ) {
+            if ($this->cryptParams['padding'] === RSA::SIGNATURE_PSS) {
                 $configured = $configured->withMGFHash($this->cryptParams['digest']);
                 if (! $configured instanceof RSA) {
                     throw new Exception('Expected an RSA key');
                 }
+            }
+        }
+        if ($this->oaepParams !== null) {
+            $configured = $configured
+                ->withHash(self::OAEP_DIGEST_ALGORITHMS[$this->oaepParams['digest']])
+                ->withMGFHash(self::OAEP_MGF_ALGORITHMS[$this->oaepParams['mgf']])
+                ->withLabel($this->oaepParams['label']);
+            if (! $configured instanceof RSA) {
+                throw new Exception('Expected an RSA key');
             }
         }
         return $configured;
