@@ -22,7 +22,7 @@ function expectRejection($name, $operation) {
         $operation();
         echo "$name: NOT rejected\n";
     } catch (Exception $e) {
-        echo "$name: rejected\n";
+        echo "$name: rejected (".$e->getMessage().")\n";
     }
 }
 
@@ -96,34 +96,34 @@ expectRejection('old identifier non-SHA1 MGF', function () {
 });
 ?>
 --EXPECTF--
-unknown digest: rejected
-unknown MGF: rejected
-digest URI as MGF: rejected
-missing digest URI: rejected
-missing MGF URI: rejected
-empty digest URI: rejected
-empty MGF URI: rejected
-duplicate digest: rejected
-conflicting digest: rejected
-duplicate MGF: rejected
-duplicate label: rejected
-invalid base64: rejected
-missing base64 padding: rejected
-invalid base64 pad bits: rejected
-extra base64 padding: rejected
-nested label: rejected
-nested digest content: rejected
-digest text content: rejected
-method text content: rejected
-wrong digest namespace: rejected
-wrong MGF namespace: rejected
-wrong label namespace: rejected
-nested parameter: rejected
-old identifier MGF forbidden: rejected
-duplicate EncryptionMethod: rejected
+unknown digest: rejected (Unsupported RSA-OAEP digest algorithm: urn:unsupported)
+unknown MGF: rejected (Unsupported RSA-OAEP MGF algorithm: urn:unsupported)
+digest URI as MGF: rejected (Unsupported RSA-OAEP MGF algorithm: http://www.w3.org/2001/04/xmlenc#sha256)
+missing digest URI: rejected (Unsupported RSA-OAEP digest algorithm: )
+missing MGF URI: rejected (Unsupported RSA-OAEP MGF algorithm: )
+empty digest URI: rejected (Unsupported RSA-OAEP digest algorithm: )
+empty MGF URI: rejected (Unsupported RSA-OAEP MGF algorithm: )
+duplicate digest: rejected (Duplicate RSA-OAEP parameter: DigestMethod)
+conflicting digest: rejected (Duplicate RSA-OAEP parameter: DigestMethod)
+duplicate MGF: rejected (Duplicate RSA-OAEP parameter: MGF)
+duplicate label: rejected (Duplicate RSA-OAEP parameter: OAEPparams)
+invalid base64: rejected (Invalid RSA-OAEP label encoding)
+missing base64 padding: rejected (Invalid RSA-OAEP label encoding)
+invalid base64 pad bits: rejected (Invalid RSA-OAEP label encoding)
+extra base64 padding: rejected (Invalid RSA-OAEP label encoding)
+nested label: rejected (Invalid RSA-OAEP parameter content)
+nested digest content: rejected (Invalid RSA-OAEP parameter content)
+digest text content: rejected (Invalid RSA-OAEP parameter content)
+method text content: rejected (Invalid RSA-OAEP parameter content)
+wrong digest namespace: rejected (Unsupported RSA-OAEP parameter element)
+wrong MGF namespace: rejected (Unsupported RSA-OAEP parameter element)
+wrong label namespace: rejected (Unsupported RSA-OAEP parameter element)
+nested parameter: rejected (Unsupported RSA-OAEP parameter element)
+old identifier MGF forbidden: rejected (rsa-oaep-mgf1p prohibits an MGF element)
+duplicate EncryptionMethod: rejected (Multiple EncryptionMethod elements)
 no descendant method: OK
-OAEP algorithm policy: rejected
-non-OAEP configuration: rejected
-non-OAEP configuration: rejected
-non-OAEP configuration: rejected
-old identifier non-SHA1 MGF: rejected
+OAEP algorithm policy: rejected (Key transport algorithm is not allowed: 'http://www.w3.org/2009/xmlenc11#rsa-oaep')
+non-OAEP configuration: rejected (OAEP parameters require an RSA-OAEP key)
+non-OAEP configuration: rejected (OAEP parameters require an RSA-OAEP key)
+non-OAEP configuration: rejected (OAEP parameters require an RSA-OAEP key)
+old identifier non-SHA1 MGF: rejected (rsa-oaep-mgf1p requires MGF1-SHA1)
