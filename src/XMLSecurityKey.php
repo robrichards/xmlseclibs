@@ -1565,22 +1565,32 @@ class XMLSecurityKey
      * @param DOMElement $element The EncryptedKey-element.
      * @param int $depth
      * @param bool $allowRSA15
+     * @param null|array<int, string> $allowedKeyAlgorithms Key-transport allowlist (see XMLSecEnc::$allowedKeyAlgorithms)
+     * @param null|array<int, string> $allowedDataAlgorithms Data-encryption allowlist (see XMLSecEnc::$allowedDataAlgorithms)
      * @throws Exception
      *
      * @return XMLSecurityKey The new key.
      */
-    public static function fromEncryptedKeyElement(DOMElement $element, int $depth = 0, bool $allowRSA15 = false): XMLSecurityKey
-    {
-
+    public static function fromEncryptedKeyElement(
+        DOMElement $element,
+        int $depth = 0,
+        bool $allowRSA15 = false,
+        ?array $allowedKeyAlgorithms = null,
+        ?array $allowedDataAlgorithms = null
+    ): XMLSecurityKey {
         $objenc = new XMLSecEnc();
         $objenc->allowRSA15KeyTransport = $allowRSA15;
+        $objenc->allowedKeyAlgorithms = $allowedKeyAlgorithms;
+        $objenc->allowedDataAlgorithms = $allowedDataAlgorithms;
         $objenc->setNode($element);
         if (! $objKey = $objenc->locateKey()) {
             throw new Exception("Unable to locate algorithm for this Encrypted Key");
         }
         $objKey->isEncrypted = true;
         $objKey->encryptedCtx = $objenc;
-        XMLSecEnc::staticLocateKeyInfo($objKey, $element, $depth, $allowRSA15);
+        XMLSecEnc::staticLocateKeyInfo(
+            $objKey, $element, $depth, $allowRSA15, $allowedKeyAlgorithms, $allowedDataAlgorithms
+        );
         return $objKey;
     }
 

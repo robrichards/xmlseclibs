@@ -67,8 +67,13 @@ Signing requires a signature key type (for example, `XMLSecurityKey::RSA_SHA256`
 
 ### API signature changes (defaults preserve most callers)
 - `processTransforms(..., $signing = false)`
-- `staticLocateKeyInfo(..., $depth = 0, $allowRSA15 = false)`
-- `fromEncryptedKeyElement(..., $depth = 0, $allowRSA15 = false)`
+- `staticLocateKeyInfo(..., $depth = 0, $allowRSA15 = false, $allowedKeyAlgorithms = null, $allowedDataAlgorithms = null)`
+- `fromEncryptedKeyElement(..., $depth = 0, $allowRSA15 = false, $allowedKeyAlgorithms = null, $allowedDataAlgorithms = null)`
+
+`locateKeyInfo()` passes the instance's `allowRSA15KeyTransport`,
+`allowedKeyAlgorithms` and `allowedDataAlgorithms` to every `EncryptedKey` it
+resolves (embedded or via `RetrievalMethod`), so the key's `encryptedCtx`
+enforces the same policy. Callers of the static methods pass them explicitly.
 
 ### Legacy mode
 `$dsig->enableLegacyMode()` / `$enc->enableLegacyMode()` restores **DOCTYPE (verify), XPath transforms + uncapped limits, and RSA-1.5** only. It does **not** undo algorithm/key binding, uniform decrypt errors, decrypted-XML DOCTYPE rejection, Reference fail-closed behavior, SSRF rules, or the PHP/phpseclib requirements.
