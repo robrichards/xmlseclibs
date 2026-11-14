@@ -158,6 +158,52 @@ If the recipient key is selected by `KeyName` (rather than an embedded
 key yourself before decrypting. Never treat key material from the document as
 trusted.
 
+### RSA-OAEP parameters and compatibility
+
+`locateKey()` (including `EncryptedKey` resolution through `locateKeyInfo()`)
+reads OAEP parameters only from the selected encrypted element's direct
+`EncryptionMethod` child. Following
+[XML Encryption 1.1 section 5.5.2](https://www.w3.org/TR/xmlenc-core1/#sec-RSA-OAEP):
+
+* Both RSA-OAEP identifiers default to SHA-1 when `ds:DigestMethod` is absent.
+* `RSA_OAEP` (`xmlenc11#rsa-oaep`) defaults to MGF1-SHA1 when `xenc11:MGF` is absent.
+* `RSA_OAEP_MGF1P` (`rsa-oaep-mgf1p`) always uses MGF1-SHA1 and prohibits an MGF element.
+* Digest and MGF hashes are independent. Supported hashes are SHA-1, SHA-224,
+  SHA-256, SHA-384 and SHA-512, using their standard XML algorithm URIs.
+* `xenc:OAEPparams` is a base64-encoded binary label; omission means an empty label.
+  Invalid encodings, unsupported parameters and duplicate parameter elements throw.
+
+For programmatic encryption, constructing `XMLSecurityKey::RSA_OAEP` still
+selects SHA-256/MGF1-SHA256; constructing `RSA_OAEP_MGF1P` selects SHA-1/MGF1-SHA1.
+To configure OAEP explicitly, before encryption or decryption:
+
+```php
+$key = new XMLSecurityKey(XMLSecurityKey::RSA_OAEP, array('type' => 'public'));
+$key->setOAEPParameters(
+    XMLSecurityDSig::SHA256,
+    'http://www.w3.org/2009/xmlenc11#mgf1sha1',
+    'application-label' // Decoded bytes, not base64.
+);
+```
+
+`setOAEPParameters()` with no arguments selects the specification defaults
+(SHA-1/MGF1-SHA1, empty label). `getOAEPParameters()` returns the selected
+`digest` and `mgf` URIs and decoded `label`, or `null` for non-OAEP keys.
+These settings do not affect RSA-PSS signatures. `encryptKey()` and
+`encryptNode()` serialize the parameters actually used, including explicit
+SHA-256 declarations and any nonempty label.
+
+**Previously generated ciphertext:** 4.0.0/4.0.1 could encrypt with
+SHA-256/MGF1-SHA256 under `xmlenc11#rsa-oaep` while omitting the parameters.
+That XML declares SHA-1 defaults and is nonconforming; it no longer decrypts
+through specification-default key resolution. Regenerate it with explicit
+parameters. For a controlled migration of known historical ciphertext only,
+an application can explicitly configure the key with the known SHA-256
+parameters using trusted out-of-band information. Do not rewrite incoming
+signed XML or guess hashes by retrying decryption. There is no automatic
+fallback; cryptographic failures retain the uniform `Failure decrypting Data`
+message, and algorithm policies and RSA-1.5 restrictions remain in effect.
+
 
 ## How to Install
 
