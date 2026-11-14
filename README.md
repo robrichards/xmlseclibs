@@ -181,6 +181,8 @@ reads OAEP parameters only from the selected encrypted element's direct
   SHA-256, SHA-384 and SHA-512, using their standard XML algorithm URIs.
 * `xenc:OAEPparams` is a base64-encoded binary label; omission means an empty label.
   Invalid encodings, unsupported parameters and duplicate parameter elements throw.
+* A schema-valid `xenc:KeySize` (a positive integer, at most once) is accepted
+  and ignored; any other element in the `EncryptionMethod` throws.
 
 Constructing `XMLSecurityKey::RSA_OAEP` yourself still selects
 SHA-256/MGF1-SHA256, and constructing `RSA_OAEP_MGF1P` selects SHA-1/MGF1-SHA1.

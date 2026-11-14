@@ -713,6 +713,18 @@ class XMLSecEnc
                 continue;
             }
             $name = $parameter->localName;
+            if ($name === 'KeySize' && $parameter->namespaceURI === self::XMLENCNS) {
+                /* Schema-valid xenc:KeySize carries no OAEP parameter; validate and ignore it. */
+                if (isset($seen[$name])) {
+                    throw new Exception('Duplicate RSA-OAEP parameter: '.$name);
+                }
+                $seen[$name] = true;
+                if ($parameter->firstElementChild !== null
+                    || preg_match('/^[1-9][0-9]{0,5}$/', trim($parameter->textContent)) !== 1) {
+                    throw new Exception('Invalid RSA-OAEP parameter content');
+                }
+                continue;
+            }
             if (! isset($namespaces[$name]) || $parameter->namespaceURI !== $namespaces[$name]) {
                 throw new Exception('Unsupported RSA-OAEP parameter element');
             }
