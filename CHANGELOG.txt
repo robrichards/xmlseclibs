@@ -6,13 +6,17 @@ Unreleased
     RSA-SHA*, ECDSA-SHA*, or HMAC signature key type; encryption/key transport is
     unchanged.
 
+14, Nov 2026, 4.0.2
+Bug Fixes:
+- Restore and extend ECDSA support (ecdsa-sha256/384/512, ECKeyValue) 
+  by @danitalika.
+
 19, Oct 2026, 4.0.1
 Security Improvements:
 - Harden HMAC key loading so asymmetric material cannot be used as an HMAC
   secret. The same check applies when signing or verifying. Ordinary HMAC
   secrets still load.
 
-|||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 22, Aug 2026, 4.0.0
 Features:
 - Add reference option omit_uri to skip adding a URI attribute on Reference
