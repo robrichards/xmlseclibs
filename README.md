@@ -182,8 +182,22 @@ reads OAEP parameters only from the selected encrypted element's direct
 * `xenc:OAEPparams` is a base64-encoded binary label; omission means an empty label.
   Invalid encodings, unsupported parameters and duplicate parameter elements throw.
 
-For programmatic encryption, constructing `XMLSecurityKey::RSA_OAEP` still
-selects SHA-256/MGF1-SHA256; constructing `RSA_OAEP_MGF1P` selects SHA-1/MGF1-SHA1.
+Constructing `XMLSecurityKey::RSA_OAEP` yourself still selects
+SHA-256/MGF1-SHA256, and constructing `RSA_OAEP_MGF1P` selects SHA-1/MGF1-SHA1.
+These constructor defaults apply to **decryption as well as encryption**: they
+are used whenever the key is not obtained from the document. A hand-built
+`RSA_OAEP` private key passed to `decryptKey()` therefore expects SHA-256 and
+cannot unwrap keys from senders that use the XML Encryption defaults
+(SHA-1/MGF1-SHA1 with no `DigestMethod`/`MGF`), such as Shibboleth IdP.
+For those senders either:
+
+* resolve the key from the document with `locateKeyInfo()` (or
+  `XMLSecurityKey::fromEncryptedKeyElement()`), load your private key into the
+  returned key, and call `$key->encryptedCtx->decryptKey($key)`. The declared
+  or default parameters are then applied; or
+* call `setOAEPParameters()` on your hand-built key with the parameters you
+  expect (no arguments selects the SHA-1/MGF1-SHA1 defaults).
+
 To configure OAEP explicitly, before encryption or decryption:
 
 ```php
