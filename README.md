@@ -67,8 +67,13 @@ Signing requires a signature key type (for example, `XMLSecurityKey::RSA_SHA256`
 
 ### API signature changes (defaults preserve most callers)
 - `processTransforms(..., $signing = false)`
-- `staticLocateKeyInfo(..., $depth = 0, $allowRSA15 = false)`
-- `fromEncryptedKeyElement(..., $depth = 0, $allowRSA15 = false)`
+- `staticLocateKeyInfo(..., $depth = 0, $allowRSA15 = false, $allowedKeyAlgorithms = null, $allowedDataAlgorithms = null)`
+- `fromEncryptedKeyElement(..., $depth = 0, $allowRSA15 = false, $allowedKeyAlgorithms = null, $allowedDataAlgorithms = null)`
+
+`locateKeyInfo()` passes the instance's `allowRSA15KeyTransport`,
+`allowedKeyAlgorithms` and `allowedDataAlgorithms` to every `EncryptedKey` it
+resolves (embedded or via `RetrievalMethod`), so the key's `encryptedCtx`
+enforces the same policy. Callers of the static methods pass them explicitly.
 
 ### Legacy mode
 `$dsig->enableLegacyMode()` / `$enc->enableLegacyMode()` restores **DOCTYPE (verify), XPath transforms + uncapped limits, and RSA-1.5** only. It does **not** undo algorithm/key binding, uniform decrypt errors, decrypted-XML DOCTYPE rejection, Reference fail-closed behavior, SSRF rules, or the PHP/phpseclib requirements.
@@ -176,9 +181,25 @@ reads OAEP parameters only from the selected encrypted element's direct
   SHA-256, SHA-384 and SHA-512, using their standard XML algorithm URIs.
 * `xenc:OAEPparams` is a base64-encoded binary label; omission means an empty label.
   Invalid encodings, unsupported parameters and duplicate parameter elements throw.
+* A schema-valid `xenc:KeySize` (a positive integer, at most once) is accepted
+  and ignored; any other element in the `EncryptionMethod` throws.
 
-For programmatic encryption, constructing `XMLSecurityKey::RSA_OAEP` still
-selects SHA-256/MGF1-SHA256; constructing `RSA_OAEP_MGF1P` selects SHA-1/MGF1-SHA1.
+Constructing `XMLSecurityKey::RSA_OAEP` yourself still selects
+SHA-256/MGF1-SHA256, and constructing `RSA_OAEP_MGF1P` selects SHA-1/MGF1-SHA1.
+These constructor defaults apply to **decryption as well as encryption**: they
+are used whenever the key is not obtained from the document. A hand-built
+`RSA_OAEP` private key passed to `decryptKey()` therefore expects SHA-256 and
+cannot unwrap keys from senders that use the XML Encryption defaults
+(SHA-1/MGF1-SHA1 with no `DigestMethod`/`MGF`), such as Shibboleth IdP.
+For those senders either:
+
+* resolve the key from the document with `locateKeyInfo()` (or
+  `XMLSecurityKey::fromEncryptedKeyElement()`), load your private key into the
+  returned key, and call `$key->encryptedCtx->decryptKey($key)`. The declared
+  or default parameters are then applied; or
+* call `setOAEPParameters()` on your hand-built key with the parameters you
+  expect (no arguments selects the SHA-1/MGF1-SHA1 defaults).
+
 To configure OAEP explicitly, before encryption or decryption:
 
 ```php
@@ -197,7 +218,7 @@ These settings do not affect RSA-PSS signatures. `encryptKey()` and
 `encryptNode()` serialize the parameters actually used, including explicit
 SHA-256 declarations and any nonempty label.
 
-**Previously generated ciphertext:** 4.0.0/4.0.1 could encrypt with
+**Previously generated ciphertext:** 4.0.0 through 4.0.2 could encrypt with
 SHA-256/MGF1-SHA256 under `xmlenc11#rsa-oaep` while omitting the parameters.
 That XML declares SHA-1 defaults and is nonconforming; it no longer decrypts
 through specification-default key resolution. Regenerate it with explicit

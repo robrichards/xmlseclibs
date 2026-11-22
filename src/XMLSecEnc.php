@@ -713,6 +713,18 @@ class XMLSecEnc
                 continue;
             }
             $name = $parameter->localName;
+            if ($name === 'KeySize' && $parameter->namespaceURI === self::XMLENCNS) {
+                /* Schema-valid xenc:KeySize carries no OAEP parameter; validate and ignore it. */
+                if (isset($seen[$name])) {
+                    throw new Exception('Duplicate RSA-OAEP parameter: '.$name);
+                }
+                $seen[$name] = true;
+                if ($parameter->firstElementChild !== null
+                    || preg_match('/^[1-9][0-9]{0,5}$/', trim($parameter->textContent)) !== 1) {
+                    throw new Exception('Invalid RSA-OAEP parameter content');
+                }
+                continue;
+            }
             if (! isset($namespaces[$name]) || $parameter->namespaceURI !== $namespaces[$name]) {
                 throw new Exception('Unsupported RSA-OAEP parameter element');
             }
@@ -829,11 +841,19 @@ class XMLSecEnc
      * @param null|DOMNode $node
      * @param int $depth
      * @param bool $allowRSA15
+     * @param null|array<int, string> $allowedKeyAlgorithms Key-transport allowlist applied to any resolved EncryptedKey
+     * @param null|array<int, string> $allowedDataAlgorithms Data-encryption allowlist applied to any resolved EncryptedKey
      * @return null|XMLSecurityKey
      * @throws Exception
      */
-    public static function staticLocateKeyInfo($objBaseKey=null, $node=null, $depth=0, $allowRSA15=false)
-    {
+    public static function staticLocateKeyInfo(
+        $objBaseKey=null,
+        $node=null,
+        $depth=0,
+        $allowRSA15=false,
+        ?array $allowedKeyAlgorithms=null,
+        ?array $allowedDataAlgorithms=null
+    ) {
         if (empty($node) || (! $node instanceof DOMNode)) {
             return null;
         }
@@ -944,9 +964,13 @@ class XMLSecEnc
                         throw new Exception("Unable to locate EncryptedKey with @Id='$id'.");
                     }
 
-                    return XMLSecurityKey::fromEncryptedKeyElement($keyElement, $depth + 1, $allowRSA15);
+                    return XMLSecurityKey::fromEncryptedKeyElement(
+                        $keyElement, $depth + 1, $allowRSA15, $allowedKeyAlgorithms, $allowedDataAlgorithms
+                    );
                 case 'EncryptedKey':
-                    return XMLSecurityKey::fromEncryptedKeyElement($child, $depth + 1, $allowRSA15);
+                    return XMLSecurityKey::fromEncryptedKeyElement(
+                        $child, $depth + 1, $allowRSA15, $allowedKeyAlgorithms, $allowedDataAlgorithms
+                    );
                 case 'X509Data':
                     $x509certNodes = $child->getElementsByTagName('X509Certificate');
                     if ($x509certNodes->length > 0) {
@@ -978,6 +1002,13 @@ class XMLSecEnc
         if (empty($node)) {
             $node = $this->rawNode;
         }
-        return self::staticLocateKeyInfo($objBaseKey, $node, 0, $this->allowRSA15KeyTransport);
+        return self::staticLocateKeyInfo(
+            $objBaseKey,
+            $node,
+            0,
+            $this->allowRSA15KeyTransport,
+            $this->allowedKeyAlgorithms,
+            $this->allowedDataAlgorithms
+        );
     }
 }
