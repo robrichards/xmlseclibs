@@ -10,13 +10,10 @@ Bug Fixes:
   XMLSecurityKey::setOAEPParameters()/getOAEPParameters(). (#293) by @cmcfadden.
 - Accept a schema-valid xenc:KeySize in an RSA-OAEP EncryptionMethod instead
   of rejecting it; other unknown elements are still rejected.
-
-Security Improvements:
-- Propagate algorithm allowlists to EncryptedKey resolution:
-  locateKeyInfo() passes allowedKeyAlgorithms and allowedDataAlgorithms
-  (alongside allowRSA15KeyTransport) to every EncryptedKey it resolves,
-  embedded or via RetrievalMethod. staticLocateKeyInfo() and
-  XMLSecurityKey::fromEncryptedKeyElement() accept them as optional arguments.
+- Apply allowedKeyAlgorithms/allowedDataAlgorithms consistently to
+  EncryptedKeys resolved via KeyInfo (embedded or RetrievalMethod).
+  staticLocateKeyInfo() and XMLSecurityKey::fromEncryptedKeyElement() accept
+  them as optional arguments.
 
 BREAKING CHANGES:
 - Reject encryption-only key types for signatures before emitting SignatureMethod.
