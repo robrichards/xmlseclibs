@@ -1,5 +1,5 @@
 --TEST--
-RSA-OAEP EncryptionMethod accepts schema-valid xenc:KeySize and still rejects other elements
+RSA-OAEP EncryptionMethod accepts xenc:KeySize (1-999999, canonical form) and still rejects other elements
 --FILE--
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');
@@ -37,6 +37,14 @@ $cases = array(
     'nested KeySize' => '<e:KeySize><e:Bits>2048</e:Bits></e:KeySize>',
     'KeySize wrong namespace' => '<e11:KeySize>2048</e11:KeySize>',
     'unknown extension' => '<x:Extension xmlns:x="urn:example"/>',
+    'KeySize one' => '<e:KeySize>1</e:KeySize>',
+    'KeySize upper bound' => '<e:KeySize>999999</e:KeySize>',
+    'KeySize above bound' => '<e:KeySize>1000000</e:KeySize>',
+    'KeySize huge' => '<e:KeySize>'.str_repeat('9', 40).'</e:KeySize>',
+    'KeySize plus sign' => '<e:KeySize>+2048</e:KeySize>',
+    'KeySize leading zero' => '<e:KeySize>02048</e:KeySize>',
+    'KeySize negative' => '<e:KeySize>-1</e:KeySize>',
+    'KeySize trailing newline' => "<e:KeySize>2048\n</e:KeySize>",
 );
 foreach ($cases as $name => $parameters) {
     try {
@@ -55,3 +63,11 @@ zero KeySize: Invalid RSA-OAEP parameter content
 nested KeySize: Invalid RSA-OAEP parameter content
 KeySize wrong namespace: Unsupported RSA-OAEP parameter element
 unknown extension: Unsupported RSA-OAEP parameter element
+KeySize one: OK
+KeySize upper bound: OK
+KeySize above bound: Invalid RSA-OAEP parameter content
+KeySize huge: Invalid RSA-OAEP parameter content
+KeySize plus sign: Invalid RSA-OAEP parameter content
+KeySize leading zero: Invalid RSA-OAEP parameter content
+KeySize negative: Invalid RSA-OAEP parameter content
+KeySize trailing newline: OK
