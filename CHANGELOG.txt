@@ -17,7 +17,7 @@ Bug Fixes:
 - Require an asymmetric key transport algorithm (RSA-1.5, RSA-OAEP,
   RSA-OAEP-MGF1P) for EncryptedKey elements, independent of
   allowedKeyAlgorithms; other algorithms are rejected when the key is
-  resolved and in decryptKey(). Symmetric key types (AES, 3DES) no longer load
+  resolved, in decryptKey(), and in decryptNode() on an EncryptedKey. Symmetric key types (AES, 3DES) no longer load
   certificates or PEM/DER key material in loadKey(); raw keys are unaffected.
 
 BREAKING CHANGES:

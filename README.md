@@ -81,7 +81,7 @@ when omitted, `$allowedKeyAlgorithms` defaults to
 key-transport allowlist.
 
 ### Legacy mode
-`$dsig->enableLegacyMode()` / `$enc->enableLegacyMode()` restores **DOCTYPE (verify), XPath transforms + uncapped limits, and RSA-1.5** only (on the encryption side it sets `allowRSA15KeyTransport` and adds RSA-1.5 to `allowedKeyAlgorithms` when that list is set). It does **not** undo algorithm/key binding, uniform decrypt errors, decrypted-XML DOCTYPE rejection, Reference fail-closed behavior, SSRF rules, or the PHP/phpseclib requirements.
+`$dsig->enableLegacyMode()` / `$enc->enableLegacyMode()` restores **DOCTYPE (verify), XPath transforms + uncapped limits, and RSA-1.5** only (on the encryption side it sets `allowRSA15KeyTransport` and adds RSA-1.5 to `allowedKeyAlgorithms` when that list is set; assigning `allowedKeyAlgorithms` afterwards replaces the list, so call `enableLegacyMode()` after configuring it). It does **not** undo algorithm/key binding, uniform decrypt errors, decrypted-XML DOCTYPE rejection, Reference fail-closed behavior, SSRF rules, or the PHP/phpseclib requirements.
 
 **Migration tip:** Prefer `verifyDocument()` with a pinned key. Use legacy mode only while updating peers.
 

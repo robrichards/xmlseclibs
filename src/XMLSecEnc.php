@@ -172,6 +172,8 @@ class XMLSecEnc
      *
      * Enables RSA-1.5 key transport and adds it to $allowedKeyAlgorithms when
      * that allowlist is set. Other algorithms in the allowlist are unchanged.
+     * Assigning $allowedKeyAlgorithms afterwards replaces the list, so call
+     * this after configuring it.
      *
      * This does NOT undo 4.0 oracle / XXE hardening that is always enforced
      * (uniform decryption error messages, DOCTYPE rejection in decrypted XML,
@@ -893,7 +895,7 @@ class XMLSecEnc
             if ($algorithm === XMLSecurityKey::RSA_1_5) {
                 throw new Exception(
                     "Key transport algorithm is not allowed: '$algorithm'; "
-                    . 'add XMLSecurityKey::RSA_1_5 to allowedKeyAlgorithms (or call enableLegacyMode()) to opt in'
+                    . 'add XMLSecurityKey::RSA_1_5 to allowedKeyAlgorithms (property or static argument) to opt in'
                 );
             }
             throw new Exception("Key transport algorithm is not allowed: '$algorithm'");
