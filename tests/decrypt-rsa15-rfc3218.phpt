@@ -66,6 +66,7 @@ $cv->textContent = base64_encode($ct);
 expectUniformDecryptFailure('CHAIN_PAD', function () use ($dom) {
     $objenc = new XMLSecEnc();
     $objenc->allowRSA15KeyTransport = true;
+    $objenc->allowedKeyAlgorithms[] = XMLSecurityKey::RSA_1_5;
     $encData = $objenc->locateEncryptedData($dom);
     $objenc->setNode($encData);
     $objenc->type = $encData->getAttribute('Type');

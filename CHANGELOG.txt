@@ -33,6 +33,16 @@ BREAKING CHANGES:
 - allowedKeyAlgorithms/allowedDataAlgorithms set on XMLSecEnc now also apply to
   EncryptedKey elements resolved by locateKeyInfo(); documents whose
   EncryptedKey uses an algorithm outside the configured list are rejected.
+- XMLSecEnc::$allowedKeyAlgorithms now defaults to
+  XMLSecEnc::DEFAULT_KEY_ALGORITHMS (RSA-OAEP and RSA-OAEP-MGF1P) instead of
+  null, a secure default for key transport. The optional $allowedKeyAlgorithms
+  argument of staticLocateKeyInfo() and XMLSecurityKey::fromEncryptedKeyElement()
+  has the same default. RSA-OAEP with SHA-1 parameters (e.g. Shibboleth IdP)
+  is unaffected. Decrypting RSA-1.5 key transport now requires both
+  allowRSA15KeyTransport = true and RSA-1.5 in the allowlist
+  ($enc->allowedKeyAlgorithms[] = XMLSecurityKey::RSA_1_5); enableLegacyMode()
+  does both. Set allowedKeyAlgorithms (or the static argument) to null to
+  apply no key-transport allowlist.
 
 14, Nov 2026, 4.0.2
 Bug Fixes:

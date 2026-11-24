@@ -71,6 +71,7 @@ foreach ([XMLSecurityKey::RSA_1_5, XMLSecurityKey::RSA_OAEP_MGF1P, XMLSecurityKe
 
     $decrypt = new XMLSecEnc();
     $decrypt->allowRSA15KeyTransport = true;
+    $decrypt->allowedKeyAlgorithms[] = XMLSecurityKey::RSA_1_5;
     $encrypted = $decrypt->locateEncryptedData($doc);
     $decrypt->setNode($encrypted);
     $decrypt->type = XMLSecEnc::Element;

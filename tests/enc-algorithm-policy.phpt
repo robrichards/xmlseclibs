@@ -4,6 +4,7 @@ XMLSecEnc algorithm policy: RSA-1.5 default-deny + data-algorithm allowlist
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');
 use RobRichards\XMLSecLibs\XMLSecEnc;
+use RobRichards\XMLSecLibs\XMLSecurityKey;
 
 $xml = <<<XML
 <?xml version="1.0"?>
@@ -41,10 +42,12 @@ try {
     print "RSA15_DEFAULT: ".$e->getMessage()."\n";
 }
 
-/* 2. RSA-1.5 can be opted into; key resolution then succeeds (no policy block). */
+/* 2. RSA-1.5 can be opted into (flag + key-transport allowlist); key
+ *    resolution then succeeds (no policy block). */
 try {
     $objenc = newEnc($xml);
     $objenc->allowRSA15KeyTransport = true;
+    $objenc->allowedKeyAlgorithms[] = XMLSecurityKey::RSA_1_5;
     $objKey = $objenc->locateKey();
     $objenc->locateKeyInfo($objKey);
     print "RSA15_OPTIN: OK\n";

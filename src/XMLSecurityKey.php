@@ -1565,7 +1565,8 @@ class XMLSecurityKey
      * @param DOMElement $element The EncryptedKey-element.
      * @param int $depth
      * @param bool $allowRSA15
-     * @param null|array<int, string> $allowedKeyAlgorithms Key-transport allowlist (see XMLSecEnc::$allowedKeyAlgorithms)
+     * @param null|array<int, string> $allowedKeyAlgorithms Key-transport allowlist (see XMLSecEnc::$allowedKeyAlgorithms;
+     *                                                     defaults to XMLSecEnc::DEFAULT_KEY_ALGORITHMS, null = no restriction)
      * @param null|array<int, string> $allowedDataAlgorithms Data-encryption allowlist (see XMLSecEnc::$allowedDataAlgorithms)
      * @throws Exception
      *
@@ -1575,7 +1576,7 @@ class XMLSecurityKey
         DOMElement $element,
         int $depth = 0,
         bool $allowRSA15 = false,
-        ?array $allowedKeyAlgorithms = null,
+        ?array $allowedKeyAlgorithms = XMLSecEnc::DEFAULT_KEY_ALGORITHMS,
         ?array $allowedDataAlgorithms = null
     ): XMLSecurityKey {
         $objenc = new XMLSecEnc();
