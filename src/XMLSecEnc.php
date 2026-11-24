@@ -78,6 +78,17 @@ class XMLSecEnc
     );
 
     /**
+     * Algorithms an EncryptedKey may use (asymmetric key transport). Any other
+     * EncryptedKey algorithm is rejected regardless of $allowedKeyAlgorithms.
+     * The allowlists and $allowRSA15KeyTransport further restrict this set.
+     */
+    private const KEY_TRANSPORT_ALGORITHMS = array(
+        XMLSecurityKey::RSA_1_5,
+        XMLSecurityKey::RSA_OAEP_MGF1P,
+        XMLSecurityKey::RSA_OAEP,
+    );
+
+    /**
      * Recommended data-encryption (symmetric) algorithms. Authenticated GCM
      * modes only; unauthenticated CBC modes are excluded because they are
      * malleable and prone to padding-oracle attacks.
@@ -434,6 +445,9 @@ class XMLSecEnc
             throw new Exception('Invalid Key');
         }
 
+        if (self::isEncryptedKeyNode($this->rawNode)) {
+            self::requireKeyTransportAlgorithm($objKey);
+        }
         $this->enforceAlgorithmPolicy($objKey);
 
         $rawNode = $this->rawNode;
@@ -624,6 +638,7 @@ class XMLSecEnc
         if (! $encKey->isEncrypted) {
             throw new Exception("Key is not Encrypted");
         }
+        self::requireKeyTransportAlgorithm($encKey);
         if (empty($encKey->key)) {
             throw new Exception("Key is missing data to perform the decryption");
         }
@@ -690,6 +705,9 @@ class XMLSecEnc
                     $objKey = new XMLSecurityKey($attrAlgorithm, array('type' => 'private'));
                 } catch (Exception $e) {
                     return null;
+                }
+                if (self::isEncryptedKeyNode($node)) {
+                    self::requireKeyTransportAlgorithm($objKey);
                 }
                 $this->enforceAlgorithmPolicy($objKey);
                 if ($objKey->getOAEPParameters() !== null) {
@@ -800,6 +818,38 @@ class XMLSecEnc
             }
             $mgf->setAttribute('Algorithm', $params['mgf']);
             $encMethod->appendChild($mgf);
+        }
+    }
+
+    /**
+     * @param mixed $node
+     * @return bool
+     */
+    private static function isEncryptedKeyNode($node)
+    {
+        return $node instanceof DOMElement
+            && $node->localName === 'EncryptedKey'
+            && $node->namespaceURI === self::XMLENCNS;
+    }
+
+    /**
+     * An EncryptedKey is always unwrapped with an asymmetric key-transport
+     * algorithm (RSA-1.5, RSA-OAEP, RSA-OAEP-MGF1P). Symmetric key wrap is not
+     * supported, so any other algorithm is rejected before decryption,
+     * independently of $allowedKeyAlgorithms.
+     *
+     * @param XMLSecurityKey $objKey
+     * @return void
+     * @throws Exception
+     */
+    private static function requireKeyTransportAlgorithm($objKey)
+    {
+        $algorithm = $objKey->getAlgorithm();
+        if (! is_string($algorithm) || ! in_array($algorithm, self::KEY_TRANSPORT_ALGORITHMS, true)) {
+            throw new Exception(
+                'EncryptedKey algorithm is not a supported key transport algorithm: \''
+                . (is_string($algorithm) ? $algorithm : '') . '\''
+            );
         }
     }
 

@@ -56,6 +56,7 @@ Signing requires a signature key type (for example, `XMLSecurityKey::RSA_SHA256`
 
 ### Encryption / decryption
 - **Key transport restricted to RSA-OAEP by default** (`allowedKeyAlgorithms = XMLSecEnc::DEFAULT_KEY_ALGORITHMS`, since 4.1). Widen the list explicitly, or set it to `null` for no key-transport allowlist
+- **EncryptedKey must use RSA key transport** (RSA-1.5, RSA-OAEP, RSA-OAEP-MGF1P), even when `allowedKeyAlgorithms` is `null`; AES/3DES keys refuse certificates and PEM/DER key material in `loadKey()`
 - **RSA-1.5 key transport denied by default**. Opt in: `$enc->allowRSA15KeyTransport = true` and `$enc->allowedKeyAlgorithms[] = XMLSecurityKey::RSA_1_5`, or `enableLegacyMode()`
 - **Single decrypt error message**: `Failure decrypting Data` (do not branch on exception text)
 - **DOCTYPE rejected in decrypted XML** (not restored by legacy mode)

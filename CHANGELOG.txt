@@ -14,6 +14,11 @@ Bug Fixes:
   EncryptedKeys resolved via KeyInfo (embedded or RetrievalMethod).
   staticLocateKeyInfo() and XMLSecurityKey::fromEncryptedKeyElement() accept
   them as optional arguments.
+- Require an asymmetric key transport algorithm (RSA-1.5, RSA-OAEP,
+  RSA-OAEP-MGF1P) for EncryptedKey elements, independent of
+  allowedKeyAlgorithms; other algorithms are rejected when the key is
+  resolved and in decryptKey(). Symmetric key types (AES, 3DES) no longer load
+  certificates or PEM/DER key material in loadKey(); raw keys are unaffected.
 
 BREAKING CHANGES:
 - Reject encryption-only key types for signatures before emitting SignatureMethod.

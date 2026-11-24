@@ -141,7 +141,8 @@ attempt('RSA15_LEGACY_MODE', function () use ($rsa15) {
     });
 });
 
-/* 5. Explicit null opts out of the allowlist (RSA-1.5 still needs its flag). */
+/* 5. Explicit null opts out of the allowlist (RSA-1.5 still needs its flag;
+ *    non-key-transport EncryptedKey algorithms are always rejected). */
 attempt('NULL_RSA15_NO_FLAG', function () use ($rsa15) {
     return decrypt($rsa15->cloneNode(true), function ($dec) {
         $dec->allowedKeyAlgorithms = null;
@@ -242,8 +243,8 @@ RSA15_LIST_ONLY: RSA-1.5 key transport is disabled (Bleichenbacher risk); set al
 RSA15_LEGACY_MODE: OK
 NULL_RSA15_NO_FLAG: RSA-1.5 key transport is disabled (Bleichenbacher risk); set allowRSA15KeyTransport = true to opt in
 NULL_RSA15_FLAG: OK
-NON_TRANSPORT_DEFAULT: Key transport algorithm is not allowed: 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256'
-NON_TRANSPORT_NULL: http://www.w3.org/2001/04/xmldsig-more#rsa-sha256
+NON_TRANSPORT_DEFAULT: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256'
+NON_TRANSPORT_NULL: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256'
 LEGACY_NULL_STAYS_NULL: NULL
 NESTED_DEFAULT: Key transport algorithm is not allowed: 'http://www.w3.org/2001/04/xmlenc#rsa-1_5'
 NESTED_NULL: http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p
