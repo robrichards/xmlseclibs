@@ -890,6 +890,12 @@ class XMLSecEnc
         }
         if ($this->allowedKeyAlgorithms !== null
             && ! in_array($algorithm, $this->allowedKeyAlgorithms, true)) {
+            if ($algorithm === XMLSecurityKey::RSA_1_5) {
+                throw new Exception(
+                    "Key transport algorithm is not allowed: '$algorithm'; "
+                    . 'add XMLSecurityKey::RSA_1_5 to allowedKeyAlgorithms (or call enableLegacyMode()) to opt in'
+                );
+            }
             throw new Exception("Key transport algorithm is not allowed: '$algorithm'");
         }
     }

@@ -237,7 +237,7 @@ OAEP: OK
 OAEP_SHA1_IMPLICIT: OK
 OAEP_SHA1_EXPLICIT: OK
 RSA15_DEFAULT: RSA-1.5 key transport is disabled (Bleichenbacher risk); set allowRSA15KeyTransport = true to opt in
-RSA15_FLAG_ONLY: Key transport algorithm is not allowed: 'http://www.w3.org/2001/04/xmlenc#rsa-1_5'
+RSA15_FLAG_ONLY: Key transport algorithm is not allowed: 'http://www.w3.org/2001/04/xmlenc#rsa-1_5'; add XMLSecurityKey::RSA_1_5 to allowedKeyAlgorithms (or call enableLegacyMode()) to opt in
 RSA15_FLAG_AND_LIST: OK
 RSA15_LIST_ONLY: RSA-1.5 key transport is disabled (Bleichenbacher risk); set allowRSA15KeyTransport = true to opt in
 RSA15_LEGACY_MODE: OK
@@ -246,11 +246,11 @@ NULL_RSA15_FLAG: OK
 NON_TRANSPORT_DEFAULT: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256'
 NON_TRANSPORT_NULL: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256'
 LEGACY_NULL_STAYS_NULL: NULL
-NESTED_DEFAULT: Key transport algorithm is not allowed: 'http://www.w3.org/2001/04/xmlenc#rsa-1_5'
+NESTED_DEFAULT: Key transport algorithm is not allowed: 'http://www.w3.org/2001/04/xmlenc#rsa-1_5'; add XMLSecurityKey::RSA_1_5 to allowedKeyAlgorithms (or call enableLegacyMode()) to opt in
 NESTED_NULL: http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p
-RETRIEVAL_DEFAULT: Key transport algorithm is not allowed: 'http://www.w3.org/2001/04/xmlenc#rsa-1_5'
+RETRIEVAL_DEFAULT: Key transport algorithm is not allowed: 'http://www.w3.org/2001/04/xmlenc#rsa-1_5'; add XMLSecurityKey::RSA_1_5 to allowedKeyAlgorithms (or call enableLegacyMode()) to opt in
 RETRIEVAL_NULL: http://www.w3.org/2001/04/xmlenc#rsa-1_5
-STATIC_FROM_DEFAULT: Key transport algorithm is not allowed: 'http://www.w3.org/2001/04/xmlenc#rsa-1_5'
+STATIC_FROM_DEFAULT: Key transport algorithm is not allowed: 'http://www.w3.org/2001/04/xmlenc#rsa-1_5'; add XMLSecurityKey::RSA_1_5 to allowedKeyAlgorithms (or call enableLegacyMode()) to opt in
 STATIC_FROM_NULL: http://www.w3.org/2001/04/xmlenc#rsa-1_5
-STATIC_LOCATE_DEFAULT: Key transport algorithm is not allowed: 'http://www.w3.org/2001/04/xmlenc#rsa-1_5'
+STATIC_LOCATE_DEFAULT: Key transport algorithm is not allowed: 'http://www.w3.org/2001/04/xmlenc#rsa-1_5'; add XMLSecurityKey::RSA_1_5 to allowedKeyAlgorithms (or call enableLegacyMode()) to opt in
 STATIC_LOCATE_NULL: http://www.w3.org/2001/04/xmlenc#rsa-1_5
