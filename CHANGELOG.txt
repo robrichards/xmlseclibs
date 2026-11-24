@@ -8,8 +8,9 @@ Bug Fixes:
   interoperability with senders such as Shibboleth IdP. Encryption now
   serializes the OAEP parameters actually used. Adds
   XMLSecurityKey::setOAEPParameters()/getOAEPParameters(). (#293) by @cmcfadden.
-- Accept a schema-valid xenc:KeySize in an RSA-OAEP EncryptionMethod instead
-  of rejecting it; other unknown elements are still rejected.
+- Accept an xenc:KeySize (a positive decimal integer of up to six digits) in
+  an RSA-OAEP EncryptionMethod instead of rejecting it; other unknown elements
+  are still rejected.
 - Apply allowedKeyAlgorithms/allowedDataAlgorithms consistently to
   EncryptedKeys resolved via KeyInfo (embedded or RetrievalMethod).
   staticLocateKeyInfo() and XMLSecurityKey::fromEncryptedKeyElement() accept
@@ -38,6 +39,13 @@ BREAKING CHANGES:
 - allowedKeyAlgorithms/allowedDataAlgorithms set on XMLSecEnc now also apply to
   EncryptedKey elements resolved by locateKeyInfo(); documents whose
   EncryptedKey uses an algorithm outside the configured list are rejected.
+- XMLSecEnc::staticLocateKeyInfo() and XMLSecurityKey::fromEncryptedKeyElement()
+  have two new optional parameters ($allowedKeyAlgorithms,
+  $allowedDataAlgorithms). Subclasses that override either method with the
+  4.0 signature fail with a PHP fatal error ("Declaration ... must be
+  compatible"); add the two parameters to the override. New public methods
+  XMLSecurityKey::setOAEPParameters(), getOAEPParameters() and
+  assertSignatureKey() can likewise conflict with same-named subclass methods.
 - XMLSecEnc::$allowedKeyAlgorithms now defaults to
   XMLSecEnc::DEFAULT_KEY_ALGORITHMS (RSA-OAEP and RSA-OAEP-MGF1P) instead of
   null, a secure default for key transport. The optional $allowedKeyAlgorithms

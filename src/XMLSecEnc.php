@@ -742,7 +742,7 @@ class XMLSecEnc
             }
             $name = $parameter->localName;
             if ($name === 'KeySize' && $parameter->namespaceURI === self::XMLENCNS) {
-                /* Schema-valid xenc:KeySize carries no OAEP parameter; validate and ignore it. */
+                /* xenc:KeySize carries no OAEP parameter; accept 1-999999 (canonical form only) and ignore it. */
                 if (isset($seen[$name])) {
                     throw new Exception('Duplicate RSA-OAEP parameter: '.$name);
                 }
