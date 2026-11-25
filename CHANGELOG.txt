@@ -56,11 +56,21 @@ BREAKING CHANGES:
   ($enc->allowedKeyAlgorithms[] = XMLSecurityKey::RSA_1_5); enableLegacyMode()
   does both. Set allowedKeyAlgorithms (or the static argument) to null to
   apply no key-transport allowlist.
+- Requires phpseclib 3.0.58 or later (4.0.2 required 3.0.57 or later).
+- Parsing an RSA-OAEP EncryptionMethod now rejects unknown or
+  wrongly-namespaced child elements, duplicate parameters, and
+  malformed content. 4.0.x ignored these children. An xenc:KeySize
+  of 1 to 999999 (no plus sign or leading zeros) is accepted and ignored.
 
 14, Nov 2026, 4.0.2
 Bug Fixes:
-- Restore and extend ECDSA support (ecdsa-sha256/384/512, ECKeyValue) 
-  by @danitalika.
+- Restore and extend ECDSA support (ecdsa-sha256/384/512, ECKeyValue)
+  by @danitalika. Adds XMLSecurityDSig::addECKeyValue(),
+  XMLSecurityKey::convertEC(), getECPublicKeyData(), and
+  $allowedECCurves (defaults to the P-256, P-384 and P-521 curves).
+
+Notes:
+- Requires phpseclib 3.0.57 or later (was ~3.0).
 
 19, Oct 2026, 4.0.1
 Security Improvements:
