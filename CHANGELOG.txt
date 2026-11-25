@@ -61,6 +61,16 @@ BREAKING CHANGES:
   wrongly-namespaced child elements, duplicate parameters, and
   malformed content. 4.0.x ignored these children. An xenc:KeySize
   of 1 to 999999 (no plus sign or leading zeros) is accepted and ignored.
+- Signature verification now defaults to SHA-2 algorithms.
+  XMLSecurityDSig::$allowedSignatureAlgorithms and $allowedDigestAlgorithms
+  default to DEFAULT_SIGNATURE_ALGORITHMS (RSA-SHA256/384/512, RSA-PSS
+  SHA256, ECDSA-SHA256/384/512) and DEFAULT_DIGEST_ALGORITHMS
+  (SHA-256/384/512) instead of null, and apply to verify() and
+  validateReference() as well as verifyDocument(). Signing is unaffected.
+  SHA-1 (rsa-sha1, dsa-sha1, hmac-sha1, sha1 digests) requires
+  enableLegacyMode(), which adds them to the lists, or adding them to the
+  lists explicitly; RIPEMD-160 digests require a list entry. Set a list to
+  null to apply no allowlist (verifyDocument() now honors null the same way).
 
 14, Nov 2026, 4.0.2
 Bug Fixes:

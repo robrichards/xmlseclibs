@@ -5,6 +5,7 @@ Verify with formatted X509Certificate
 require(dirname(__FILE__) . '/../xmlseclibs.php');
 use RobRichards\XMLSecLibs\XMLSecurityDSig;
 use RobRichards\XMLSecLibs\XMLSecEnc;
+use RobRichards\XMLSecLibs\XMLSecurityKey;
 
 $doc = new DOMDocument();
 $arTests = array('SIGN_TEST_FORMATTED'=>'sign-formatted-test.xml');
@@ -12,6 +13,9 @@ $arTests = array('SIGN_TEST_FORMATTED'=>'sign-formatted-test.xml');
 foreach ($arTests AS $testName=>$testFile) {
 	$doc->load(dirname(__FILE__) . "/$testFile");
 	$objXMLSecDSig = new XMLSecurityDSig();
+	/* Fixture uses rsa-sha1 / sha1: widen the default lists explicitly. */
+	$objXMLSecDSig->allowedSignatureAlgorithms[] = XMLSecurityKey::RSA_SHA1;
+	$objXMLSecDSig->allowedDigestAlgorithms[] = XMLSecurityDSig::SHA1;
 	
 	$objDSig = $objXMLSecDSig->locateSignature($doc);
 	if (! $objDSig) {
