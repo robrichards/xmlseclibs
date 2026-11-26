@@ -32,9 +32,17 @@ function newEnc($xml) {
     return $objenc;
 }
 
+/* The fixture's data algorithm is AES-CBC, outside the default data list. */
+function allowLegacyData($objenc) {
+    foreach (XMLSecEnc::LEGACY_DATA_ALGORITHMS as $algorithm) {
+        $objenc->allowedDataAlgorithms[] = $algorithm;
+    }
+}
+
 /* 1. RSA-1.5 key transport is denied by default during key resolution. */
 try {
     $objenc = newEnc($xml);
+    allowLegacyData($objenc);
     $objKey = $objenc->locateKey();
     $objenc->locateKeyInfo($objKey);
     print "RSA15_DEFAULT: unexpected success\n";
@@ -46,6 +54,7 @@ try {
  *    resolution then succeeds (no policy block). */
 try {
     $objenc = newEnc($xml);
+    allowLegacyData($objenc);
     $objenc->allowRSA15KeyTransport = true;
     $objenc->allowedKeyAlgorithms[] = XMLSecurityKey::RSA_1_5;
     $objKey = $objenc->locateKey();
@@ -55,10 +64,9 @@ try {
     print "RSA15_OPTIN: ".$e->getMessage()."\n";
 }
 
-/* 3. Data-algorithm allowlist rejects unauthenticated CBC when GCM-only. */
+/* 3. The default data-algorithm list rejects AES-CBC. */
 try {
     $objenc = newEnc($xml);
-    $objenc->allowedDataAlgorithms = XMLSecEnc::DEFAULT_DATA_ALGORITHMS;
     $objenc->locateKey();
     print "DATA_ALLOWLIST: unexpected success\n";
 } catch (Exception $e) {

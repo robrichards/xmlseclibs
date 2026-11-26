@@ -9,6 +9,8 @@ $doc = new DOMDocument();
 $doc->load(dirname(__FILE__) . "/retrievalmethod-findkey.xml");
 
 $objenc = new XMLSecEnc();
+/* retrievalmethod-findkey.xml uses AES-256-CBC. */
+$objenc->enableLegacyMode();
 $encData = $objenc->locateEncryptedData($doc);
 if (! $encData) {
 	throw new Exception("Cannot locate Encrypted Data");

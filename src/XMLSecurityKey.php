@@ -1586,7 +1586,8 @@ class XMLSecurityKey
      * @param bool $allowRSA15
      * @param null|array<int, string> $allowedKeyAlgorithms Key-transport allowlist (see XMLSecEnc::$allowedKeyAlgorithms;
      *                                                     defaults to XMLSecEnc::DEFAULT_KEY_ALGORITHMS, null = no restriction)
-     * @param null|array<int, string> $allowedDataAlgorithms Data-encryption allowlist (see XMLSecEnc::$allowedDataAlgorithms)
+     * @param null|array<int, string> $allowedDataAlgorithms Data-encryption allowlist (see XMLSecEnc::$allowedDataAlgorithms;
+     *                                                     defaults to XMLSecEnc::DEFAULT_DATA_ALGORITHMS, null = no restriction)
      * @throws Exception
      *
      * @return XMLSecurityKey The new key.
@@ -1596,7 +1597,7 @@ class XMLSecurityKey
         int $depth = 0,
         bool $allowRSA15 = false,
         ?array $allowedKeyAlgorithms = XMLSecEnc::DEFAULT_KEY_ALGORITHMS,
-        ?array $allowedDataAlgorithms = null
+        ?array $allowedDataAlgorithms = XMLSecEnc::DEFAULT_DATA_ALGORITHMS
     ): XMLSecurityKey {
         $objenc = new XMLSecEnc();
         $objenc->allowRSA15KeyTransport = $allowRSA15;

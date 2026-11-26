@@ -29,6 +29,10 @@ foreach ($arTests AS $testName=>$testFile) {
 	
 	try {
 		$objenc = new XMLSecEnc();
+		/* oaep_sha1-res.xml uses AES-256-CBC, which requires legacy mode. */
+		if ($testName === 'AOESP_SHA1') {
+			$objenc->enableLegacyMode();
+		}
 		$encData = $objenc->locateEncryptedData($doc);
 		if (! $encData) {
 			throw new Exception("Cannot locate Encrypted Data");

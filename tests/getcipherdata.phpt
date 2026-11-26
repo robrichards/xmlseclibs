@@ -10,6 +10,8 @@ $doc->load(dirname(__FILE__) . '/oaep_sha1-res.xml');
 
 
 $objenc = new XMLSecEnc();
+/* oaep_sha1-res.xml uses AES-256-CBC. */
+$objenc->enableLegacyMode();
 $encData = $objenc->locateEncryptedData($doc);
 $objenc->setNode($encData);
 

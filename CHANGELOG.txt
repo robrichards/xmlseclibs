@@ -71,6 +71,16 @@ BREAKING CHANGES:
   enableLegacyMode(), which adds them to the lists, or adding them to the
   lists explicitly; RIPEMD-160 digests require a list entry. Set a list to
   null to apply no allowlist (verifyDocument() now honors null the same way).
+- Data decryption now defaults to AES-GCM.
+  XMLSecEnc::$allowedDataAlgorithms defaults to DEFAULT_DATA_ALGORITHMS
+  (AES-128/192/256-GCM) instead of null. The same default applies to the
+  $allowedDataAlgorithms argument of staticLocateKeyInfo() and
+  XMLSecurityKey::fromEncryptedKeyElement(). AES-CBC and TripleDES-CBC
+  require enableLegacyMode(), which adds LEGACY_DATA_ALGORITHMS, or an
+  explicit allowedDataAlgorithms list. Set the property or the static
+  argument to null to apply no data-encryption allowlist. A null list is
+  left null by enableLegacyMode(). Encryption still uses the algorithm of
+  the caller-supplied key.
 
 14, Nov 2026, 4.0.2
 Bug Fixes:
