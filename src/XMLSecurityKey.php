@@ -293,7 +293,13 @@ class XMLSecurityKey
                 $this->cryptParams['library'] = 'phpseclib';
                 $this->cryptParams['padding'] = RSA::ENCRYPTION_OAEP;
                 $this->cryptParams['method'] = 'http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p';
-                $this->setOAEPParameters();
+                // SHA-256 OAEP digest when the caller has not chosen one.
+                // MGF1-SHA1 is fixed for this identifier. An EncryptedKey with
+                // no DigestMethod is still read as SHA-1 in readOAEPParameters().
+                $this->setOAEPParameters(
+                    XMLSecurityDSig::SHA256,
+                    XMLSecEnc::XMLENC11NS.'mgf1sha1'
+                );
                 if (is_array($params) && ! empty($params['type'])) {
                     if ($params['type'] == 'public' || $params['type'] == 'private') {
                         $this->cryptParams['type'] = $params['type'];
@@ -305,10 +311,13 @@ class XMLSecurityKey
                 $this->cryptParams['library'] = 'phpseclib';
                 $this->cryptParams['padding'] = RSA::ENCRYPTION_OAEP;
                 $this->cryptParams['method'] = 'http://www.w3.org/2009/xmlenc11#rsa-oaep';
-                // Preserve programmatic encryption defaults; XML declares these explicitly.
+                // SHA-256 digest and MGF1-SHA256 when the caller has not chosen
+                // them. encryptKey()/encryptNode() write both on EncryptionMethod.
+                // An EncryptedKey with no DigestMethod or MGF is still read as
+                // SHA-1/MGF1-SHA1 in readOAEPParameters().
                 $this->setOAEPParameters(
-                    'http://www.w3.org/2001/04/xmlenc#sha256',
-                    'http://www.w3.org/2009/xmlenc11#mgf1sha256'
+                    XMLSecurityDSig::SHA256,
+                    XMLSecEnc::XMLENC11NS.'mgf1sha256'
                 );
                 if (is_array($params) && ! empty($params['type'])) {
                     if ($params['type'] == 'public' || $params['type'] == 'private') {
@@ -422,7 +431,11 @@ class XMLSecurityKey
 
     /**
      * Configure OAEP using XML algorithm URIs and a decoded (binary) label.
-     * Defaults here are the XML Encryption defaults, not the RSA_OAEP constructor defaults.
+     *
+     * Defaults here are the XML Encryption defaults (SHA-1 and MGF1-SHA1,
+     * empty label), not the constructor defaults used when the caller has not
+     * chosen a digest: SHA-256, with MGF1-SHA256 for RSA_OAEP and MGF1-SHA1
+     * for RSA_OAEP_MGF1P.
      */
     public function setOAEPParameters(
         string $digest = 'http://www.w3.org/2000/09/xmldsig#sha1',

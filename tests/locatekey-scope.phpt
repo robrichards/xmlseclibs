@@ -87,4 +87,4 @@ no own EncryptionMethod: null
 RSA_OAEP default: OK [DigestMethod=http://www.w3.org/2001/04/xmlenc#sha256, MGF=http://www.w3.org/2009/xmlenc11#mgf1sha256]
 RSA_OAEP SHA1: OK [DigestMethod=http://www.w3.org/2000/09/xmldsig#sha1, MGF=http://www.w3.org/2009/xmlenc11#mgf1sha1]
 RSA_OAEP label: OK [OAEPparams=label, DigestMethod=http://www.w3.org/2001/04/xmlenc#sha256, MGF=http://www.w3.org/2009/xmlenc11#mgf1sha1]
-RSA_OAEP_MGF1P default: OK [DigestMethod=http://www.w3.org/2000/09/xmldsig#sha1]
+RSA_OAEP_MGF1P default: OK [DigestMethod=http://www.w3.org/2001/04/xmlenc#sha256]

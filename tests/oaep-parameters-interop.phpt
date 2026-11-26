@@ -98,7 +98,7 @@ $outbound = array(
     array('programmatic SHA256', XMLSecurityKey::RSA_OAEP, 'sha256', 'sha256', '', false),
     array('configured SHA1', XMLSecurityKey::RSA_OAEP, 'sha1', 'sha1', '', true),
     array('mixed label', XMLSecurityKey::RSA_OAEP, 'sha256', 'sha1', $label, true),
-    array('old programmatic', XMLSecurityKey::RSA_OAEP_MGF1P, 'sha1', 'sha1', '', false),
+    array('mgf1p default', XMLSecurityKey::RSA_OAEP_MGF1P, 'sha256', 'sha1', '', false),
     array('old configured', XMLSecurityKey::RSA_OAEP_MGF1P, 'sha256', 'sha1', $label, true),
 );
 foreach ($outbound as [$name, $algorithm, $hash, $mgfHash, $oaepLabel, $configure]) {
@@ -214,7 +214,7 @@ SHA512 SHA224: OK
 outbound programmatic SHA256: OK
 outbound configured SHA1: OK
 outbound mixed label: OK
-outbound old programmatic: OK
+outbound mgf1p default: OK
 outbound old configured: OK
 RSA-PSS: OK
 wrong digest/MGF/label: uniform

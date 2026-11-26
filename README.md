@@ -40,6 +40,8 @@ This release requires phpseclib 3.0.58 or later (4.0.2 required 3.0.57 or later)
 
 Signing requires a signature key type (for example, `XMLSecurityKey::RSA_SHA256` or `XMLSecurityKey::ECDSA_SHA256`), not an encryption/key-transport type such as `RSA_1_5` or `RSA_OAEP`. `signData()` and `XMLSecurityDSig::sign()` now throw for this misuse, before emitting a SignatureMethod; `verifySignature()` returns `-1`. This also applies in legacy mode. Encryption/key transport is unchanged.
 
+RSA-OAEP key transport uses SHA-256 when `setOAEPParameters()` has not been called. Both `rsa-oaep-mgf1p` and `xmlenc11#rsa-oaep` write that choice as a `ds:DigestMethod` (`http://www.w3.org/2001/04/xmlenc#sha256`) on `EncryptionMethod`. `xmlenc11#rsa-oaep` also writes MGF1-SHA256 (`http://www.w3.org/2009/xmlenc11#mgf1sha256`). `rsa-oaep-mgf1p` keeps MGF1-SHA1 and does not write an MGF element. Decryption still follows a declared `DigestMethod` or `MGF`, and an `EncryptedKey` with no `DigestMethod` remains SHA-1. Receivers that ignore `DigestMethod` and always apply SHA-1 cannot decrypt new `rsa-oaep-mgf1p` ciphertext; pass SHA-1 to `setOAEPParameters()` before encrypting to keep that digest.
+
 ## Breaking changes (3.1 → 4.0)
 
 ### Platform
@@ -59,6 +61,7 @@ Signing requires a signature key type (for example, `XMLSecurityKey::RSA_SHA256`
 
 ### Encryption / decryption
 - **Key transport restricted to RSA-OAEP by default** (`allowedKeyAlgorithms = XMLSecEnc::DEFAULT_KEY_ALGORITHMS`, since 4.1). Widen the list explicitly, or set it to `null` for no key-transport allowlist
+- **RSA-OAEP encryption defaults to a SHA-256 digest** (since 4.1) when `setOAEPParameters()` has not been called, and that digest is written on `EncryptionMethod`. `xmlenc11#rsa-oaep` also defaults to MGF1-SHA256 and writes it. `rsa-oaep-mgf1p` keeps MGF1-SHA1. Receivers that ignore `DigestMethod` and always apply SHA-1 cannot decrypt new `rsa-oaep-mgf1p` ciphertext; call `setOAEPParameters()` with SHA-1 to keep the previous digest. Decrypting an `EncryptedKey` with no `DigestMethod` is still SHA-1
 - **EncryptedKey must use RSA key transport** (RSA-1.5, RSA-OAEP, RSA-OAEP-MGF1P), even when `allowedKeyAlgorithms` is `null`; AES/3DES keys refuse certificates and PEM/DER key material in `loadKey()`
 - **RSA-1.5 key transport denied by default**. Opt in: `$enc->allowRSA15KeyTransport = true` and `$enc->allowedKeyAlgorithms[] = XMLSecurityKey::RSA_1_5`, or `enableLegacyMode()`
 - **Single decrypt error message**: `Failure decrypting Data` (do not branch on exception text)
@@ -196,13 +199,20 @@ reads OAEP parameters only from the selected encrypted element's direct
   leading zeros (`+2048`, `02048`), are rejected, as is any other element in
   the `EncryptionMethod`.
 
-Constructing `XMLSecurityKey::RSA_OAEP` yourself still selects
-SHA-256/MGF1-SHA256, and constructing `RSA_OAEP_MGF1P` selects SHA-1/MGF1-SHA1.
-These constructor defaults apply to **decryption as well as encryption**: they
-are used whenever the key is not obtained from the document. A hand-built
-`RSA_OAEP` private key passed to `decryptKey()` therefore expects SHA-256 and
-cannot unwrap keys from senders that use the XML Encryption defaults
-(SHA-1/MGF1-SHA1 with no `DigestMethod`/`MGF`), such as Shibboleth IdP.
+Constructing `XMLSecurityKey::RSA_OAEP` selects SHA-256/MGF1-SHA256, and
+constructing `RSA_OAEP_MGF1P` selects a SHA-256 OAEP digest with MGF1-SHA1.
+`encryptKey()` and `encryptNode()` write those parameters. When the caller
+has not called `setOAEPParameters()`, that is a `ds:DigestMethod` of
+`http://www.w3.org/2001/04/xmlenc#sha256`, plus, for `xmlenc11#rsa-oaep`, an
+`xenc11:MGF` of `http://www.w3.org/2009/xmlenc11#mgf1sha256`.
+`rsa-oaep-mgf1p` does not emit an MGF element.
+
+These constructor defaults apply to **decryption as well as encryption** when
+the key is not obtained from the document. A hand-built private key passed to
+`decryptKey()` therefore expects SHA-256 (MGF1-SHA256 for `RSA_OAEP`,
+MGF1-SHA1 for `RSA_OAEP_MGF1P`) and cannot unwrap keys from senders that use
+the XML Encryption defaults (SHA-1/MGF1-SHA1 with no `DigestMethod`/`MGF`),
+such as Shibboleth IdP.
 For those senders either:
 
 * resolve the key from the document with `locateKeyInfo()` (or
@@ -227,8 +237,14 @@ $key->setOAEPParameters(
 (SHA-1/MGF1-SHA1, empty label). `getOAEPParameters()` returns the selected
 `digest` and `mgf` URIs and decoded `label`, or `null` for non-OAEP keys.
 These settings do not affect RSA-PSS signatures. `encryptKey()` and
-`encryptNode()` serialize the parameters actually used, including explicit
-SHA-256 declarations and any nonempty label.
+`encryptNode()` serialize the parameters actually used, including an explicit
+SHA-1 digest and any nonempty label.
+
+Receivers that ignore `DigestMethod` and always apply SHA-1 cannot decrypt
+`rsa-oaep-mgf1p` ciphertext produced with the default digest. That identifier
+previously encrypted with SHA-1 and already wrote `DigestMethod`. Call
+`setOAEPParameters()` with SHA-1 before encrypting to keep that digest.
+`xmlenc11#rsa-oaep` already defaulted to SHA-256/MGF1-SHA256 and wrote both.
 
 **Previously generated ciphertext:** 4.0.0 through 4.0.2 could encrypt with
 SHA-256/MGF1-SHA256 under `xmlenc11#rsa-oaep` while omitting the parameters.

@@ -71,6 +71,23 @@ BREAKING CHANGES:
   enableLegacyMode(), which adds them to the lists, or adding them to the
   lists explicitly; RIPEMD-160 digests require a list entry. Set a list to
   null to apply no allowlist (verifyDocument() now honors null the same way).
+- RSA-OAEP key transport encryption uses SHA-256 when the caller has not
+  selected a digest, and writes that choice as a ds:DigestMethod
+  (http://www.w3.org/2001/04/xmlenc#sha256) on EncryptionMethod.
+  xmlenc11#rsa-oaep also uses and writes MGF1-SHA256
+  (http://www.w3.org/2009/xmlenc11#mgf1sha256). rsa-oaep-mgf1p keeps
+  MGF1-SHA1 and does not write an MGF element. setOAEPParameters() still
+  selects another digest, including SHA-1. Decryption is unchanged: a
+  declared DigestMethod or MGF is honored, and an EncryptedKey with no
+  DigestMethod still uses SHA-1.
+  Receivers that ignore DigestMethod and always apply SHA-1 cannot decrypt
+  rsa-oaep-mgf1p ciphertext produced with this default. That identifier
+  previously encrypted with SHA-1 (DigestMethod was already written). Call
+  setOAEPParameters() with SHA-1 before encrypting to keep the previous
+  digest. Hand-built RSA_OAEP_MGF1P keys now default to a SHA-256 OAEP
+  digest, with MGF1-SHA1, when parameters are not taken from the document;
+  setOAEPParameters() with no arguments selects SHA-1/MGF1-SHA1.
+  Hand-built xmlenc11#rsa-oaep keys already defaulted to SHA-256/MGF1-SHA256.
 
 14, Nov 2026, 4.0.2
 Bug Fixes:
