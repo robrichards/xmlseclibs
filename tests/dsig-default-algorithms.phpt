@@ -114,7 +114,8 @@ $d->allowedDigestAlgorithms = null;
 $d->enableLegacyMode();
 echo 'LEGACY NULL: ', ($d->allowedSignatureAlgorithms === null && $d->allowedDigestAlgorithms === null ? 'yes' : 'no'), "\n";
 
-/* Null lists apply no allowlist, in both flows. */
+/* Null lists apply no allowlist on the low-level flow.
+   verifyDocument() falls back to the default lists. */
 echo 'NULL RSA-SHA1 low: ', lowLevel($rsaSha1, XMLSecurityKey::RSA_SHA1, $nullLists), "\n";
 echo 'NULL RSA-SHA1 doc: ', highLevel($rsaSha1, XMLSecurityKey::RSA_SHA1, $nullLists), "\n";
 echo 'NULL DIG-SHA1 doc: ', highLevel($digSha1, XMLSecurityKey::RSA_SHA256, $nullLists), "\n";
@@ -162,8 +163,8 @@ LEGACY SIG LIST: yes
 LEGACY DIG LIST: yes
 LEGACY NULL: yes
 NULL RSA-SHA1 low: OK
-NULL RSA-SHA1 doc: OK
-NULL DIG-SHA1 doc: OK
+NULL RSA-SHA1 doc: SignatureMethod algorithm is not allowed: 'http://www.w3.org/2000/09/xmldsig#rsa-sha1'
+NULL DIG-SHA1 doc: DigestMethod algorithm is not allowed: 'http://www.w3.org/2000/09/xmldsig#sha1'
 NULL RIPEMD low: OK
 NULL SIG ONLY: DigestMethod algorithm is not allowed: 'http://www.w3.org/2000/09/xmldsig#sha1'
 NULL DIG ONLY: SignatureMethod algorithm is not allowed: 'http://www.w3.org/2000/09/xmldsig#rsa-sha1'
