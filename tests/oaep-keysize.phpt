@@ -1,5 +1,5 @@
 --TEST--
-RSA-OAEP EncryptionMethod accepts xenc:KeySize (1-999999, canonical form) and still rejects other elements
+RSA-OAEP EncryptionMethod KeySize, when present, must match the RSA modulus size in bits
 --FILE--
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');
@@ -28,6 +28,7 @@ function unwrap($parameters, $wrapped) {
 
 $digest = '<ds:DigestMethod Algorithm="'.XMLSecurityDSig::SHA1.'"/>';
 $cases = array(
+    'KeySize omitted' => '',
     'KeySize only' => '<e:KeySize>2048</e:KeySize>',
     'KeySize with parameters' => '<e:KeySize> 2048 </e:KeySize>'.$digest
         .'<e11:MGF Algorithm="'.XMLSecEnc::XMLENC11NS.'mgf1sha1"/>',
@@ -38,12 +39,20 @@ $cases = array(
     'KeySize wrong namespace' => '<e11:KeySize>2048</e11:KeySize>',
     'unknown extension' => '<x:Extension xmlns:x="urn:example"/>',
     'KeySize one' => '<e:KeySize>1</e:KeySize>',
+    'KeySize 1024' => '<e:KeySize>1024</e:KeySize>',
+    'KeySize 3072' => '<e:KeySize>3072</e:KeySize>',
+    'KeySize 4096' => '<e:KeySize>4096</e:KeySize>',
     'KeySize upper bound' => '<e:KeySize>999999</e:KeySize>',
     'KeySize above bound' => '<e:KeySize>1000000</e:KeySize>',
     'KeySize huge' => '<e:KeySize>'.str_repeat('9', 40).'</e:KeySize>',
     'KeySize plus sign' => '<e:KeySize>+2048</e:KeySize>',
     'KeySize leading zero' => '<e:KeySize>02048</e:KeySize>',
-    'KeySize negative' => '<e:KeySize>-1</e:KeySize>',
+    'KeySize plus and zeros' => '<e:KeySize>+0002048</e:KeySize>',
+    'KeySize surrounding space' => '<e:KeySize> 2048 </e:KeySize>',
+    'KeySize negative' => '<e:KeySize>-2048</e:KeySize>',
+    'KeySize plus only' => '<e:KeySize>+</e:KeySize>',
+    'KeySize exponent' => '<e:KeySize>2e3</e:KeySize>',
+    'KeySize internal space' => '<e:KeySize>20 48</e:KeySize>',
     'KeySize trailing newline' => "<e:KeySize>2048\n</e:KeySize>",
 );
 foreach ($cases as $name => $parameters) {
@@ -55,6 +64,7 @@ foreach ($cases as $name => $parameters) {
 }
 ?>
 --EXPECTF--
+KeySize omitted: OK
 KeySize only: OK
 KeySize with parameters: OK
 duplicate KeySize: Duplicate RSA-OAEP parameter: KeySize
@@ -63,11 +73,19 @@ zero KeySize: Invalid RSA-OAEP parameter content
 nested KeySize: Invalid RSA-OAEP parameter content
 KeySize wrong namespace: Unsupported RSA-OAEP parameter element
 unknown extension: Unsupported RSA-OAEP parameter element
-KeySize one: OK
-KeySize upper bound: OK
+KeySize one: Failure decrypting Data
+KeySize 1024: Failure decrypting Data
+KeySize 3072: Failure decrypting Data
+KeySize 4096: Failure decrypting Data
+KeySize upper bound: Failure decrypting Data
 KeySize above bound: Invalid RSA-OAEP parameter content
 KeySize huge: Invalid RSA-OAEP parameter content
-KeySize plus sign: Invalid RSA-OAEP parameter content
-KeySize leading zero: Invalid RSA-OAEP parameter content
+KeySize plus sign: OK
+KeySize leading zero: OK
+KeySize plus and zeros: OK
+KeySize surrounding space: OK
 KeySize negative: Invalid RSA-OAEP parameter content
+KeySize plus only: Invalid RSA-OAEP parameter content
+KeySize exponent: Invalid RSA-OAEP parameter content
+KeySize internal space: Invalid RSA-OAEP parameter content
 KeySize trailing newline: OK

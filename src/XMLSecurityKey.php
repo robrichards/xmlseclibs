@@ -145,6 +145,13 @@ class XMLSecurityKey
     /** @var array{digest: string, mgf: string, label: string}|null */
     private $oaepParams = null;
 
+    /**
+     * RSA modulus size in bits declared by xenc:KeySize, when present.
+     *
+     * @var int|null
+     */
+    private $oaepKeySize = null;
+
     /** @var int|string */
     public $type = 0;
 
@@ -443,6 +450,16 @@ class XMLSecurityKey
             throw new Exception('rsa-oaep-mgf1p requires MGF1-SHA1');
         }
         $this->oaepParams = array('digest' => $digest, 'mgf' => $mgf, 'label' => $label);
+    }
+
+    /**
+     * Record the normalized xenc:KeySize (RSA modulus size in bits).
+     *
+     * Compared with the loaded key before RSA decryption. Absent means no check.
+     */
+    public function setOAEPKeySize(int $bits): void
+    {
+        $this->oaepKeySize = $bits;
     }
 
     /** @return array{digest: string, mgf: string, label: string}|null */
@@ -1239,6 +1256,10 @@ class XMLSecurityKey
                 $private = $this->configureRSAKey($private);
                 if (! $private instanceof RSAPrivateKey) {
                     throw new Exception('Expected an RSA private key');
+                }
+                /* xenc:KeySize, when present, must equal the modulus size in bits. */
+                if ($this->oaepKeySize !== null && $private->getLength() !== $this->oaepKeySize) {
+                    throw new Exception(self::DECRYPTION_FAILURE);
                 }
                 return $this->decryptPrivateRsa($private, $data);
             default:

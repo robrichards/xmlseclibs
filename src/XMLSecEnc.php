@@ -764,15 +764,19 @@ class XMLSecEnc
             }
             $name = $parameter->localName;
             if ($name === 'KeySize' && $parameter->namespaceURI === self::XMLENCNS) {
-                /* xenc:KeySize carries no OAEP parameter; accept 1-999999 (canonical form only) and ignore it. */
+                /* xenc:KeySize is the RSA modulus size in bits. Accept an
+                   xs:integer form of 1-999999 (optional +, any leading zeros)
+                   after trim, and keep the normalized integer. */
                 if (isset($seen[$name])) {
                     throw new Exception('Duplicate RSA-OAEP parameter: '.$name);
                 }
                 $seen[$name] = true;
+                $lexical = trim($parameter->textContent);
                 if ($parameter->firstElementChild !== null
-                    || preg_match('/^[1-9][0-9]{0,5}$/', trim($parameter->textContent)) !== 1) {
+                    || preg_match('/^\+?0*[1-9][0-9]{0,5}$/', $lexical) !== 1) {
                     throw new Exception('Invalid RSA-OAEP parameter content');
                 }
+                $key->setOAEPKeySize((int) ltrim($lexical, '+0'));
                 continue;
             }
             if (! isset($namespaces[$name]) || $parameter->namespaceURI !== $namespaces[$name]) {
