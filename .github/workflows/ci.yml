@@ -4,71 +4,13 @@ on: [push, pull_request]
 
 jobs:
 
-  tests-eol:
-    name: PHP ${{ matrix.php-versions }} Tests
-    runs-on: ${{ matrix.operating-system }}
-    strategy:
-      matrix:
-        operating-system: ['ubuntu-latest']
-        php-versions: ['8.0', '8.1']
-
-    steps:
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ matrix.php-versions }}
-          tools: phpunit/phpunit:9.6
-
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - name: Install Composer packages
-        uses: ramsey/composer-install@v3
-
-      - name: Run tests
-        run: phpunit --coverage-clover clover.xml tests
-
-      - uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./clover.xml
-
-  tests-support:
-    name: PHP ${{ matrix.php-versions }} Tests
-    runs-on: ${{ matrix.operating-system }}
-    strategy:
-      matrix:
-        operating-system: ['ubuntu-latest']
-        php-versions: ['8.2', '8.3']
-
-    steps:
-      - uses: shivammathur/setup-php@v2
-        with:
-          php-version: ${{ matrix.php-versions }}
-          tools: phpunit/phpunit:9.6
-
-      - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - name: Install Composer packages
-        uses: ramsey/composer-install@v3
-
-      - name: Run tests
-        run: phpunit --coverage-clover clover.xml tests
-
-      - uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./clover.xml
-
   tests:
     name: PHP ${{ matrix.php-versions }} Tests
     runs-on: ${{ matrix.operating-system }}
     strategy:
       matrix:
         operating-system: ['ubuntu-latest']
-        php-versions: ['8.4', '8.5']
+        php-versions: ['8.3', '8.4', '8.5', '8.6']
 
     steps:
       - uses: shivammathur/setup-php@v2

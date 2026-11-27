@@ -56,6 +56,7 @@ BREAKING CHANGES:
   ($enc->allowedKeyAlgorithms[] = XMLSecurityKey::RSA_1_5); enableLegacyMode()
   does both. Set allowedKeyAlgorithms (or the static argument) to null to
   apply no key-transport allowlist.
+- Requires PHP 8.3 or later
 - Requires phpseclib 3.0.58 or later (4.0.2 required 3.0.57 or later).
 - Parsing an RSA-OAEP EncryptionMethod now rejects unknown or
   wrongly-namespaced child elements, duplicate parameters, and

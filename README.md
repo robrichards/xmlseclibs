@@ -6,7 +6,7 @@ The author of xmlseclibs is Rob Richards.
 
 # Branches
 Master is currently the only actively maintained branch.
-* master: requires PHP version 8.0+
+* master: requires PHP version 8.3+
 * 3.1: Added AES-GCM support requiring 7.1+
 * 3.0: Removes mcrypt usage requiring 5.4+ (5.6.24+ recommended for security reasons)
 * 2.0: Contains namespace support requiring 5.3+
@@ -14,7 +14,7 @@ Master is currently the only actively maintained branch.
 
 # Requirements
 
-xmlseclibs requires PHP version 8.0 or greater and phpseclib 3.0.58 or later. OpenSSL is optional (phpseclib is used for crypto).
+xmlseclibs requires PHP version 8.3 or greater and phpseclib 3.0.58 or later. OpenSSL is optional (phpseclib is used for crypto).
 
 ## Security notes
 
@@ -36,14 +36,14 @@ xmlseclibs requires PHP version 8.0 or greater and phpseclib 3.0.58 or later. Op
 
 ## Unreleased compatibility note
 
-This release requires phpseclib 3.0.58 or later (4.0.2 required 3.0.57 or later).
+This release requires PHP 8.3 or later (4.0 required PHP 8.0 or later) and phpseclib 3.0.58 or later (4.0.2 required 3.0.57 or later).
 
 Signing requires a signature key type (for example, `XMLSecurityKey::RSA_SHA256` or `XMLSecurityKey::ECDSA_SHA256`), not an encryption/key-transport type such as `RSA_1_5` or `RSA_OAEP`. `signData()` and `XMLSecurityDSig::sign()` now throw for this misuse, before emitting a SignatureMethod; `verifySignature()` returns `-1`. This also applies in legacy mode. Encryption/key transport is unchanged.
 
 ## Breaking changes (3.1 → 4.0)
 
 ### Platform
-- **PHP 8.0+ required** (was 5.4+)
+- **PHP 8.3+ required as of 4.1** (4.0 required 8.0+; was 5.4+ before that)
 - **`phpseclib/phpseclib` 3.0.57 or later required as of 4.0.2; 3.0.58 or later as of 4.1**; `ext-openssl` is now optional
 
 ### Signature verification
