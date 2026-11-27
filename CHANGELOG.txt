@@ -8,12 +8,18 @@ Bug Fixes:
   interoperability with senders such as Shibboleth IdP. Encryption now
   serializes the OAEP parameters actually used. Adds
   XMLSecurityKey::setOAEPParameters()/getOAEPParameters(). (#293) by @cmcfadden.
-- Accept a schema-valid xenc:KeySize in an RSA-OAEP EncryptionMethod instead
-  of rejecting it; other unknown elements are still rejected.
+- Accept an xenc:KeySize (a positive decimal integer of up to six digits) in
+  an RSA-OAEP EncryptionMethod instead of rejecting it; other unknown elements
+  are still rejected.
 - Apply allowedKeyAlgorithms/allowedDataAlgorithms consistently to
   EncryptedKeys resolved via KeyInfo (embedded or RetrievalMethod).
   staticLocateKeyInfo() and XMLSecurityKey::fromEncryptedKeyElement() accept
   them as optional arguments.
+- Require an asymmetric key transport algorithm (RSA-1.5, RSA-OAEP,
+  RSA-OAEP-MGF1P) for EncryptedKey elements, independent of
+  allowedKeyAlgorithms; other algorithms are rejected when the key is
+  resolved, in decryptKey(), and in decryptNode() on an EncryptedKey. Symmetric key types (AES, 3DES) no longer load
+  certificates or PEM/DER key material in loadKey(); raw keys are unaffected.
 
 BREAKING CHANGES:
 - Reject encryption-only key types for signatures before emitting SignatureMethod.
@@ -33,11 +39,58 @@ BREAKING CHANGES:
 - allowedKeyAlgorithms/allowedDataAlgorithms set on XMLSecEnc now also apply to
   EncryptedKey elements resolved by locateKeyInfo(); documents whose
   EncryptedKey uses an algorithm outside the configured list are rejected.
+- XMLSecEnc::staticLocateKeyInfo() and XMLSecurityKey::fromEncryptedKeyElement()
+  have two new optional parameters ($allowedKeyAlgorithms,
+  $allowedDataAlgorithms). Subclasses that override either method with the
+  4.0 signature fail with a PHP fatal error ("Declaration ... must be
+  compatible"); add the two parameters to the override. New public methods
+  XMLSecurityKey::setOAEPParameters(), getOAEPParameters() and
+  assertSignatureKey() can likewise conflict with same-named subclass methods.
+- XMLSecEnc::$allowedKeyAlgorithms now defaults to
+  XMLSecEnc::DEFAULT_KEY_ALGORITHMS (RSA-OAEP and RSA-OAEP-MGF1P) instead of
+  null, a secure default for key transport. The optional $allowedKeyAlgorithms
+  argument of staticLocateKeyInfo() and XMLSecurityKey::fromEncryptedKeyElement()
+  has the same default. RSA-OAEP with SHA-1 parameters (e.g. Shibboleth IdP)
+  is unaffected. Decrypting RSA-1.5 key transport now requires both
+  allowRSA15KeyTransport = true and RSA-1.5 in the allowlist
+  ($enc->allowedKeyAlgorithms[] = XMLSecurityKey::RSA_1_5); enableLegacyMode()
+  does both. Set allowedKeyAlgorithms (or the static argument) to null to
+  apply no key-transport allowlist.
+- Requires phpseclib 3.0.58 or later (4.0.2 required 3.0.57 or later).
+- Parsing an RSA-OAEP EncryptionMethod now rejects unknown or
+  wrongly-namespaced child elements, duplicate parameters, and
+  malformed content. 4.0.x ignored these children. An xenc:KeySize
+  of 1 to 999999 (no plus sign or leading zeros) is accepted and ignored.
+- Signature verification now defaults to SHA-2 algorithms.
+  XMLSecurityDSig::$allowedSignatureAlgorithms and $allowedDigestAlgorithms
+  default to DEFAULT_SIGNATURE_ALGORITHMS (RSA-SHA256/384/512, RSA-PSS
+  SHA256, ECDSA-SHA256/384/512) and DEFAULT_DIGEST_ALGORITHMS
+  (SHA-256/384/512) instead of null, and apply to verify() and
+  validateReference() as well as verifyDocument(). Signing is unaffected.
+  SHA-1 (rsa-sha1, dsa-sha1, hmac-sha1, sha1 digests) requires
+  enableLegacyMode(), which adds them to the lists, or adding them to the
+  lists explicitly; RIPEMD-160 digests require a list entry. Set a list to
+  null to apply no allowlist (verifyDocument() now honors null the same way).
+- Data decryption now defaults to AES-GCM.
+  XMLSecEnc::$allowedDataAlgorithms defaults to DEFAULT_DATA_ALGORITHMS
+  (AES-128/192/256-GCM) instead of null. The same default applies to the
+  $allowedDataAlgorithms argument of staticLocateKeyInfo() and
+  XMLSecurityKey::fromEncryptedKeyElement(). AES-CBC and TripleDES-CBC
+  require enableLegacyMode(), which adds LEGACY_DATA_ALGORITHMS, or an
+  explicit allowedDataAlgorithms list. Set the property or the static
+  argument to null to apply no data-encryption allowlist. A null list is
+  left null by enableLegacyMode(). Encryption still uses the algorithm of
+  the caller-supplied key.
 
 14, Nov 2026, 4.0.2
 Bug Fixes:
-- Restore and extend ECDSA support (ecdsa-sha256/384/512, ECKeyValue) 
-  by @danitalika.
+- Restore and extend ECDSA support (ecdsa-sha256/384/512, ECKeyValue)
+  by @danitalika. Adds XMLSecurityDSig::addECKeyValue(),
+  XMLSecurityKey::convertEC(), getECPublicKeyData(), and
+  $allowedECCurves (defaults to the P-256, P-384 and P-521 curves).
+
+Notes:
+- Requires phpseclib 3.0.57 or later (was ~3.0).
 
 19, Oct 2026, 4.0.1
 Security Improvements:

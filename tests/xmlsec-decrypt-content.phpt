@@ -33,6 +33,8 @@ foreach ($arTests AS $testName=>$testFile) {
 	
 	try {
 		$objenc = new XMLSecEnc();
+		/* These fixtures use AES-CBC or TripleDES-CBC. */
+		$objenc->enableLegacyMode();
 		$encData = $objenc->locateEncryptedData($doc);
 		if (! $encData) {
 			throw new Exception("Cannot locate Encrypted Data");

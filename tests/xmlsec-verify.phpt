@@ -12,6 +12,8 @@ $arTests = array('SIGN_TEST'=>'sign-basic-test.xml');
 foreach ($arTests AS $testName=>$testFile) {
 	$doc->load(dirname(__FILE__) . "/$testFile");
 	$objXMLSecDSig = new XMLSecurityDSig();
+	/* Fixture uses rsa-sha1 / sha1, which require legacy mode. */
+	$objXMLSecDSig->enableLegacyMode();
 	
 	$objDSig = $objXMLSecDSig->locateSignature($doc);
 	if (! $objDSig) {

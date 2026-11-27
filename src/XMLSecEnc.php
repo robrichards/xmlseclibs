@@ -78,9 +78,21 @@ class XMLSecEnc
     );
 
     /**
-     * Recommended data-encryption (symmetric) algorithms. Authenticated GCM
-     * modes only; unauthenticated CBC modes are excluded because they are
-     * malleable and prone to padding-oracle attacks.
+     * Algorithms an EncryptedKey may use (asymmetric key transport). Any other
+     * EncryptedKey algorithm is rejected regardless of $allowedKeyAlgorithms.
+     * The allowlists and $allowRSA15KeyTransport further restrict this set.
+     */
+    private const KEY_TRANSPORT_ALGORITHMS = array(
+        XMLSecurityKey::RSA_1_5,
+        XMLSecurityKey::RSA_OAEP_MGF1P,
+        XMLSecurityKey::RSA_OAEP,
+    );
+
+    /**
+     * Data-encryption algorithms accepted by default ($allowedDataAlgorithms).
+     * AES-128/192/256-GCM (XML Encryption 1.1). CBC modes are not included;
+     * enableLegacyMode() adds them (see LEGACY_DATA_ALGORITHMS), or set
+     * $allowedDataAlgorithms explicitly (null removes the restriction).
      */
     const DEFAULT_DATA_ALGORITHMS = array(
         XMLSecurityKey::AES128_GCM,
@@ -88,21 +100,34 @@ class XMLSecEnc
         XMLSecurityKey::AES256_GCM,
     );
 
+    /** Data-encryption algorithms enableLegacyMode() adds to $allowedDataAlgorithms. */
+    const LEGACY_DATA_ALGORITHMS = array(
+        XMLSecurityKey::AES128_CBC,
+        XMLSecurityKey::AES192_CBC,
+        XMLSecurityKey::AES256_CBC,
+        XMLSecurityKey::TRIPLEDES_CBC,
+    );
+
     /**
      * Allowlist of acceptable key-transport (asymmetric) algorithm URIs.
-     * When null (default) no allowlist restriction is applied, preserving
-     * backward compatibility. Note that RSA-1.5 is additionally governed by
-     * $allowRSA15KeyTransport regardless of this list.
+     * Defaults to DEFAULT_KEY_ALGORITHMS (RSA-OAEP only). Widen it explicitly
+     * for other algorithms, or set it to null to apply no allowlist
+     * restriction. RSA-1.5 additionally requires $allowRSA15KeyTransport,
+     * regardless of this list.
      * @var array<int, string>|null
      */
-    public $allowedKeyAlgorithms = null;
+    public $allowedKeyAlgorithms = self::DEFAULT_KEY_ALGORITHMS;
 
     /**
      * Allowlist of acceptable data-encryption (symmetric) algorithm URIs.
-     * When null (default) no allowlist restriction is applied.
+     *
+     * Defaults to DEFAULT_DATA_ALGORITHMS (AES-GCM). enableLegacyMode() adds
+     * the CBC algorithms; you can also add entries or set your own list. Set
+     * to null to apply no allowlist.
+     *
      * @var array<int, string>|null
      */
-    public $allowedDataAlgorithms = null;
+    public $allowedDataAlgorithms = self::DEFAULT_DATA_ALGORITHMS;
 
     /**
      * Whether RSA-1.5 (PKCS#1 v1.5) key transport is permitted on decryption.
@@ -155,18 +180,35 @@ class XMLSecEnc
      * Restore pre-4.0 interoperability defaults for XML Encryption decryption.
      *
      * Use this only when you must decrypt payloads that use RSA-1.5 key
-     * transport. Prefer migrating senders to RSA-OAEP (and AES-GCM) and then
-     * removing the call.
+     * transport or CBC data encryption. Prefer migrating senders to RSA-OAEP
+     * and AES-GCM and then removing the call.
      *
-     * This does NOT undo 4.0 oracle / XXE hardening that is always enforced
-     * (uniform decryption error messages, DOCTYPE rejection in decrypted XML,
-     * EncryptedKey recursion depth bound, ISO 10126 pad-length validation).
+     * Enables RSA-1.5 key transport and adds it to $allowedKeyAlgorithms when
+     * that allowlist is set. Adds LEGACY_DATA_ALGORITHMS to
+     * $allowedDataAlgorithms when that allowlist is set; a null list is left
+     * null. Entries already present are not duplicated. Assigning either list
+     * afterwards replaces it, so call this after configuring them.
+     *
+     * This does NOT undo checks that are always enforced (uniform decryption
+     * error messages, DOCTYPE rejection in decrypted XML, EncryptedKey
+     * recursion depth bound, ISO 10126 pad-length validation).
      *
      * @return $this
      */
     public function enableLegacyMode()
     {
         $this->allowRSA15KeyTransport = true;
+        if (is_array($this->allowedKeyAlgorithms)
+            && ! in_array(XMLSecurityKey::RSA_1_5, $this->allowedKeyAlgorithms, true)) {
+            $this->allowedKeyAlgorithms[] = XMLSecurityKey::RSA_1_5;
+        }
+        if (is_array($this->allowedDataAlgorithms)) {
+            foreach (self::LEGACY_DATA_ALGORITHMS as $algorithm) {
+                if (! in_array($algorithm, $this->allowedDataAlgorithms, true)) {
+                    $this->allowedDataAlgorithms[] = $algorithm;
+                }
+            }
+        }
         return $this;
     }
 
@@ -426,6 +468,9 @@ class XMLSecEnc
             throw new Exception('Invalid Key');
         }
 
+        if (self::isEncryptedKeyNode($this->rawNode)) {
+            self::requireKeyTransportAlgorithm($objKey);
+        }
         $this->enforceAlgorithmPolicy($objKey);
 
         $rawNode = $this->rawNode;
@@ -616,6 +661,7 @@ class XMLSecEnc
         if (! $encKey->isEncrypted) {
             throw new Exception("Key is not Encrypted");
         }
+        self::requireKeyTransportAlgorithm($encKey);
         if (empty($encKey->key)) {
             throw new Exception("Key is missing data to perform the decryption");
         }
@@ -683,6 +729,9 @@ class XMLSecEnc
                 } catch (Exception $e) {
                     return null;
                 }
+                if (self::isEncryptedKeyNode($node)) {
+                    self::requireKeyTransportAlgorithm($objKey);
+                }
                 $this->enforceAlgorithmPolicy($objKey);
                 if ($objKey->getOAEPParameters() !== null) {
                     $this->readOAEPParameters($encmeth, $objKey);
@@ -714,7 +763,7 @@ class XMLSecEnc
             }
             $name = $parameter->localName;
             if ($name === 'KeySize' && $parameter->namespaceURI === self::XMLENCNS) {
-                /* Schema-valid xenc:KeySize carries no OAEP parameter; validate and ignore it. */
+                /* xenc:KeySize carries no OAEP parameter; accept 1-999999 (canonical form only) and ignore it. */
                 if (isset($seen[$name])) {
                     throw new Exception('Duplicate RSA-OAEP parameter: '.$name);
                 }
@@ -796,6 +845,38 @@ class XMLSecEnc
     }
 
     /**
+     * @param mixed $node
+     * @return bool
+     */
+    private static function isEncryptedKeyNode($node)
+    {
+        return $node instanceof DOMElement
+            && $node->localName === 'EncryptedKey'
+            && $node->namespaceURI === self::XMLENCNS;
+    }
+
+    /**
+     * An EncryptedKey is always unwrapped with an asymmetric key-transport
+     * algorithm (RSA-1.5, RSA-OAEP, RSA-OAEP-MGF1P). Symmetric key wrap is not
+     * supported, so any other algorithm is rejected before decryption,
+     * independently of $allowedKeyAlgorithms.
+     *
+     * @param XMLSecurityKey $objKey
+     * @return void
+     * @throws Exception
+     */
+    private static function requireKeyTransportAlgorithm($objKey)
+    {
+        $algorithm = $objKey->getAlgorithm();
+        if (! is_string($algorithm) || ! in_array($algorithm, self::KEY_TRANSPORT_ALGORITHMS, true)) {
+            throw new Exception(
+                'EncryptedKey algorithm is not a supported key transport algorithm: \''
+                . (is_string($algorithm) ? $algorithm : '') . '\''
+            );
+        }
+    }
+
+    /**
      * Enforce the configured algorithm policy for a key located in the document.
      *
      * Fails closed (throws) when the document-selected algorithm is not
@@ -832,6 +913,12 @@ class XMLSecEnc
         }
         if ($this->allowedKeyAlgorithms !== null
             && ! in_array($algorithm, $this->allowedKeyAlgorithms, true)) {
+            if ($algorithm === XMLSecurityKey::RSA_1_5) {
+                throw new Exception(
+                    "Key transport algorithm is not allowed: '$algorithm'; "
+                    . 'add XMLSecurityKey::RSA_1_5 to allowedKeyAlgorithms (property or static argument) to opt in'
+                );
+            }
             throw new Exception("Key transport algorithm is not allowed: '$algorithm'");
         }
     }
@@ -842,7 +929,9 @@ class XMLSecEnc
      * @param int $depth
      * @param bool $allowRSA15
      * @param null|array<int, string> $allowedKeyAlgorithms Key-transport allowlist applied to any resolved EncryptedKey
+     *                                                     (defaults to DEFAULT_KEY_ALGORITHMS; null = no restriction)
      * @param null|array<int, string> $allowedDataAlgorithms Data-encryption allowlist applied to any resolved EncryptedKey
+     *                                                     (defaults to DEFAULT_DATA_ALGORITHMS; null = no restriction)
      * @return null|XMLSecurityKey
      * @throws Exception
      */
@@ -851,8 +940,8 @@ class XMLSecEnc
         $node=null,
         $depth=0,
         $allowRSA15=false,
-        ?array $allowedKeyAlgorithms=null,
-        ?array $allowedDataAlgorithms=null
+        ?array $allowedKeyAlgorithms=self::DEFAULT_KEY_ALGORITHMS,
+        ?array $allowedDataAlgorithms=self::DEFAULT_DATA_ALGORITHMS
     ) {
         if (empty($node) || (! $node instanceof DOMNode)) {
             return null;

@@ -10,6 +10,8 @@ use RobRichards\XMLSecLibs\XMLSecurityDSig;
 $doc = new DOMDocument();
 $doc->load(dirname(__FILE__) . '/withcomment-id-uri.xml');
 $objXMLSecDSig = new XMLSecurityDSig();
+/* Fixture uses a sha1 DigestMethod. */
+$objXMLSecDSig->allowedDigestAlgorithms[] = XMLSecurityDSig::SHA1;
 $objXMLSecDSig->idKeys = array('xml:id');
 
 $objDSig = $objXMLSecDSig->locateSignature($doc);

@@ -11,6 +11,8 @@ $doc = new DOMDocument();
 $doc->load(dirname(__FILE__) . '/withcomment-empty-uri.xml');
 
 $objXMLSecDSig = new XMLSecurityDSig();
+/* Fixture uses a sha1 DigestMethod. */
+$objXMLSecDSig->allowedDigestAlgorithms[] = XMLSecurityDSig::SHA1;
 
 $objDSig = $objXMLSecDSig->locateSignature($doc);
 if (! $objDSig) {

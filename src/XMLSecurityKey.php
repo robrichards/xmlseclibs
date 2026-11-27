@@ -576,6 +576,25 @@ class XMLSecurityKey
             }
         }
 
+        /*
+         * A symmetric (AES / 3DES) key is raw secret bytes. Refuse certificates
+         * and PEM-armored keys, and check values longer than the key size for
+         * other asymmetric encodings (DER, bare base64, ...). Values of exactly
+         * the key size (generated or unwrapped session keys) are not parsed,
+         * so ordinary raw keys are unaffected.
+         */
+        if (($this->cryptParams['type'] ?? null) === 'symmetric') {
+            if ($isCert) {
+                throw new Exception('An X.509 certificate cannot be used as a symmetric key');
+            }
+            if (is_string($this->key)
+                && (strpos($this->key, '-----BEGIN') !== false
+                    || (strlen($this->key) > ($this->cryptParams['keysize'] ?? PHP_INT_MAX)
+                        && self::isAsymmetricKeyMaterial($this->key)))) {
+                throw new Exception('Asymmetric key material cannot be used as a symmetric key');
+            }
+        }
+
         if ($isCert) {
             $x509 = new X509();
             $certData = $x509->loadX509($this->key);
@@ -1565,8 +1584,10 @@ class XMLSecurityKey
      * @param DOMElement $element The EncryptedKey-element.
      * @param int $depth
      * @param bool $allowRSA15
-     * @param null|array<int, string> $allowedKeyAlgorithms Key-transport allowlist (see XMLSecEnc::$allowedKeyAlgorithms)
-     * @param null|array<int, string> $allowedDataAlgorithms Data-encryption allowlist (see XMLSecEnc::$allowedDataAlgorithms)
+     * @param null|array<int, string> $allowedKeyAlgorithms Key-transport allowlist (see XMLSecEnc::$allowedKeyAlgorithms;
+     *                                                     defaults to XMLSecEnc::DEFAULT_KEY_ALGORITHMS, null = no restriction)
+     * @param null|array<int, string> $allowedDataAlgorithms Data-encryption allowlist (see XMLSecEnc::$allowedDataAlgorithms;
+     *                                                     defaults to XMLSecEnc::DEFAULT_DATA_ALGORITHMS, null = no restriction)
      * @throws Exception
      *
      * @return XMLSecurityKey The new key.
@@ -1575,8 +1596,8 @@ class XMLSecurityKey
         DOMElement $element,
         int $depth = 0,
         bool $allowRSA15 = false,
-        ?array $allowedKeyAlgorithms = null,
-        ?array $allowedDataAlgorithms = null
+        ?array $allowedKeyAlgorithms = XMLSecEnc::DEFAULT_KEY_ALGORITHMS,
+        ?array $allowedDataAlgorithms = XMLSecEnc::DEFAULT_DATA_ALGORITHMS
     ): XMLSecurityKey {
         $objenc = new XMLSecEnc();
         $objenc->allowRSA15KeyTransport = $allowRSA15;

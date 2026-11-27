@@ -72,10 +72,10 @@ class XMLSecurityDSig
     const MAX_XPATH_NAMESPACES = 20;
 
     /**
-     * Safe-by-default SignatureMethod allowlist applied by verifyDocument().
-     * SHA-1 based signatures (rsa-sha1, dsa-sha1, hmac-sha1) are intentionally
-     * excluded; callers that must interoperate with legacy peers can opt in by
-     * populating $allowedSignatureAlgorithms explicitly.
+     * Default SignatureMethod allowlist ($allowedSignatureAlgorithms).
+     * SHA-1 based signatures (rsa-sha1, dsa-sha1, hmac-sha1) are not included;
+     * enableLegacyMode() adds them (see LEGACY_SIGNATURE_ALGORITHMS), or set
+     * $allowedSignatureAlgorithms explicitly (null removes the restriction).
      */
     const DEFAULT_SIGNATURE_ALGORITHMS = array(
         XMLSecurityKey::RSA_SHA256,
@@ -88,13 +88,26 @@ class XMLSecurityDSig
     );
 
     /**
-     * Safe-by-default DigestMethod allowlist applied by verifyDocument().
-     * SHA-1 and RIPEMD-160 are intentionally excluded.
+     * Default Reference DigestMethod allowlist ($allowedDigestAlgorithms).
+     * SHA-1 and RIPEMD-160 are not included; enableLegacyMode() adds SHA-1,
+     * RIPEMD-160 requires an explicit list entry (or a null list).
      */
     const DEFAULT_DIGEST_ALGORITHMS = array(
         self::SHA256,
         self::SHA384,
         self::SHA512,
+    );
+
+    /** SignatureMethod algorithms enableLegacyMode() adds to $allowedSignatureAlgorithms. */
+    const LEGACY_SIGNATURE_ALGORITHMS = array(
+        XMLSecurityKey::RSA_SHA1,
+        XMLSecurityKey::DSA_SHA1,
+        XMLSecurityKey::HMAC_SHA1,
+    );
+
+    /** DigestMethod algorithms enableLegacyMode() adds to $allowedDigestAlgorithms. */
+    const LEGACY_DIGEST_ALGORITHMS = array(
+        self::SHA1,
     );
 
     const BASE_TEMPLATE = '<Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
@@ -148,26 +161,29 @@ class XMLSecurityDSig
     public $allowXPathTransforms = false;
 
     /**
-     * Allowlist of acceptable SignatureMethod algorithm URIs.
+     * Allowlist of acceptable SignatureMethod algorithm URIs, enforced by
+     * verify() (and therefore verifyDocument()).
      *
-     * When null (the default), the low-level verify() primitive imposes no
-     * restriction, preserving backward compatibility. verifyDocument() applies
-     * DEFAULT_SIGNATURE_ALGORITHMS when this is null. Set explicitly (e.g.
-     * add XMLSecurityKey::RSA_SHA1) to widen or narrow the accepted set.
+     * Defaults to DEFAULT_SIGNATURE_ALGORITHMS. enableLegacyMode() adds the
+     * SHA-1 based algorithms; you can also add entries (e.g.
+     * $dsig->allowedSignatureAlgorithms[] = XMLSecurityKey::RSA_SHA1) or set
+     * your own list. Set to null to apply no allowlist. Signing is unaffected.
      *
      * @var array|null
      */
-    public $allowedSignatureAlgorithms = null;
+    public $allowedSignatureAlgorithms = self::DEFAULT_SIGNATURE_ALGORITHMS;
 
     /**
-     * Allowlist of acceptable Reference DigestMethod algorithm URIs.
+     * Allowlist of acceptable Reference DigestMethod algorithm URIs, enforced
+     * by validateDigest() (and therefore validateReference()/verifyDocument()).
      *
-     * When null (the default), no restriction is imposed by the low-level
-     * primitives. verifyDocument() applies DEFAULT_DIGEST_ALGORITHMS when null.
+     * Defaults to DEFAULT_DIGEST_ALGORITHMS. enableLegacyMode() adds SHA-1;
+     * set your own list to widen or narrow it, or null to apply no allowlist.
+     * Signing is unaffected.
      *
      * @var array|null
      */
-    public $allowedDigestAlgorithms = null;
+    public $allowedDigestAlgorithms = self::DEFAULT_DIGEST_ALGORITHMS;
 
     /**
      * Reject documents that carry a DOCTYPE when locating a Signature.
@@ -247,9 +263,15 @@ class XMLSecurityDSig
      * Restore pre-4.0 interoperability defaults for signature verification.
      *
      * Use this only when you must accept documents/peers that rely on
-     * behaviours 4.0 rejects by default (DOCTYPE, XPath Filtering Transforms,
-     * uncapped XPath transform counts). Prefer migrating peers and then
-     * removing the call.
+     * behaviours rejected by default (DOCTYPE, XPath Filtering Transforms,
+     * uncapped XPath transform counts, SHA-1 based SignatureMethod and
+     * DigestMethod algorithms). Prefer migrating peers and then removing the
+     * call.
+     *
+     * The SHA-1 algorithms are added to $allowedSignatureAlgorithms and
+     * $allowedDigestAlgorithms when those are lists; a null list is left
+     * null. Assigning a list afterwards replaces it, so call this after
+     * configuring the lists.
      *
      * This does NOT weaken cryptographic checks that are always enforced in
      * 4.0 (SignatureMethod/key algorithm binding, hash_equals compares,
@@ -263,6 +285,20 @@ class XMLSecurityDSig
         $this->allowXPathTransforms = true;
         $this->maxXPathTransforms = PHP_INT_MAX;
         $this->maxXPathNamespaces = PHP_INT_MAX;
+        if (is_array($this->allowedSignatureAlgorithms)) {
+            foreach (self::LEGACY_SIGNATURE_ALGORITHMS as $algorithm) {
+                if (! in_array($algorithm, $this->allowedSignatureAlgorithms, true)) {
+                    $this->allowedSignatureAlgorithms[] = $algorithm;
+                }
+            }
+        }
+        if (is_array($this->allowedDigestAlgorithms)) {
+            foreach (self::LEGACY_DIGEST_ALGORITHMS as $algorithm) {
+                if (! in_array($algorithm, $this->allowedDigestAlgorithms, true)) {
+                    $this->allowedDigestAlgorithms[] = $algorithm;
+                }
+            }
+        }
         return $this;
     }
 
@@ -1224,10 +1260,9 @@ class XMLSecurityDSig
      *    so an attacker cannot both supply the message and the key that
      *    verifies it.
      *  - Both the SignatureMethod and every Reference DigestMethod are checked
-     *    against an algorithm allowlist. Strong defaults
-     *    (DEFAULT_SIGNATURE_ALGORITHMS / DEFAULT_DIGEST_ALGORITHMS) are applied
-     *    unless the caller has populated $allowedSignatureAlgorithms /
-     *    $allowedDigestAlgorithms explicitly.
+     *    against $allowedSignatureAlgorithms / $allowedDigestAlgorithms, which
+     *    default to DEFAULT_SIGNATURE_ALGORITHMS / DEFAULT_DIGEST_ALGORITHMS
+     *    (a null list applies no allowlist, as in verify()/validateDigest()).
      *  - Success is only reported when the SignedInfo signature is valid AND
      *    every Reference digest validated. The set of validated nodes is
      *    returned so callers never have to re-query the document (which would
@@ -1245,40 +1280,26 @@ class XMLSecurityDSig
             throw new Exception('A trusted key must be supplied to verifyDocument()');
         }
 
-        $prevSigAlgs = $this->allowedSignatureAlgorithms;
-        $prevDigAlgs = $this->allowedDigestAlgorithms;
-        if ($this->allowedSignatureAlgorithms === null) {
-            $this->allowedSignatureAlgorithms = self::DEFAULT_SIGNATURE_ALGORITHMS;
+        $this->resetXPathObj();
+        if (! $this->locateSignature($objDoc, $pos)) {
+            throw new Exception('Cannot locate Signature Node');
         }
-        if ($this->allowedDigestAlgorithms === null) {
-            $this->allowedDigestAlgorithms = self::DEFAULT_DIGEST_ALGORITHMS;
+        if ($this->canonicalizeSignedInfo() === null) {
+            throw new Exception('Cannot canonicalize SignedInfo');
         }
 
-        try {
-            $this->resetXPathObj();
-            if (! $this->locateSignature($objDoc, $pos)) {
-                throw new Exception('Cannot locate Signature Node');
-            }
-            if ($this->canonicalizeSignedInfo() === null) {
-                throw new Exception('Cannot canonicalize SignedInfo');
-            }
+        /* Throws on any unresolved/failed/duplicate reference (fail closed). */
+        $this->validateReference();
 
-            /* Throws on any unresolved/failed/duplicate reference (fail closed). */
-            $this->validateReference();
-
-            if ($this->verify($objKey) !== 1) {
-                throw new Exception('Signature validation failed');
-            }
-
-            $validatedNodes = $this->getValidatedNodes();
-            if (empty($validatedNodes)) {
-                throw new Exception('Signature verified but no signed nodes were validated');
-            }
-            return $validatedNodes;
-        } finally {
-            $this->allowedSignatureAlgorithms = $prevSigAlgs;
-            $this->allowedDigestAlgorithms = $prevDigAlgs;
+        if ($this->verify($objKey) !== 1) {
+            throw new Exception('Signature validation failed');
         }
+
+        $validatedNodes = $this->getValidatedNodes();
+        if (empty($validatedNodes)) {
+            throw new Exception('Signature verified but no signed nodes were validated');
+        }
+        return $validatedNodes;
     }
 
     /**
