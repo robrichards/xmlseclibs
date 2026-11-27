@@ -3,6 +3,7 @@ namespace RobRichards\XMLSecLibs;
 
 use DOMElement;
 use Exception;
+use RobRichards\XMLSecLibs\Internal\KeyTransportAlgorithms;
 use phpseclib3\Crypt\AES;
 use phpseclib3\Crypt\Common\AsymmetricKey;
 use phpseclib3\Crypt\DSA;
@@ -1649,7 +1650,7 @@ class XMLSecurityKey
         if (! $objKey = $objenc->locateKey()) {
             throw new Exception("Unable to locate algorithm for this Encrypted Key");
         }
-        XMLSecEnc::requireKeyTransportAlgorithm($objKey);
+        KeyTransportAlgorithms::assertAlgorithm($objKey);
         $objKey->isEncrypted = true;
         $objKey->encryptedCtx = $objenc;
         XMLSecEnc::staticLocateKeyInfo(

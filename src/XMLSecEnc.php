@@ -6,6 +6,7 @@ use DOMElement;
 use DOMNode;
 use DOMXPath;
 use Exception;
+use RobRichards\XMLSecLibs\Internal\KeyTransportAlgorithms;
 use RobRichards\XMLSecLibs\Utils\XPath as XPath;
 
 /**
@@ -75,17 +76,6 @@ class XMLSecEnc
     const DEFAULT_KEY_ALGORITHMS = array(
         XMLSecurityKey::RSA_OAEP,
         XMLSecurityKey::RSA_OAEP_MGF1P,
-    );
-
-    /**
-     * Algorithms an EncryptedKey may use (asymmetric key transport). Any other
-     * EncryptedKey algorithm is rejected regardless of $allowedKeyAlgorithms.
-     * The allowlists and $allowRSA15KeyTransport further restrict this set.
-     */
-    private const KEY_TRANSPORT_ALGORITHMS = array(
-        XMLSecurityKey::RSA_1_5,
-        XMLSecurityKey::RSA_OAEP_MGF1P,
-        XMLSecurityKey::RSA_OAEP,
     );
 
     /**
@@ -483,7 +473,7 @@ class XMLSecEnc
         }
 
         if (self::isEncryptedKeyNode($this->rawNode)) {
-            self::requireKeyTransportAlgorithm($objKey);
+            KeyTransportAlgorithms::assertAlgorithm($objKey);
         }
         $this->enforceAlgorithmPolicy($objKey);
 
@@ -596,7 +586,7 @@ class XMLSecEnc
         if ((! $srcKey instanceof XMLSecurityKey) || (! $rawKey instanceof XMLSecurityKey)) {
             throw new Exception('Invalid Key');
         }
-        self::requireKeyTransportAlgorithm($srcKey);
+        KeyTransportAlgorithms::assertAlgorithm($srcKey);
         if ($this->encdoc === null) {
             throw new Exception('Encryption template has not been initialized');
         }
@@ -676,7 +666,7 @@ class XMLSecEnc
         if (! $encKey->isEncrypted) {
             throw new Exception("Key is not Encrypted");
         }
-        self::requireKeyTransportAlgorithm($encKey);
+        KeyTransportAlgorithms::assertAlgorithm($encKey);
         if (empty($encKey->key)) {
             throw new Exception("Key is missing data to perform the decryption");
         }
@@ -745,7 +735,7 @@ class XMLSecEnc
                     return null;
                 }
                 if (self::isEncryptedKeyNode($node)) {
-                    self::requireKeyTransportAlgorithm($objKey);
+                    KeyTransportAlgorithms::assertAlgorithm($objKey);
                 }
                 $this->enforceAlgorithmPolicy($objKey);
                 if ($objKey->getOAEPParameters() !== null) {
@@ -872,27 +862,6 @@ class XMLSecEnc
         return $node instanceof DOMElement
             && $node->localName === 'EncryptedKey'
             && $node->namespaceURI === self::XMLENCNS;
-    }
-
-    /**
-     * An EncryptedKey is always unwrapped with an asymmetric key-transport
-     * algorithm (RSA-1.5, RSA-OAEP, RSA-OAEP-MGF1P). Symmetric key wrap is not
-     * supported, so any other algorithm is rejected before decryption,
-     * independently of $allowedKeyAlgorithms.
-     *
-     * @param XMLSecurityKey $objKey
-     * @return void
-     * @throws Exception
-     */
-    public static function requireKeyTransportAlgorithm($objKey)
-    {
-        $algorithm = $objKey->getAlgorithm();
-        if (! is_string($algorithm) || ! in_array($algorithm, self::KEY_TRANSPORT_ALGORITHMS, true)) {
-            throw new Exception(
-                'EncryptedKey algorithm is not a supported key transport algorithm: \''
-                . (is_string($algorithm) ? $algorithm : '') . '\''
-            );
-        }
     }
 
     /**

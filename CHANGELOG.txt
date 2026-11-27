@@ -86,10 +86,9 @@ BREAKING CHANGES:
   have two new optional parameters ($allowedKeyAlgorithms,
   $allowedDataAlgorithms). Subclasses that override either method with the
   4.0 signature fail with a PHP fatal error ("Declaration ... must be
-  compatible"); add the two parameters to the override.   New public methods
-  XMLSecurityKey::setOAEPParameters(), getOAEPParameters(), setOAEPKeySize(),
-  assertSignatureKey(), and XMLSecEnc::requireKeyTransportAlgorithm() can
-  likewise conflict with same-named subclass methods.
+  compatible"); add the two parameters to the override. New public methods
+  XMLSecurityKey::setOAEPParameters(), getOAEPParameters(), setOAEPKeySize() and
+  assertSignatureKey() can likewise conflict with same-named subclass methods.
 - XMLSecEnc::$allowedKeyAlgorithms now defaults to
   XMLSecEnc::DEFAULT_KEY_ALGORITHMS (RSA-OAEP and RSA-OAEP-MGF1P) instead of
   null, a stricter default for key transport. The optional $allowedKeyAlgorithms
