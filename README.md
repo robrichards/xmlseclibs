@@ -62,7 +62,7 @@ Signing requires a signature key type (for example, `XMLSecurityKey::RSA_SHA256`
 - **EncryptedKey must use RSA key transport** (RSA-1.5, RSA-OAEP, RSA-OAEP-MGF1P), even when `allowedKeyAlgorithms` is `null`. `encryptKey()` rejects any other wrapping key before changing the document. AES/3DES `loadKey()` refuses certificates and PEM/DER key material and leaves the previous key in place. A symmetric key shorter than the algorithm requires is rejected (AES-128: 16 bytes, AES-192: 24, AES-256: 32, TripleDES: 24, CBC and GCM); longer keys are truncated to that length
 - **RSA-1.5 key transport denied by default**. Opt in: `$enc->allowRSA15KeyTransport = true` and `$enc->allowedKeyAlgorithms[] = XMLSecurityKey::RSA_1_5`, or `enableLegacyMode()`
 - **Data decryption restricted to AES-GCM by default** (`allowedDataAlgorithms = XMLSecEnc::DEFAULT_DATA_ALGORITHMS`, since 4.1). AES-CBC and TripleDES-CBC: `enableLegacyMode()` or add `LEGACY_DATA_ALGORITHMS`. `null` applies no data-encryption allowlist. The same default applies to `staticLocateKeyInfo()` and `XMLSecurityKey::fromEncryptedKeyElement()`. Encryption of a caller-chosen algorithm is unchanged
-- **Single decrypt error message**: `Failure decrypting Data` (do not branch on exception text). A symmetric key shorter than the algorithm requires raises its own exception before decryption
+- **Single decrypt error message**: `Failure decrypting Data` (do not branch on exception text). A symmetric key shorter than the algorithm requires uses that same message on decryption; encryption names the short key
 - **DOCTYPE rejected in decrypted XML** (not restored by legacy mode)
 - **EncryptedKey/RetrievalMethod depth capped**
 - **ISO 10126 pad length validated** on CBC decrypt

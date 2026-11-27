@@ -623,9 +623,7 @@ class XMLSecurityKey
         /* Assign only after every check has passed, so a rejection leaves the previous key in place. */
         $this->key = $loadedKey;
         $this->x509Certificate = $certificate;
-        if ($isCert) {
-            $this->X509Thumbprint = $thumbprint;
-        }
+        $this->X509Thumbprint = $thumbprint;
     }
 
     /**
@@ -973,12 +971,6 @@ class XMLSecurityKey
         }
 
         /*
-         * Reject a too-short key before ciphertext handling, so that error is
-         * not replaced by the generic decryption failure below.
-         */
-        $cipher = $this->createSymmetricCipher();
-
-        /*
          * Catch every crypto/padding failure and rethrow the same generic
          * exception. Distinct phpseclib types/messages (LengthException,
          * BadDecryptionException, etc.) would otherwise form a ciphertext-
@@ -988,6 +980,7 @@ class XMLSecurityKey
             $iv_length = $this->cryptParams['ivsize'];
             $this->iv = substr($data, 0, $iv_length);
             $data = substr($data, $iv_length);
+            $cipher = $this->createSymmetricCipher();
             $authTag = null;
 
             if ($this->cryptParams['mode'] === 'gcm') {

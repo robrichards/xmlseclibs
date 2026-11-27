@@ -58,6 +58,16 @@ list($result, $dsig) = run(loadDoc('rsa-sha256-sha1.xml'), function ($d) use ($e
 echo 'SHA1 EXPLICIT: ', $result, "\n";
 echo 'SHA1 EXPLICIT PROP: ', ($dsig->allowedDigestAlgorithms === $explicit ? 'same' : 'changed'), "\n";
 
+/* Default digest list plus enableLegacyMode() adds SHA-1, so the fixture verifies. */
+$legacy = new XMLSecurityDSig();
+$legacy->enableLegacyMode();
+try {
+    $legacyNodes = $legacy->verifyDocument(pinnedKey(), loadDoc('rsa-sha256-sha1.xml'));
+    echo 'SHA1 LEGACY: ', (count($legacyNodes) === 1 ? 'OK' : 'FAIL '.count($legacyNodes)), "\n";
+} catch (Exception $e) {
+    echo 'SHA1 LEGACY: ', $e->getMessage(), "\n";
+}
+
 $tampered = loadDoc('rsa-sha256-sha256.xml');
 $tampered->getElementsByTagName('Item')->item(0)->textContent = 'changed';
 list($result, $dsig) = run($tampered, function ($d) {
@@ -73,4 +83,5 @@ SHA1 NULL: DigestMethod algorithm is not allowed: 'http://www.w3.org/2000/09/xml
 SHA1 NULL PROP: null
 SHA1 EXPLICIT: OK
 SHA1 EXPLICIT PROP: same
+SHA1 LEGACY: OK
 TAMPER: Reference validation failed

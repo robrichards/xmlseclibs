@@ -111,10 +111,10 @@ KEEP_FILE_SAME: yes
 KEEP_CERT: An X.509 certificate cannot be used as a symmetric key
 KEEP_CERT_SAME: yes
 SHORT_AES256_GCM: Symmetric key is shorter than the 32 bytes required for type "http://www.w3.org/2009/xmlenc11#aes256-gcm".
-SHORT_DEC_AES256_GCM: Symmetric key is shorter than the 32 bytes required for type "http://www.w3.org/2009/xmlenc11#aes256-gcm".
+SHORT_DEC_AES256_GCM: Failure decrypting Data
 EXACT_AES256_GCM: yes
 OVERLONG_AES256_GCM: yes
 SHORT_AES128_CBC: Symmetric key is shorter than the 16 bytes required for type "http://www.w3.org/2001/04/xmlenc#aes128-cbc".
-SHORT_DEC_AES128_CBC: Symmetric key is shorter than the 16 bytes required for type "http://www.w3.org/2001/04/xmlenc#aes128-cbc".
+SHORT_DEC_AES128_CBC: Failure decrypting Data
 EXACT_AES128_CBC: yes
 OVERLONG_AES128_CBC: yes

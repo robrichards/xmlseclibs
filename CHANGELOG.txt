@@ -7,7 +7,11 @@ Bug Fixes:
   a key already loaded on the object.
 - Reject a symmetric key shorter than the algorithm requires when the key
   is used (AES-128: 16 bytes, AES-192: 24, AES-256: 32, TripleDES: 24,
-  for CBC and GCM). Longer keys are still truncated to that length.
+  for CBC and GCM). Encryption names the short key; decryption uses the
+  generic failure message. Longer keys are still truncated to that length.
+- A successful loadKey() that is not a certificate clears any previously
+  stored certificate thumbprint along with the certificate. A rejected
+  load leaves both unchanged.
 - XMLSecEnc::encryptKey() rejects a wrapping key that is not a key
   transport algorithm before it changes the document.
 - Restore default algorithm fallback in verifyDocument(). When
