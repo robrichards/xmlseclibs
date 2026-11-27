@@ -456,9 +456,15 @@ class XMLSecurityKey
      * Record the normalized xenc:KeySize (RSA modulus size in bits).
      *
      * Compared with the loaded key before RSA decryption. Absent means no check.
+     *
+     * @throws Exception when the key is not an RSA-OAEP key
      */
     public function setOAEPKeySize(int $bits): void
     {
+        $algorithm = $this->getAlgorithm();
+        if ($algorithm !== self::RSA_OAEP && $algorithm !== self::RSA_OAEP_MGF1P) {
+            throw new Exception('OAEP key size requires an RSA-OAEP key');
+        }
         $this->oaepKeySize = $bits;
     }
 
@@ -1347,8 +1353,8 @@ class XMLSecurityKey
      *
      * Returns:
      *  1 on succesful signature verification,
-     *  0 when signature verification failed,
-     *  -1 if an error occurred during processing (including a non-signature key type).
+     *  0 when signature verification failed, or the key is not a signature key,
+     *  -1 if an error occurred during processing.
      *
      * NOTE: be very careful when checking the return value, because in PHP,
      * -1 will be cast to True when in boolean context. So always check the
@@ -1360,11 +1366,11 @@ class XMLSecurityKey
      */
     public function verifySignature($data, $signature)
     {
-        // Preserve the integer return contract for unsupported key algorithms.
+        // A non-signature key type is a failed verification, not a processing error.
         try {
             $this->assertSignatureKey();
         } catch (Exception $e) {
-            return -1;
+            return 0;
         }
         switch ($this->cryptParams['library'] ?? null) {
             case 'phpseclib':
@@ -1621,8 +1627,9 @@ class XMLSecurityKey
      * @param bool $allowRSA15
      * @param null|array<int, string> $allowedKeyAlgorithms Key-transport allowlist (see XMLSecEnc::$allowedKeyAlgorithms;
      *                                                     defaults to XMLSecEnc::DEFAULT_KEY_ALGORITHMS, null = no restriction)
-     * @param null|array<int, string> $allowedDataAlgorithms Data-encryption allowlist (see XMLSecEnc::$allowedDataAlgorithms;
-     *                                                     defaults to XMLSecEnc::DEFAULT_DATA_ALGORITHMS, null = no restriction)
+     * @param null|array<int, string> $allowedDataAlgorithms Copied onto the inner XMLSecEnc context
+     *                                                     (defaults to XMLSecEnc::DEFAULT_DATA_ALGORITHMS; null copies null).
+     *                                                     It does not affect decryption.
      * @throws Exception
      *
      * @return XMLSecurityKey The new key.
@@ -1642,6 +1649,7 @@ class XMLSecurityKey
         if (! $objKey = $objenc->locateKey()) {
             throw new Exception("Unable to locate algorithm for this Encrypted Key");
         }
+        XMLSecEnc::requireKeyTransportAlgorithm($objKey);
         $objKey->isEncrypted = true;
         $objKey->encryptedCtx = $objenc;
         XMLSecEnc::staticLocateKeyInfo(

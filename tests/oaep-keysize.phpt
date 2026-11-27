@@ -62,6 +62,31 @@ foreach ($cases as $name => $parameters) {
         echo "$name: ".$e->getMessage()."\n";
     }
 }
+
+foreach (array(
+    'setOAEPKeySize RSA_OAEP' => XMLSecurityKey::RSA_OAEP,
+    'setOAEPKeySize RSA_OAEP_MGF1P' => XMLSecurityKey::RSA_OAEP_MGF1P,
+) as $name => $alg) {
+    try {
+        $key = new XMLSecurityKey($alg, array('type' => 'private'));
+        $key->setOAEPKeySize(2048);
+        echo "$name: OK\n";
+    } catch (Exception $e) {
+        echo "$name: ".$e->getMessage()."\n";
+    }
+}
+foreach (array(
+    'setOAEPKeySize AES128_GCM' => XMLSecurityKey::AES128_GCM,
+    'setOAEPKeySize RSA_SHA256' => XMLSecurityKey::RSA_SHA256,
+) as $name => $alg) {
+    try {
+        $key = new XMLSecurityKey($alg, array('type' => 'public'));
+        $key->setOAEPKeySize(2048);
+        echo "$name: not rejected\n";
+    } catch (Exception $e) {
+        echo "$name: ".$e->getMessage()."\n";
+    }
+}
 ?>
 --EXPECTF--
 KeySize omitted: OK
@@ -89,3 +114,7 @@ KeySize plus only: Invalid RSA-OAEP parameter content
 KeySize exponent: Invalid RSA-OAEP parameter content
 KeySize internal space: Invalid RSA-OAEP parameter content
 KeySize trailing newline: OK
+setOAEPKeySize RSA_OAEP: OK
+setOAEPKeySize RSA_OAEP_MGF1P: OK
+setOAEPKeySize AES128_GCM: OAEP key size requires an RSA-OAEP key
+setOAEPKeySize RSA_SHA256: OAEP key size requires an RSA-OAEP key

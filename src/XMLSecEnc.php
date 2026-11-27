@@ -119,11 +119,16 @@ class XMLSecEnc
     public $allowedKeyAlgorithms = self::DEFAULT_KEY_ALGORITHMS;
 
     /**
-     * Allowlist of acceptable data-encryption (symmetric) algorithm URIs.
+     * Allowlist of acceptable symmetric data-encryption algorithm URIs.
      *
+     * Applies to an EncryptedData whose EncryptionMethod is AES or 3DES.
      * Defaults to DEFAULT_DATA_ALGORITHMS (AES-GCM). enableLegacyMode() adds
      * the CBC algorithms; you can also add entries or set your own list. Set
      * to null to apply no allowlist.
+     *
+     * An EncryptedData encrypted directly with an RSA key-transport algorithm
+     * is governed by $allowedKeyAlgorithms and $allowRSA15KeyTransport, not
+     * this list.
      *
      * @var array<int, string>|null
      */
@@ -286,7 +291,8 @@ class XMLSecEnc
             }
         }
         $xPath = new DOMXPath($this->encdoc);
-        $objList = $xPath->query('/xenc:EncryptedData/xenc:CipherData/xenc:CipherValue');
+        $xPath->registerNamespace('xenc', self::XMLENCNS);
+        $objList = $xPath->query('/xenc:EncryptedData/xenc:CipherData/xenc:CipherValue', null, false);
         if ($objList === false) {
             throw new Exception('Error locating CipherValue element within template');
         }
@@ -327,20 +333,28 @@ class XMLSecEnc
         }
         $encMethod->setAttribute('Algorithm', $objKey->getAlgorithm());
         $this->appendOAEPParameters($encMethod, $objKey);
-        $root->appendChild($encMethod);
-        $cipherData = $cipherValue->parentNode;
-        if ($cipherData === null || $cipherData->parentNode === null) {
+        if ($cipherValue->parentNode === null || $cipherValue->parentNode->parentNode === null) {
             throw new Exception('Error locating CipherData element within template');
         }
-        $cipherData->parentNode->insertBefore($encMethod, $cipherData->parentNode->firstChild);
 
+        /* Encrypt before changing the template, so a failed call leaves it reusable. */
         $encrypted = $objKey->encryptData($data);
         if (! is_string($encrypted)) {
             throw new Exception('Failure encrypting Data');
         }
-        $strEncrypt = base64_encode($encrypted);
-        $value = $this->encdoc->createTextNode($strEncrypt);
-        $cipherValue->appendChild($value);
+
+        $child = $root->firstChild;
+        while ($child !== null) {
+            $next = $child->nextSibling;
+            if ($child instanceof DOMElement
+                && $child->localName === 'EncryptionMethod'
+                && $child->namespaceURI === self::XMLENCNS) {
+                $root->removeChild($child);
+            }
+            $child = $next;
+        }
+        $root->insertBefore($encMethod, $root->firstChild);
+        $cipherValue->textContent = base64_encode($encrypted);
 
         if ($replace) {
             switch ($this->type) {
@@ -435,7 +449,7 @@ class XMLSecEnc
         $xPath->registerNamespace('xmlencr', self::XMLENCNS);
         /* Only handles embedded content right now and not a reference */
         $query = "./xmlencr:CipherData/xmlencr:CipherValue";
-        $nodeset = $xPath->query($query, $this->rawNode);
+        $nodeset = $xPath->query($query, $this->rawNode, false);
         if ($nodeset === false) {
             return null;
         }
@@ -713,7 +727,7 @@ class XMLSecEnc
             $xpath = new DOMXPath($doc);
             $xpath->registerNamespace('xmlsecenc', self::XMLENCNS);
             $query = "./xmlsecenc:EncryptionMethod";
-            $nodeset = $xpath->query($query, $node);
+            $nodeset = $xpath->query($query, $node, false);
             if ($nodeset === false) {
                 return null;
             }
@@ -870,7 +884,7 @@ class XMLSecEnc
      * @return void
      * @throws Exception
      */
-    private static function requireKeyTransportAlgorithm($objKey)
+    public static function requireKeyTransportAlgorithm($objKey)
     {
         $algorithm = $objKey->getAlgorithm();
         if (! is_string($algorithm) || ! in_array($algorithm, self::KEY_TRANSPORT_ALGORITHMS, true)) {
@@ -935,8 +949,10 @@ class XMLSecEnc
      * @param bool $allowRSA15
      * @param null|array<int, string> $allowedKeyAlgorithms Key-transport allowlist applied to any resolved EncryptedKey
      *                                                     (defaults to DEFAULT_KEY_ALGORITHMS; null = no restriction)
-     * @param null|array<int, string> $allowedDataAlgorithms Data-encryption allowlist applied to any resolved EncryptedKey
-     *                                                     (defaults to DEFAULT_DATA_ALGORITHMS; null = no restriction)
+     * @param null|array<int, string> $allowedDataAlgorithms Copied onto the inner XMLSecEnc context
+     *                                                     (defaults to DEFAULT_DATA_ALGORITHMS; null copies null).
+     *                                                     It does not affect decryption. Symmetric data encryption
+     *                                                     is governed by the EncryptedData reader's allowedDataAlgorithms.
      * @return null|XMLSecurityKey
      * @throws Exception
      */
@@ -969,7 +985,7 @@ class XMLSecEnc
         $xpath->registerNamespace('xmlsecenc', self::XMLENCNS);
         $xpath->registerNamespace('xmlsecdsig', XMLSecurityDSig::XMLDSIGNS);
         $query = "./xmlsecdsig:KeyInfo";
-        $nodeset = $xpath->query($query, $node);
+        $nodeset = $xpath->query($query, $node, false);
         if ($nodeset === false) {
             return $objBaseKey;
         }
@@ -1053,7 +1069,7 @@ class XMLSecEnc
                     $id = substr($uri, 1);
 
                     $query = '//xmlsecenc:EncryptedKey[@Id="'.XPath::filterAttrValue($id, XPath::DOUBLE_QUOTE).'"]';
-                    $keyNodes = $xpath->query($query);
+                    $keyNodes = $xpath->query($query, null, false);
                     if ($keyNodes === false || ! (($keyElement = $keyNodes->item(0)) instanceof DOMElement)) {
                         throw new Exception("Unable to locate EncryptedKey with @Id='$id'.");
                     }
@@ -1062,6 +1078,9 @@ class XMLSecEnc
                         $keyElement, $depth + 1, $allowRSA15, $allowedKeyAlgorithms, $allowedDataAlgorithms
                     );
                 case 'EncryptedKey':
+                    if ($child->namespaceURI !== self::XMLENCNS) {
+                        break;
+                    }
                     return XMLSecurityKey::fromEncryptedKeyElement(
                         $child, $depth + 1, $allowRSA15, $allowedKeyAlgorithms, $allowedDataAlgorithms
                     );
