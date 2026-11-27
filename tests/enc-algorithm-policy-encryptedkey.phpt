@@ -63,6 +63,11 @@ attempt('RetrievalMethod disallowed', function () {
     $doc->load(__DIR__ . '/retrievalmethod-findkey.xml');
     $dec = new XMLSecEnc();
     $dec->allowedKeyAlgorithms = array(XMLSecurityKey::RSA_OAEP);
+    /* Fixture data algorithm is AES-256-CBC. */
+    $dec->allowedDataAlgorithms = array_merge(
+        XMLSecEnc::DEFAULT_DATA_ALGORITHMS,
+        XMLSecEnc::LEGACY_DATA_ALGORITHMS
+    );
     $dec->setNode($dec->locateEncryptedData($doc));
     $dec->locateKeyInfo($dec->locateKey());
     return 'unexpected success';
@@ -72,6 +77,11 @@ attempt('RetrievalMethod allowed', function () {
     $doc->load(__DIR__ . '/retrievalmethod-findkey.xml');
     $dec = new XMLSecEnc();
     $dec->allowedKeyAlgorithms = array(XMLSecurityKey::RSA_OAEP_MGF1P);
+    /* Fixture data algorithm is AES-256-CBC. */
+    $dec->allowedDataAlgorithms = array_merge(
+        XMLSecEnc::DEFAULT_DATA_ALGORITHMS,
+        XMLSecEnc::LEGACY_DATA_ALGORITHMS
+    );
     $dec->setNode($dec->locateEncryptedData($doc));
     return $dec->locateKeyInfo($dec->locateKey())->getAlgorithm();
 });

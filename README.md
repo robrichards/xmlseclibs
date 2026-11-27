@@ -23,7 +23,7 @@ xmlseclibs requires PHP version 8.0 or greater and phpseclib 3.0.58 or later. Op
 * After `validateReference()`, use `getValidatedNodes()` and operate only on those nodes (especially for SAML / WS-Security). Do not re-select assertions by Id from the whole document.
 * Do not trust a signing certificate from `KeyInfo` alone. Load and pin trusted keys yourself.
 * Signature verification (`verifyDocument()` as well as `verify()` / `validateReference()`) accepts by default only SHA-256/384/512 digests and RSA-SHA-256/384/512 (and RSA-PSS) and ECDSA-SHA-256/384/512 signatures (`$objDSig->allowedSignatureAlgorithms` / `$objDSig->allowedDigestAlgorithms` default to `XMLSecurityDSig::DEFAULT_SIGNATURE_ALGORITHMS` / `DEFAULT_DIGEST_ALGORITHMS`). To accept SHA-1 (rsa-sha1, dsa-sha1, hmac-sha1 and sha1 digests), call `$objDSig->enableLegacyMode()` or widen the lists explicitly, e.g. `$objDSig->allowedSignatureAlgorithms[] = XMLSecurityKey::RSA_SHA1;` and `$objDSig->allowedDigestAlgorithms[] = XMLSecurityDSig::SHA1;`. Set a list to `null` to apply no allowlist. Signing is unaffected. ECDSA keys are limited to the P-256, P-384 and P-521 curves (`XMLSecurityKey::EC_CURVE_OIDS`); to accept another curve, add it explicitly to `$objKey->allowedECCurves`.
-* Prefer RSA-OAEP and AES-GCM for encryption. RSA-1.5 key transport is **denied by default** on decryption (Bleichenbacher risk); opt in with `$objenc->allowRSA15KeyTransport = true;` plus `$objenc->allowedKeyAlgorithms[] = XMLSecurityKey::RSA_1_5;` only for legacy interop. Key transport is restricted by default to RSA-OAEP (`$objenc->allowedKeyAlgorithms` defaults to `XMLSecEnc::DEFAULT_KEY_ALGORITHMS`); widen the list explicitly, or set it to `null` to apply no key-transport allowlist. Data encryption can be pinned via `$objenc->allowedDataAlgorithms` (preset: `XMLSecEnc::DEFAULT_DATA_ALGORITHMS`, AES-GCM only). Unauthenticated CBC modes remain available for interop but are malleable — prefer AES-GCM.
+* Prefer RSA-OAEP and AES-GCM for encryption. RSA-1.5 key transport is **denied by default** on decryption (Bleichenbacher risk); opt in with `$objenc->allowRSA15KeyTransport = true;` plus `$objenc->allowedKeyAlgorithms[] = XMLSecurityKey::RSA_1_5;` only for legacy interop. Key transport is restricted by default to RSA-OAEP (`$objenc->allowedKeyAlgorithms` defaults to `XMLSecEnc::DEFAULT_KEY_ALGORITHMS`); widen the list explicitly, or set it to `null` to apply no key-transport allowlist. Data decryption accepts only AES-GCM by default (`$objenc->allowedDataAlgorithms` defaults to `XMLSecEnc::DEFAULT_DATA_ALGORITHMS`). AES-CBC and TripleDES-CBC require `$objenc->enableLegacyMode()` (adds `XMLSecEnc::LEGACY_DATA_ALGORITHMS`) or an explicit list. Set the list to `null` to apply no data-encryption allowlist. Encryption still uses the algorithm of the caller-supplied key.
 * XPath (`REC-xpath-19991116`) transforms are **rejected during verification by default**. They evaluate a document-supplied XPath expression in `validateReference()` before any signature crypto runs, so a crafted expression is a pre-authentication CPU denial-of-service — and the expression is arbitrary XPath by design, so it cannot be sanitized. SAML and WS-Security do not use them. Set `$objDSig->allowXPathTransforms = true` only if you must verify signatures that legitimately rely on XPath transforms and you trust the source. Signing is unaffected. When enabled, the count/namespace caps below still apply.
 
 * XPath transforms (once enabled) are capped by default (`maxXPathTransforms` / `maxXPathNamespaces`, defaults 5 and 20). Raise or lower these on the `XMLSecurityDSig` instance if your use case needs different limits.
@@ -32,7 +32,7 @@ xmlseclibs requires PHP version 8.0 or greater and phpseclib 3.0.58 or later. Op
 
 * Documents carrying a `DOCTYPE` are rejected during signature verification (`locateSignature()` / `verifyDocument()`). This closes the entity-reference bypass in which an `Id="&e;"` attribute is resolved by `getAttribute()` but is invisible to the XPath reference lookup (a libxml2 hashing bug, the same root cause as CVE-2025-23369), causing `verify()` to validate a different node than the one your application reads. Set `$objDSig->forbidDoctype = false` only if you fully trust the document source and require DTD support.
 
-* **Legacy interoperability (temporary):** if you must accept documents/peers that rely on pre-4.0 behaviour, call `$objDSig->enableLegacyMode()` and/or `$objenc->enableLegacyMode()` once after construction. That restores the interoperability settings in one place (DOCTYPE allowed on verify, XPath transforms allowed without count caps, SHA-1 signature and digest algorithms accepted on verify, RSA-1.5 key transport allowed). It does **not** undo always-on hardening such as SignatureMethod/key binding, uniform decryption errors, or DOCTYPE rejection in *decrypted* XML. Prefer migrating peers and removing the call.
+* **Legacy interoperability (temporary):** if you must accept documents/peers that rely on pre-4.0 behaviour, call `$objDSig->enableLegacyMode()` and/or `$objenc->enableLegacyMode()` once after construction. That restores the interoperability settings in one place (DOCTYPE allowed on verify, XPath transforms allowed without count caps, SHA-1 signature and digest algorithms accepted on verify, RSA-1.5 key transport allowed, AES-CBC and TripleDES-CBC data decryption allowed). It does **not** undo always-on hardening such as SignatureMethod/key binding, uniform decryption errors, or DOCTYPE rejection in *decrypted* XML. Prefer migrating peers and removing the call.
 
 ## Unreleased compatibility note
 
@@ -61,6 +61,7 @@ Signing requires a signature key type (for example, `XMLSecurityKey::RSA_SHA256`
 - **Key transport restricted to RSA-OAEP by default** (`allowedKeyAlgorithms = XMLSecEnc::DEFAULT_KEY_ALGORITHMS`, since 4.1). Widen the list explicitly, or set it to `null` for no key-transport allowlist
 - **EncryptedKey must use RSA key transport** (RSA-1.5, RSA-OAEP, RSA-OAEP-MGF1P), even when `allowedKeyAlgorithms` is `null`; AES/3DES keys refuse certificates and PEM/DER key material in `loadKey()`
 - **RSA-1.5 key transport denied by default**. Opt in: `$enc->allowRSA15KeyTransport = true` and `$enc->allowedKeyAlgorithms[] = XMLSecurityKey::RSA_1_5`, or `enableLegacyMode()`
+- **Data decryption restricted to AES-GCM by default** (`allowedDataAlgorithms = XMLSecEnc::DEFAULT_DATA_ALGORITHMS`, since 4.1). AES-CBC and TripleDES-CBC: `enableLegacyMode()` or add `LEGACY_DATA_ALGORITHMS`. `null` applies no data-encryption allowlist. The same default applies to `staticLocateKeyInfo()` and `XMLSecurityKey::fromEncryptedKeyElement()`. Encryption of a caller-chosen algorithm is unchanged
 - **Single decrypt error message**: `Failure decrypting Data` (do not branch on exception text)
 - **DOCTYPE rejected in decrypted XML** (not restored by legacy mode)
 - **EncryptedKey/RetrievalMethod depth capped**
@@ -72,19 +73,20 @@ Signing requires a signature key type (for example, `XMLSecurityKey::RSA_SHA256`
 
 ### API signature changes (defaults preserve most callers)
 - `processTransforms(..., $signing = false)`
-- `staticLocateKeyInfo(..., $depth = 0, $allowRSA15 = false, $allowedKeyAlgorithms = XMLSecEnc::DEFAULT_KEY_ALGORITHMS, $allowedDataAlgorithms = null)`
-- `fromEncryptedKeyElement(..., $depth = 0, $allowRSA15 = false, $allowedKeyAlgorithms = XMLSecEnc::DEFAULT_KEY_ALGORITHMS, $allowedDataAlgorithms = null)`
+- `staticLocateKeyInfo(..., $depth = 0, $allowRSA15 = false, $allowedKeyAlgorithms = XMLSecEnc::DEFAULT_KEY_ALGORITHMS, $allowedDataAlgorithms = XMLSecEnc::DEFAULT_DATA_ALGORITHMS)`
+- `fromEncryptedKeyElement(..., $depth = 0, $allowRSA15 = false, $allowedKeyAlgorithms = XMLSecEnc::DEFAULT_KEY_ALGORITHMS, $allowedDataAlgorithms = XMLSecEnc::DEFAULT_DATA_ALGORITHMS)`
 
 `locateKeyInfo()` passes the instance's `allowRSA15KeyTransport`,
 `allowedKeyAlgorithms` and `allowedDataAlgorithms` to every `EncryptedKey` it
 resolves (embedded or via `RetrievalMethod`), so the key's `encryptedCtx`
 enforces the same policy. Callers of the static methods pass them explicitly;
 when omitted, `$allowedKeyAlgorithms` defaults to
-`XMLSecEnc::DEFAULT_KEY_ALGORITHMS`, and passing `null` applies no
-key-transport allowlist.
+`XMLSecEnc::DEFAULT_KEY_ALGORITHMS` and `$allowedDataAlgorithms` defaults to
+`XMLSecEnc::DEFAULT_DATA_ALGORITHMS`. Passing `null` for either applies no
+allowlist for that list.
 
 ### Legacy mode
-`$dsig->enableLegacyMode()` / `$enc->enableLegacyMode()` restores **DOCTYPE (verify), XPath transforms + uncapped limits, SHA-1 signature/digest algorithms (verify), and RSA-1.5** only (on the signature side it adds rsa-sha1, dsa-sha1, hmac-sha1 and the sha1 digest to `allowedSignatureAlgorithms` / `allowedDigestAlgorithms` when those lists are set; on the encryption side it sets `allowRSA15KeyTransport` and adds RSA-1.5 to `allowedKeyAlgorithms` when that list is set; assigning any of these lists afterwards replaces it, so call `enableLegacyMode()` after configuring them). It does **not** undo algorithm/key binding, uniform decrypt errors, decrypted-XML DOCTYPE rejection, Reference fail-closed behavior, SSRF rules, or the PHP/phpseclib requirements.
+`$dsig->enableLegacyMode()` / `$enc->enableLegacyMode()` restores **DOCTYPE (verify), XPath transforms + uncapped limits, SHA-1 signature/digest algorithms (verify), RSA-1.5, and CBC data decryption** only (on the signature side it adds rsa-sha1, dsa-sha1, hmac-sha1 and the sha1 digest to `allowedSignatureAlgorithms` / `allowedDigestAlgorithms` when those lists are set; on the encryption side it sets `allowRSA15KeyTransport`, adds RSA-1.5 to `allowedKeyAlgorithms` when that list is set, and adds `LEGACY_DATA_ALGORITHMS` — AES-CBC and TripleDES-CBC — to `allowedDataAlgorithms` when that list is set; a null list is left null; assigning any of these lists afterwards replaces it, so call `enableLegacyMode()` after configuring them). It does **not** undo algorithm/key binding, uniform decrypt errors, decrypted-XML DOCTYPE rejection, Reference fail-closed behavior, SSRF rules, or the PHP/phpseclib requirements.
 
 **Migration tip:** Prefer `verifyDocument()` with a pinned key. Use legacy mode only while updating peers.
 
@@ -138,8 +140,15 @@ $objenc = new XMLSecEnc();
 //    enable it if you must interoperate with a legacy peer:
 // $objenc->allowRSA15KeyTransport = true;
 // $objenc->allowedKeyAlgorithms[] = XMLSecurityKey::RSA_1_5;
-//  - Restrict data encryption to authenticated AES-GCM (rejects CBC):
-$objenc->allowedDataAlgorithms = XMLSecEnc::DEFAULT_DATA_ALGORITHMS;
+//  - Data decryption accepts AES-GCM by default
+//    ($objenc->allowedDataAlgorithms === XMLSecEnc::DEFAULT_DATA_ALGORITHMS).
+//    AES-CBC and TripleDES-CBC, either:
+// $objenc->enableLegacyMode();
+//    or, without also enabling RSA-1.5 key transport:
+// $objenc->allowedDataAlgorithms = array_merge(
+//     XMLSecEnc::DEFAULT_DATA_ALGORITHMS,
+//     XMLSecEnc::LEGACY_DATA_ALGORITHMS
+// );
 
 $encData = $objenc->locateEncryptedData($doc);
 if (! $encData) {

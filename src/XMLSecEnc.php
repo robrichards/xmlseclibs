@@ -89,14 +89,23 @@ class XMLSecEnc
     );
 
     /**
-     * Recommended data-encryption (symmetric) algorithms. Authenticated GCM
-     * modes only; unauthenticated CBC modes are excluded because they are
-     * malleable and prone to padding-oracle attacks.
+     * Data-encryption algorithms accepted by default ($allowedDataAlgorithms).
+     * AES-128/192/256-GCM (XML Encryption 1.1). CBC modes are not included;
+     * enableLegacyMode() adds them (see LEGACY_DATA_ALGORITHMS), or set
+     * $allowedDataAlgorithms explicitly (null removes the restriction).
      */
     const DEFAULT_DATA_ALGORITHMS = array(
         XMLSecurityKey::AES128_GCM,
         XMLSecurityKey::AES192_GCM,
         XMLSecurityKey::AES256_GCM,
+    );
+
+    /** Data-encryption algorithms enableLegacyMode() adds to $allowedDataAlgorithms. */
+    const LEGACY_DATA_ALGORITHMS = array(
+        XMLSecurityKey::AES128_CBC,
+        XMLSecurityKey::AES192_CBC,
+        XMLSecurityKey::AES256_CBC,
+        XMLSecurityKey::TRIPLEDES_CBC,
     );
 
     /**
@@ -111,10 +120,14 @@ class XMLSecEnc
 
     /**
      * Allowlist of acceptable data-encryption (symmetric) algorithm URIs.
-     * When null (default) no allowlist restriction is applied.
+     *
+     * Defaults to DEFAULT_DATA_ALGORITHMS (AES-GCM). enableLegacyMode() adds
+     * the CBC algorithms; you can also add entries or set your own list. Set
+     * to null to apply no allowlist.
+     *
      * @var array<int, string>|null
      */
-    public $allowedDataAlgorithms = null;
+    public $allowedDataAlgorithms = self::DEFAULT_DATA_ALGORITHMS;
 
     /**
      * Whether RSA-1.5 (PKCS#1 v1.5) key transport is permitted on decryption.
@@ -167,17 +180,18 @@ class XMLSecEnc
      * Restore pre-4.0 interoperability defaults for XML Encryption decryption.
      *
      * Use this only when you must decrypt payloads that use RSA-1.5 key
-     * transport. Prefer migrating senders to RSA-OAEP (and AES-GCM) and then
-     * removing the call.
+     * transport or CBC data encryption. Prefer migrating senders to RSA-OAEP
+     * and AES-GCM and then removing the call.
      *
      * Enables RSA-1.5 key transport and adds it to $allowedKeyAlgorithms when
-     * that allowlist is set. Other algorithms in the allowlist are unchanged.
-     * Assigning $allowedKeyAlgorithms afterwards replaces the list, so call
-     * this after configuring it.
+     * that allowlist is set. Adds LEGACY_DATA_ALGORITHMS to
+     * $allowedDataAlgorithms when that allowlist is set; a null list is left
+     * null. Entries already present are not duplicated. Assigning either list
+     * afterwards replaces it, so call this after configuring them.
      *
-     * This does NOT undo 4.0 oracle / XXE hardening that is always enforced
-     * (uniform decryption error messages, DOCTYPE rejection in decrypted XML,
-     * EncryptedKey recursion depth bound, ISO 10126 pad-length validation).
+     * This does NOT undo checks that are always enforced (uniform decryption
+     * error messages, DOCTYPE rejection in decrypted XML, EncryptedKey
+     * recursion depth bound, ISO 10126 pad-length validation).
      *
      * @return $this
      */
@@ -187,6 +201,13 @@ class XMLSecEnc
         if (is_array($this->allowedKeyAlgorithms)
             && ! in_array(XMLSecurityKey::RSA_1_5, $this->allowedKeyAlgorithms, true)) {
             $this->allowedKeyAlgorithms[] = XMLSecurityKey::RSA_1_5;
+        }
+        if (is_array($this->allowedDataAlgorithms)) {
+            foreach (self::LEGACY_DATA_ALGORITHMS as $algorithm) {
+                if (! in_array($algorithm, $this->allowedDataAlgorithms, true)) {
+                    $this->allowedDataAlgorithms[] = $algorithm;
+                }
+            }
         }
         return $this;
     }
@@ -910,6 +931,7 @@ class XMLSecEnc
      * @param null|array<int, string> $allowedKeyAlgorithms Key-transport allowlist applied to any resolved EncryptedKey
      *                                                     (defaults to DEFAULT_KEY_ALGORITHMS; null = no restriction)
      * @param null|array<int, string> $allowedDataAlgorithms Data-encryption allowlist applied to any resolved EncryptedKey
+     *                                                     (defaults to DEFAULT_DATA_ALGORITHMS; null = no restriction)
      * @return null|XMLSecurityKey
      * @throws Exception
      */
@@ -919,7 +941,7 @@ class XMLSecEnc
         $depth=0,
         $allowRSA15=false,
         ?array $allowedKeyAlgorithms=self::DEFAULT_KEY_ALGORITHMS,
-        ?array $allowedDataAlgorithms=null
+        ?array $allowedDataAlgorithms=self::DEFAULT_DATA_ALGORITHMS
     ) {
         if (empty($node) || (! $node instanceof DOMNode)) {
             return null;
