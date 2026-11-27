@@ -9,7 +9,7 @@ use RobRichards\XMLSecLibs\XMLSecurityKey;
 
 const WSU = 'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd';
 
-function sign($xml) {
+function sign($xml, $prefixNs = WSU) {
     $doc = new DOMDocument();
     $doc->loadXML($xml);
     $payload = $doc->getElementsByTagName('payload')->item(0);
@@ -22,7 +22,7 @@ function sign($xml) {
         array(
             'overwrite' => false,
             'prefix' => 'u',
-            'prefix_ns' => WSU,
+            'prefix_ns' => $prefixNs,
             'id_name' => 'Id',
         )
     );
@@ -33,7 +33,7 @@ function sign($xml) {
     return $doc->saveXML();
 }
 
-function check($xml) {
+function check($xml, $idKeys = null, $idNS = null) {
     $doc = new DOMDocument();
     $doc->loadXML($xml);
     $dsig = new XMLSecurityDSig();
@@ -41,8 +41,8 @@ function check($xml) {
         return 'no signature';
     }
     $dsig->canonicalizeSignedInfo();
-    $dsig->idKeys = array('wsu:Id');
-    $dsig->idNS = array('wsu' => WSU);
+    $dsig->idKeys = $idKeys === null ? array('wsu:Id') : $idKeys;
+    $dsig->idNS = $idNS === null ? array('wsu' => WSU) : $idNS;
     try {
         $dsig->validateReference();
     } catch (Exception $e) {
@@ -64,11 +64,18 @@ $plain = sign(
     '<root xmlns:wsu="'.WSU.'"><payload wsu:Id="signed">hello</payload></root>'
 );
 
+$rootPrefix = sign(
+    '<root xmlns:alt="urn:example:alt"><payload alt:Id="signed">hello</payload></root>',
+    'urn:example:alt'
+);
+
 echo 'CONFLICT: '.check($conflict)."\n";
 echo 'CONFLICT_MODIFIED: '.check(str_replace('>hello<', '>hell0<', $conflict))."\n";
 echo 'PLAIN: '.check($plain)."\n";
+echo 'ROOT_PREFIX: '.check($rootPrefix, array('alt:Id'), array('wsu' => WSU))."\n";
 ?>
 --EXPECTF--
 CONFLICT: valid payload hello
 CONFLICT_MODIFIED: Reference validation failed
 PLAIN: valid payload hello
+ROOT_PREFIX: valid payload hello

@@ -856,12 +856,13 @@ class XMLSecurityDSig
 
             if ($identifier !== null) {
                 $xPath = new DOMXPath($refNode->ownerDocument);
+                $root = $refNode->ownerDocument->documentElement;
                 /*
-                 * Bind caller idNS URIs to prefixes the document does not
-                 * declare. Document bindings remain in effect for any idKeys
-                 * prefix the caller did not list.
+                 * Register only prefixes that idKeys actually use. A caller
+                 * idNS entry wins; otherwise use the document element's
+                 * binding. The lookup then ignores other in-scope declarations.
                  */
-                $idNsPrefixes = $this->registerIdNamespacePrefixes($xPath);
+                $registered = array();
                 $iDlist = '@Id="'.XPath::filterAttrValue($identifier, XPath::DOUBLE_QUOTE).'"';
                 foreach ($this->idKeys as $idKey) {
                     $attrName = XPath::filterAttrName($idKey);
@@ -871,15 +872,30 @@ class XMLSecurityDSig
                     $colon = strpos($attrName, ':');
                     if ($colon !== false) {
                         $prefix = substr($attrName, 0, $colon);
-                        if (isset($idNsPrefixes[$prefix])) {
-                            $attrName = $idNsPrefixes[$prefix].substr($attrName, $colon);
+                        if (! isset($registered[$prefix])) {
+                            $uri = null;
+                            if (is_array($this->idNS)
+                                && isset($this->idNS[$prefix])
+                                && is_string($this->idNS[$prefix])
+                                && $this->idNS[$prefix] !== '') {
+                                $uri = $this->idNS[$prefix];
+                            } elseif ($root instanceof DOMElement) {
+                                $lookedUp = $root->lookupNamespaceURI($prefix);
+                                if (is_string($lookedUp) && $lookedUp !== '') {
+                                    $uri = $lookedUp;
+                                }
+                            }
+                            if ($uri !== null) {
+                                $xPath->registerNamespace($prefix, $uri);
+                            }
+                            $registered[$prefix] = true;
                         }
                     }
                     $iDlist .= " or @".$attrName.'="'.
                         XPath::filterAttrValue($identifier, XPath::DOUBLE_QUOTE).'"';
                 }
                 $query = '//*['.$iDlist.']';
-                $nodeset = $xPath->query($query);
+                $nodeset = $xPath->query($query, null, false);
                 if ($nodeset === false || $nodeset->length === 0) {
                     throw new Exception('Reference URI does not identify a node');
                 }
@@ -904,41 +920,6 @@ class XMLSecurityDSig
             'includeCommentNodes' => $includeCommentNodes,
             'identifier' => $identifier,
         );
-    }
-
-    /**
-     * Register each idNS URI under a prefix the document does not declare.
-     *
-     * @param DOMXPath $xpath
-     * @return array<string, string> Caller prefix => generated prefix
-     */
-    private function registerIdNamespacePrefixes(DOMXPath $xpath): array
-    {
-        $map = array();
-        if (! is_array($this->idNS) || $this->idNS === array()) {
-            return $map;
-        }
-        $declared = array();
-        $nsNodes = $xpath->query('//namespace::*');
-        if ($nsNodes !== false) {
-            foreach ($nsNodes as $nsNode) {
-                $declared[$nsNode->localName] = true;
-            }
-        }
-        $index = 0;
-        foreach ($this->idNS as $prefix => $uri) {
-            if (! is_string($prefix) || $prefix === '' || ! is_string($uri)) {
-                continue;
-            }
-            do {
-                $generated = 'xslidns'.$index;
-                $index++;
-            } while (isset($declared[$generated]));
-            $declared[$generated] = true;
-            $xpath->registerNamespace($generated, $uri);
-            $map[$prefix] = $generated;
-        }
-        return $map;
     }
 
     /**
