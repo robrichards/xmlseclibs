@@ -73,10 +73,11 @@ class XMLSecurityDSig
 
     /**
      * Default SignatureMethod allowlist ($allowedSignatureAlgorithms).
-     * SHA-1 based signatures (rsa-sha1, dsa-sha1, hmac-sha1) are not included;
+     * SHA-1 based signatures (rsa-sha1, hmac-sha1) are not included;
      * enableLegacyMode() adds them (see LEGACY_SIGNATURE_ALGORITHMS), or set
-     * $allowedSignatureAlgorithms explicitly. verify() treats null as no
-     * restriction; verifyDocument() uses this list when the property is null.
+     * $allowedSignatureAlgorithms explicitly. DSA signatures are not supported.
+     * verify() treats null as no restriction; verifyDocument() uses this list
+     * when the property is null.
      */
     const DEFAULT_SIGNATURE_ALGORITHMS = array(
         XMLSecurityKey::RSA_SHA256,
@@ -104,7 +105,6 @@ class XMLSecurityDSig
     /** SignatureMethod algorithms enableLegacyMode() adds to $allowedSignatureAlgorithms. */
     const LEGACY_SIGNATURE_ALGORITHMS = array(
         XMLSecurityKey::RSA_SHA1,
-        XMLSecurityKey::DSA_SHA1,
         XMLSecurityKey::HMAC_SHA1,
     );
 

@@ -2,6 +2,8 @@ xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 XX, Nov 2026, 4.1.0
 Bug Fixes:
+- enableLegacyMode() no longer lists the unsupported dsa-sha1 signature
+  algorithm. XMLSecurityKey::DSA_SHA1 remains defined.
 - XMLSecurityKey::loadKey() validates a symmetric key before storing it.
   PEM, certificate, DER, and too-short input is rejected without replacing
   a key already loaded on the object.
@@ -92,9 +94,10 @@ BREAKING CHANGES:
   SHA256, ECDSA-SHA256/384/512) and DEFAULT_DIGEST_ALGORITHMS
   (SHA-256/384/512) instead of null, and apply to verify() and
   validateReference() as well as verifyDocument(). Signing is unaffected.
-  SHA-1 (rsa-sha1, dsa-sha1, hmac-sha1, sha1 digests) requires
+  SHA-1 (rsa-sha1, hmac-sha1, sha1 digests) requires
   enableLegacyMode(), which adds them to the lists, or adding them to the
-  lists explicitly; RIPEMD-160 digests require a list entry. verify() and
+  lists explicitly; RIPEMD-160 digests require a list entry. DSA signatures
+  are not supported. verify() and
   validateReference() treat a null list as no restriction.
   verifyDocument() falls back to the corresponding DEFAULT_* list when a
   list is null, for that call only, and restores the property afterwards.

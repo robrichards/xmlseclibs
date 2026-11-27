@@ -104,7 +104,7 @@ echo 'LEGACY RIPEMD low: ', lowLevel($ripemd, XMLSecurityKey::RSA_SHA256, $legac
 $d = new XMLSecurityDSig();
 $d->enableLegacyMode();
 $d->enableLegacyMode();
-echo 'LEGACY SIG LIST: ', ($d->allowedSignatureAlgorithms === array_merge(XMLSecurityDSig::DEFAULT_SIGNATURE_ALGORITHMS, array(XMLSecurityKey::RSA_SHA1, XMLSecurityKey::DSA_SHA1, XMLSecurityKey::HMAC_SHA1)) ? 'yes' : 'no'), "\n";
+echo 'LEGACY SIG LIST: ', ($d->allowedSignatureAlgorithms === array_merge(XMLSecurityDSig::DEFAULT_SIGNATURE_ALGORITHMS, array(XMLSecurityKey::RSA_SHA1, XMLSecurityKey::HMAC_SHA1)) ? 'yes' : 'no'), "\n";
 echo 'LEGACY DIG LIST: ', ($d->allowedDigestAlgorithms === array(XMLSecurityDSig::SHA256, XMLSecurityDSig::SHA384, XMLSecurityDSig::SHA512, XMLSecurityDSig::SHA1) ? 'yes' : 'no'), "\n";
 
 /* enableLegacyMode() leaves null lists null. */
