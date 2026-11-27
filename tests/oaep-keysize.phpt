@@ -1,5 +1,5 @@
 --TEST--
-RSA-OAEP EncryptionMethod accepts xenc:KeySize (1-999999, canonical form) and still rejects other elements
+RSA-OAEP EncryptionMethod accepts xenc:KeySize (xs:integer 1-999999) and still rejects other elements
 --FILE--
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');
@@ -43,7 +43,12 @@ $cases = array(
     'KeySize huge' => '<e:KeySize>'.str_repeat('9', 40).'</e:KeySize>',
     'KeySize plus sign' => '<e:KeySize>+2048</e:KeySize>',
     'KeySize leading zero' => '<e:KeySize>02048</e:KeySize>',
-    'KeySize negative' => '<e:KeySize>-1</e:KeySize>',
+    'KeySize plus and zeros' => '<e:KeySize>+0002048</e:KeySize>',
+    'KeySize surrounding space' => '<e:KeySize> 2048 </e:KeySize>',
+    'KeySize negative' => '<e:KeySize>-2048</e:KeySize>',
+    'KeySize plus only' => '<e:KeySize>+</e:KeySize>',
+    'KeySize exponent' => '<e:KeySize>2e3</e:KeySize>',
+    'KeySize internal space' => '<e:KeySize>20 48</e:KeySize>',
     'KeySize trailing newline' => "<e:KeySize>2048\n</e:KeySize>",
 );
 foreach ($cases as $name => $parameters) {
@@ -67,7 +72,12 @@ KeySize one: OK
 KeySize upper bound: OK
 KeySize above bound: Invalid RSA-OAEP parameter content
 KeySize huge: Invalid RSA-OAEP parameter content
-KeySize plus sign: Invalid RSA-OAEP parameter content
-KeySize leading zero: Invalid RSA-OAEP parameter content
+KeySize plus sign: OK
+KeySize leading zero: OK
+KeySize plus and zeros: OK
+KeySize surrounding space: OK
 KeySize negative: Invalid RSA-OAEP parameter content
+KeySize plus only: Invalid RSA-OAEP parameter content
+KeySize exponent: Invalid RSA-OAEP parameter content
+KeySize internal space: Invalid RSA-OAEP parameter content
 KeySize trailing newline: OK

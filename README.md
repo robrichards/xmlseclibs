@@ -200,10 +200,9 @@ reads OAEP parameters only from the selected encrypted element's direct
 * `xenc:OAEPparams` is a base64-encoded binary label; omission means an empty label.
   Invalid encodings, unsupported parameters and duplicate parameter elements throw.
 * An `xenc:KeySize` is accepted and ignored if it appears at most once and
-  holds a positive decimal integer of up to six digits (surrounding whitespace
-  allowed). Other forms that the schema permits, such as a leading `+` or
-  leading zeros (`+2048`, `02048`), are rejected, as is any other element in
-  the `EncryptionMethod`.
+  holds an xs:integer lexical form of a positive integer from 1 to 999999
+  (optional leading `+`, any leading zeros, surrounding whitespace). Any other
+  element in the `EncryptionMethod` is rejected.
 
 Constructing `XMLSecurityKey::RSA_OAEP` yourself still selects
 SHA-256/MGF1-SHA256, and constructing `RSA_OAEP_MGF1P` selects SHA-1/MGF1-SHA1.
