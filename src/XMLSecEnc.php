@@ -582,6 +582,7 @@ class XMLSecEnc
         if ((! $srcKey instanceof XMLSecurityKey) || (! $rawKey instanceof XMLSecurityKey)) {
             throw new Exception('Invalid Key');
         }
+        self::requireKeyTransportAlgorithm($srcKey);
         if ($this->encdoc === null) {
             throw new Exception('Encryption template has not been initialized');
         }
