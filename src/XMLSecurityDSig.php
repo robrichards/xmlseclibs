@@ -75,7 +75,8 @@ class XMLSecurityDSig
      * Default SignatureMethod allowlist ($allowedSignatureAlgorithms).
      * SHA-1 based signatures (rsa-sha1, dsa-sha1, hmac-sha1) are not included;
      * enableLegacyMode() adds them (see LEGACY_SIGNATURE_ALGORITHMS), or set
-     * $allowedSignatureAlgorithms explicitly (null removes the restriction).
+     * $allowedSignatureAlgorithms explicitly. verify() treats null as no
+     * restriction; verifyDocument() uses this list when the property is null.
      */
     const DEFAULT_SIGNATURE_ALGORITHMS = array(
         XMLSecurityKey::RSA_SHA256,
@@ -89,8 +90,10 @@ class XMLSecurityDSig
 
     /**
      * Default Reference DigestMethod allowlist ($allowedDigestAlgorithms).
-     * SHA-1 and RIPEMD-160 are not included; enableLegacyMode() adds SHA-1,
-     * RIPEMD-160 requires an explicit list entry (or a null list).
+     * SHA-1 and RIPEMD-160 are not included; enableLegacyMode() adds SHA-1.
+     * RIPEMD-160 requires an explicit list entry. verify()/validateDigest()
+     * treat a null list as no restriction; verifyDocument() uses this list
+     * when the property is null.
      */
     const DEFAULT_DIGEST_ALGORITHMS = array(
         self::SHA256,
@@ -165,9 +168,12 @@ class XMLSecurityDSig
      * verify() (and therefore verifyDocument()).
      *
      * Defaults to DEFAULT_SIGNATURE_ALGORITHMS. enableLegacyMode() adds the
-     * SHA-1 based algorithms; you can also add entries (e.g.
-     * $dsig->allowedSignatureAlgorithms[] = XMLSecurityKey::RSA_SHA1) or set
-     * your own list. Set to null to apply no allowlist. Signing is unaffected.
+     * SHA-1 based algorithms when this is a list; you can also add entries
+     * (e.g. $dsig->allowedSignatureAlgorithms[] = XMLSecurityKey::RSA_SHA1)
+     * or set your own list. verify() treats null as no restriction.
+     * verifyDocument() substitutes DEFAULT_SIGNATURE_ALGORITHMS when this is
+     * null, for that call only, then restores the property. Signing is
+     * unaffected.
      *
      * @var array|null
      */
@@ -177,9 +183,11 @@ class XMLSecurityDSig
      * Allowlist of acceptable Reference DigestMethod algorithm URIs, enforced
      * by validateDigest() (and therefore validateReference()/verifyDocument()).
      *
-     * Defaults to DEFAULT_DIGEST_ALGORITHMS. enableLegacyMode() adds SHA-1;
-     * set your own list to widen or narrow it, or null to apply no allowlist.
-     * Signing is unaffected.
+     * Defaults to DEFAULT_DIGEST_ALGORITHMS. enableLegacyMode() adds SHA-1
+     * when this is a list; set your own list to widen or narrow it.
+     * validateDigest() treats null as no restriction. verifyDocument()
+     * substitutes DEFAULT_DIGEST_ALGORITHMS when this is null, for that call
+     * only, then restores the property. Signing is unaffected.
      *
      * @var array|null
      */
@@ -1260,9 +1268,14 @@ class XMLSecurityDSig
      *    so an attacker cannot both supply the message and the key that
      *    verifies it.
      *  - Both the SignatureMethod and every Reference DigestMethod are checked
-     *    against $allowedSignatureAlgorithms / $allowedDigestAlgorithms, which
-     *    default to DEFAULT_SIGNATURE_ALGORITHMS / DEFAULT_DIGEST_ALGORITHMS
-     *    (a null list applies no allowlist, as in verify()/validateDigest()).
+     *    against $allowedSignatureAlgorithms / $allowedDigestAlgorithms.
+     *    Each null list is replaced for this call only with
+     *    DEFAULT_SIGNATURE_ALGORITHMS / DEFAULT_DIGEST_ALGORITHMS.
+     *    enableLegacyMode() extends those lists only when they are arrays, so
+     *    a null property still falls back to the DEFAULT_* constants. An
+     *    explicit list, including an empty array, is used unchanged. The
+     *    caller's property values are restored before return. verify() and
+     *    validateDigest() still treat null as no restriction.
      *  - Success is only reported when the SignedInfo signature is valid AND
      *    every Reference digest validated. The set of validated nodes is
      *    returned so callers never have to re-query the document (which would
@@ -1280,26 +1293,47 @@ class XMLSecurityDSig
             throw new Exception('A trusted key must be supplied to verifyDocument()');
         }
 
-        $this->resetXPathObj();
-        if (! $this->locateSignature($objDoc, $pos)) {
-            throw new Exception('Cannot locate Signature Node');
+        /*
+         * Resolve each list on its own. Null falls back to the DEFAULT_*
+         * constant for this call; an explicit list, including [], is kept.
+         * enableLegacyMode() only appends LEGACY_* entries to non-null lists,
+         * so a null property still uses the constant (not the legacy additions).
+         * The caller's values are restored even when verification throws.
+         */
+        $prevSigAlgs = $this->allowedSignatureAlgorithms;
+        $prevDigAlgs = $this->allowedDigestAlgorithms;
+        if ($this->allowedSignatureAlgorithms === null) {
+            $this->allowedSignatureAlgorithms = self::DEFAULT_SIGNATURE_ALGORITHMS;
         }
-        if ($this->canonicalizeSignedInfo() === null) {
-            throw new Exception('Cannot canonicalize SignedInfo');
+        if ($this->allowedDigestAlgorithms === null) {
+            $this->allowedDigestAlgorithms = self::DEFAULT_DIGEST_ALGORITHMS;
         }
 
-        /* Throws on any unresolved/failed/duplicate reference (fail closed). */
-        $this->validateReference();
+        try {
+            $this->resetXPathObj();
+            if (! $this->locateSignature($objDoc, $pos)) {
+                throw new Exception('Cannot locate Signature Node');
+            }
+            if ($this->canonicalizeSignedInfo() === null) {
+                throw new Exception('Cannot canonicalize SignedInfo');
+            }
 
-        if ($this->verify($objKey) !== 1) {
-            throw new Exception('Signature validation failed');
-        }
+            /* Throws on any unresolved/failed/duplicate reference (fail closed). */
+            $this->validateReference();
 
-        $validatedNodes = $this->getValidatedNodes();
-        if (empty($validatedNodes)) {
-            throw new Exception('Signature verified but no signed nodes were validated');
+            if ($this->verify($objKey) !== 1) {
+                throw new Exception('Signature validation failed');
+            }
+
+            $validatedNodes = $this->getValidatedNodes();
+            if (empty($validatedNodes)) {
+                throw new Exception('Signature verified but no signed nodes were validated');
+            }
+            return $validatedNodes;
+        } finally {
+            $this->allowedSignatureAlgorithms = $prevSigAlgs;
+            $this->allowedDigestAlgorithms = $prevDigAlgs;
         }
-        return $validatedNodes;
     }
 
     /**

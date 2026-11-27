@@ -2,6 +2,14 @@ xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 XX, Nov 2026, 4.1.0
 Bug Fixes:
+- Restore default algorithm fallback in verifyDocument(). When
+  allowedSignatureAlgorithms or allowedDigestAlgorithms is null,
+  verifyDocument() uses DEFAULT_SIGNATURE_ALGORITHMS or
+  DEFAULT_DIGEST_ALGORITHMS for that call. An explicit list, including an
+  empty array, is used unchanged. The caller's property values are restored
+  afterwards. verify() and validateReference() still treat null as no
+  restriction. Callers that need an extra algorithm (for example SHA-1
+  digests) should add it to the list explicitly.
 - Parse RSA-OAEP parameters (ds:DigestMethod, xenc11:MGF, xenc:OAEPparams)
   from the EncryptionMethod of an EncryptedKey/EncryptedData, applying the
   XML Encryption defaults (SHA-1/MGF1-SHA1, empty label) when absent. Restores
@@ -70,8 +78,10 @@ BREAKING CHANGES:
   validateReference() as well as verifyDocument(). Signing is unaffected.
   SHA-1 (rsa-sha1, dsa-sha1, hmac-sha1, sha1 digests) requires
   enableLegacyMode(), which adds them to the lists, or adding them to the
-  lists explicitly; RIPEMD-160 digests require a list entry. Set a list to
-  null to apply no allowlist (verifyDocument() now honors null the same way).
+  lists explicitly; RIPEMD-160 digests require a list entry. verify() and
+  validateReference() treat a null list as no restriction.
+  verifyDocument() falls back to the corresponding DEFAULT_* list when a
+  list is null, for that call only, and restores the property afterwards.
 - Data decryption now defaults to AES-GCM.
   XMLSecEnc::$allowedDataAlgorithms defaults to DEFAULT_DATA_ALGORITHMS
   (AES-128/192/256-GCM) instead of null. The same default applies to the
