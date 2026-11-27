@@ -3,6 +3,8 @@ Certificate thumbprint check
 --FILE--
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');
+
+use phpseclib3\File\X509;
 use RobRichards\XMLSecLibs\XMLSecurityKey;
 
 $siteKey = new XMLSecurityKey(XMLSecurityKey::RSA_OAEP_MGF1P, array('type'=>'public'));
@@ -12,8 +14,12 @@ $thumbprint = $siteKey->getX509Thumbprint();
 echo $thumbprint."\n";
 echo base64_encode($thumbprint)."\n";
 
-$details = openssl_pkey_get_details(openssl_pkey_get_public(file_get_contents(dirname(__FILE__) . '/mycert.pem')));
-$siteKey->loadKey($details['key']);
+$certPem = file_get_contents(dirname(__FILE__) . '/mycert.pem');
+$x509 = new X509();
+if (! is_array($x509->loadX509($certPem))) {
+    throw new Exception('unable to load test certificate');
+}
+$siteKey->loadKey($x509->getPublicKey()->toString('PKCS8'));
 echo 'AFTER_RAW_CERT: '.($siteKey->getX509Certificate() === null ? 'null' : 'set')."\n";
 echo 'AFTER_RAW_THUMB: '.($siteKey->getX509Thumbprint() === null ? 'null' : 'set')."\n";
 
