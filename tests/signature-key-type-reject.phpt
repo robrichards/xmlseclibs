@@ -34,7 +34,7 @@ foreach ($types as $type) {
     $signRejected = rejected(function () use ($private) {
         $private->signData('payload');
     }, $private);
-    $verifyRejected = $public->verifySignature('payload', 'signature') === -1;
+    $verifyRejected = $public->verifySignature('payload', 'signature') === 0;
     $dsig = new XMLSecurityDSig();
     $dsig->enableLegacyMode(); // Legacy interoperability must not undo this check.
     $dsig->setCanonicalMethod(XMLSecurityDSig::EXC_C14N);
@@ -55,7 +55,7 @@ $key = new XMLSecurityKey(XMLSecurityKey::RSA_1_5, ['type' => 'private']);
 $key->loadKey(__DIR__ . '/privkey.pem', true);
 $key->type = XMLSecurityKey::RSA_SHA256;
 echo (rejected(function () use ($key) { $key->signData('payload'); }, $key) ? 'OK' : 'FAIL') . "\n";
-echo ($key->verifySignature('payload', 'signature') === -1 ? 'OK' : 'FAIL') . "\n";
+echo ($key->verifySignature('payload', 'signature') === 0 ? 'OK' : 'FAIL') . "\n";
 ?>
 --EXPECTF--
 OK
