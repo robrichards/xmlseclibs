@@ -11,6 +11,8 @@ Bug Fixes:
 - Protocol element lookups keep the prefixes the library registered when the
   document also binds those prefixes. Evaluation of a caller-supplied XPath
   transform is unchanged.
+- Caller-supplied idNS mappings take precedence over document prefix
+  declarations when resolving references.
 - XMLSecEnc::encryptNode() encrypts before it writes EncryptionMethod,
   replaces an existing direct EncryptionMethod child, and replaces
   CipherValue text. A later call on the same instance, including

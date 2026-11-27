@@ -856,16 +856,24 @@ class XMLSecurityDSig
 
             if ($identifier !== null) {
                 $xPath = new DOMXPath($refNode->ownerDocument);
-                if ($this->idNS) {
-                    foreach ($this->idNS as $nspf => $ns) {
-                        $xPath->registerNamespace($nspf, $ns);
-                    }
-                }
+                /*
+                 * Bind caller idNS URIs to prefixes the document does not
+                 * declare. Document bindings remain in effect for any idKeys
+                 * prefix the caller did not list.
+                 */
+                $idNsPrefixes = $this->registerIdNamespacePrefixes($xPath);
                 $iDlist = '@Id="'.XPath::filterAttrValue($identifier, XPath::DOUBLE_QUOTE).'"';
                 foreach ($this->idKeys as $idKey) {
                     $attrName = XPath::filterAttrName($idKey);
                     if ($attrName === '' || $attrName !== $idKey) {
                         throw new Exception('Invalid idKeys attribute name');
+                    }
+                    $colon = strpos($attrName, ':');
+                    if ($colon !== false) {
+                        $prefix = substr($attrName, 0, $colon);
+                        if (isset($idNsPrefixes[$prefix])) {
+                            $attrName = $idNsPrefixes[$prefix].substr($attrName, $colon);
+                        }
                     }
                     $iDlist .= " or @".$attrName.'="'.
                         XPath::filterAttrValue($identifier, XPath::DOUBLE_QUOTE).'"';
@@ -896,6 +904,41 @@ class XMLSecurityDSig
             'includeCommentNodes' => $includeCommentNodes,
             'identifier' => $identifier,
         );
+    }
+
+    /**
+     * Register each idNS URI under a prefix the document does not declare.
+     *
+     * @param DOMXPath $xpath
+     * @return array<string, string> Caller prefix => generated prefix
+     */
+    private function registerIdNamespacePrefixes(DOMXPath $xpath): array
+    {
+        $map = array();
+        if (! is_array($this->idNS) || $this->idNS === array()) {
+            return $map;
+        }
+        $declared = array();
+        $nsNodes = $xpath->query('//namespace::*');
+        if ($nsNodes !== false) {
+            foreach ($nsNodes as $nsNode) {
+                $declared[$nsNode->localName] = true;
+            }
+        }
+        $index = 0;
+        foreach ($this->idNS as $prefix => $uri) {
+            if (! is_string($prefix) || $prefix === '' || ! is_string($uri)) {
+                continue;
+            }
+            do {
+                $generated = 'xslidns'.$index;
+                $index++;
+            } while (isset($declared[$generated]));
+            $declared[$generated] = true;
+            $xpath->registerNamespace($generated, $uri);
+            $map[$prefix] = $generated;
+        }
+        return $map;
     }
 
     /**
