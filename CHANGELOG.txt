@@ -2,6 +2,14 @@ xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 XX, Nov 2026, 4.1.0
 Bug Fixes:
+- XMLSecurityKey::loadKey() validates a symmetric key before storing it.
+  PEM, certificate, DER, and too-short input is rejected without replacing
+  a key already loaded on the object.
+- Reject a symmetric key shorter than the algorithm requires when the key
+  is used (AES-128: 16 bytes, AES-192: 24, AES-256: 32, TripleDES: 24,
+  for CBC and GCM). Longer keys are still truncated to that length.
+- XMLSecEnc::encryptKey() rejects a wrapping key that is not a key
+  transport algorithm before it changes the document.
 - Restore default algorithm fallback in verifyDocument(). When
   allowedSignatureAlgorithms or allowedDigestAlgorithms is null,
   verifyDocument() uses DEFAULT_SIGNATURE_ALGORITHMS or
@@ -23,13 +31,17 @@ Bug Fixes:
   EncryptedKeys resolved via KeyInfo (embedded or RetrievalMethod).
   staticLocateKeyInfo() and XMLSecurityKey::fromEncryptedKeyElement() accept
   them as optional arguments.
-- Require an asymmetric key transport algorithm (RSA-1.5, RSA-OAEP,
-  RSA-OAEP-MGF1P) for EncryptedKey elements, independent of
-  allowedKeyAlgorithms; other algorithms are rejected when the key is
-  resolved, in decryptKey(), and in decryptNode() on an EncryptedKey. Symmetric key types (AES, 3DES) no longer load
-  certificates or PEM/DER key material in loadKey(); raw keys are unaffected.
 
 BREAKING CHANGES:
+- An EncryptedKey requires a key transport algorithm (RSA-1.5, RSA-OAEP,
+  RSA-OAEP-MGF1P), independent of allowedKeyAlgorithms. Other algorithms
+  are rejected when the key is resolved, in decryptKey(), in decryptNode()
+  on an EncryptedKey, and in encryptKey() before the document is changed.
+  Symmetric key types (AES, 3DES) no longer load certificates or PEM/DER
+  key material in loadKey(); raw keys are unaffected. A symmetric key
+  shorter than the algorithm requires is rejected (AES-128: 16 bytes,
+  AES-192: 24, AES-256: 32, TripleDES: 24, for CBC and GCM). Longer keys
+  are still truncated to that length.
 - Reject encryption-only key types for signatures before emitting SignatureMethod.
   Signing throws an actionable exception; verifySignature() returns -1. Use an
   RSA-SHA*, ECDSA-SHA*, or HMAC signature key type; encryption/key transport is

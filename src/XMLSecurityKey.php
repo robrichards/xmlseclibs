@@ -552,9 +552,9 @@ class XMLSecurityKey
             if ($fileContents === false) {
                 throw new Exception('Unable to read key from file');
             }
-            $this->key = $fileContents;
+            $loadedKey = $fileContents;
         } else {
-            $this->key = $key;
+            $loadedKey = $key;
         }
 
         /*
@@ -571,7 +571,7 @@ class XMLSecurityKey
             if ($isCert) {
                 throw new Exception('An X.509 certificate cannot be used as an HMAC key');
             }
-            if (is_string($this->key) && self::isAsymmetricKeyMaterial($this->key)) {
+            if (is_string($loadedKey) && self::isAsymmetricKeyMaterial($loadedKey)) {
                 throw new Exception('Asymmetric key material cannot be used as an HMAC key');
             }
         }
@@ -587,37 +587,44 @@ class XMLSecurityKey
             if ($isCert) {
                 throw new Exception('An X.509 certificate cannot be used as a symmetric key');
             }
-            if (is_string($this->key)
-                && (strpos($this->key, '-----BEGIN') !== false
-                    || (strlen($this->key) > ($this->cryptParams['keysize'] ?? PHP_INT_MAX)
-                        && self::isAsymmetricKeyMaterial($this->key)))) {
+            if (is_string($loadedKey)
+                && (strpos($loadedKey, '-----BEGIN') !== false
+                    || (strlen($loadedKey) > ($this->cryptParams['keysize'] ?? PHP_INT_MAX)
+                        && self::isAsymmetricKeyMaterial($loadedKey)))) {
                 throw new Exception('Asymmetric key material cannot be used as a symmetric key');
             }
         }
 
+        $certificate = null;
+        $thumbprint = null;
         if ($isCert) {
             $x509 = new X509();
-            $certData = $x509->loadX509($this->key);
+            $certData = $x509->loadX509($loadedKey);
             if (! is_array($certData)) {
                 throw new Exception('Unable to extract certificate');
             }
             $str_cert = $x509->saveX509($certData);
             $str_cert = self::requireString($str_cert, 'Unable to export certificate');
-            $this->x509Certificate = $str_cert;
-            $this->key = $str_cert;
-            $this->X509Thumbprint = self::getRawThumbprint($this->key);
-        } else {
-            $this->x509Certificate = null;
+            $certificate = $str_cert;
+            $loadedKey = $str_cert;
+            $thumbprint = self::getRawThumbprint($loadedKey);
         }
         if (($this->cryptParams['type'] ?? null) === 'symmetric') {
             if (! isset($this->cryptParams['keysize'])) {
                 throw new Exception('Unknown key size for type "' . $this->type . '".');
             }
             $keysize = $this->cryptParams['keysize'];
-            if (strlen($this->key) < $keysize) {
+            if (strlen($loadedKey) < $keysize) {
                 throw new Exception(self::DECRYPTION_FAILURE);
             }
             /* Overlong keys (e.g. RSA-unwrapped session keys) are truncated at use time. */
+        }
+
+        /* Assign only after every check has passed, so a rejection leaves the previous key in place. */
+        $this->key = $loadedKey;
+        $this->x509Certificate = $certificate;
+        if ($isCert) {
+            $this->X509Thumbprint = $thumbprint;
         }
     }
 
@@ -888,6 +895,20 @@ class XMLSecurityKey
         if (! isset($this->cryptParams['cipher'], $this->cryptParams['mode'])) {
             throw new Exception('Unknown symmetric cipher');
         }
+        if (! isset($this->cryptParams['keysize'])) {
+            throw new Exception('Unknown key size for type "' . $this->type . '".');
+        }
+        $keysize = $this->cryptParams['keysize'];
+        $key = $this->key;
+        if (strlen($key) < $keysize) {
+            throw new Exception(
+                'Symmetric key is shorter than the ' . $keysize . ' bytes required for type "' . $this->type . '".'
+            );
+        }
+        /* Truncate overlong keys to the algorithm size (legacy RSA-unwrapped keys). */
+        if (strlen($key) > $keysize) {
+            $key = substr($key, 0, $keysize);
+        }
         $mode = $this->cryptParams['mode'];
         if ($this->cryptParams['cipher'] === 'aes') {
             $cipher = new AES($mode);
@@ -895,11 +916,6 @@ class XMLSecurityKey
             $cipher = new TripleDES($mode);
         } else {
             throw new Exception('Unknown symmetric cipher');
-        }
-        /* Truncate overlong keys to the algorithm size (legacy RSA-unwrapped keys). */
-        $key = $this->key;
-        if (isset($this->cryptParams['keysize']) && strlen($key) > $this->cryptParams['keysize']) {
-            $key = substr($key, 0, $this->cryptParams['keysize']);
         }
         $cipher->setKey($key);
         return $cipher;
@@ -957,6 +973,12 @@ class XMLSecurityKey
         }
 
         /*
+         * Reject a too-short key before ciphertext handling, so that error is
+         * not replaced by the generic decryption failure below.
+         */
+        $cipher = $this->createSymmetricCipher();
+
+        /*
          * Catch every crypto/padding failure and rethrow the same generic
          * exception. Distinct phpseclib types/messages (LengthException,
          * BadDecryptionException, etc.) would otherwise form a ciphertext-
@@ -966,7 +988,6 @@ class XMLSecurityKey
             $iv_length = $this->cryptParams['ivsize'];
             $this->iv = substr($data, 0, $iv_length);
             $data = substr($data, $iv_length);
-            $cipher = $this->createSymmetricCipher();
             $authTag = null;
 
             if ($this->cryptParams['mode'] === 'gcm') {
