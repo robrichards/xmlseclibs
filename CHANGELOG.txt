@@ -2,6 +2,8 @@ xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 XX, Nov 2026, 4.1.0
 Bug Fixes:
+- RSA-OAEP xenc:KeySize, when present, must match the RSA key size in bits.
+  A mismatch uses the generic decryption failure. Omission is unchanged.
 - Accept all valid xs:integer forms of xenc:KeySize in RSA-OAEP EncryptionMethod.
 - enableLegacyMode() no longer lists the unsupported dsa-sha1 signature
   algorithm. XMLSecurityKey::DSA_SHA1 remains defined.
@@ -88,8 +90,8 @@ BREAKING CHANGES:
 - Parsing an RSA-OAEP EncryptionMethod now rejects unknown or
   wrongly-namespaced child elements, duplicate parameters, and
   malformed content. 4.0.x ignored these children. An xenc:KeySize
-  of 1 to 999999, including a leading plus and leading zeros, is accepted
-  and ignored.
+  of 1 to 999999, including a leading plus and leading zeros, is accepted.
+  When present, it must match the RSA key size in bits. Omission is unchanged.
 - Signature verification now defaults to SHA-2 algorithms.
   XMLSecurityDSig::$allowedSignatureAlgorithms and $allowedDigestAlgorithms
   default to DEFAULT_SIGNATURE_ALGORITHMS (RSA-SHA256/384/512, RSA-PSS
