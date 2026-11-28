@@ -72,6 +72,17 @@ class XMLSecurityDSig
      */
     const MAX_XPATH_TRANSFORMS = 5;
 
+    /**
+     * Maximum size, in bytes, of a certificate response body downloaded over
+     * http/https by add509Cert() and staticAdd509Cert(). A body of exactly
+     * this size is accepted; a longer body is rejected with an Exception
+     * before it is parsed and before KeyInfo is changed. The limit is applied
+     * while the body is read, so it holds when the server sends no
+     * Content-Length header. It does not apply to inline certificates or to
+     * file:// sources enabled with $options['allow_file_scheme'].
+     */
+    const MAX_REMOTE_CERT_BYTES = 1048576;
+
     /** Default maximum namespaces allowed on a single XPath transform. */
     const MAX_XPATH_NAMESPACES = 20;
 
@@ -1936,7 +1947,8 @@ class XMLSecurityDSig
      * resolved and every resulting IP address is validated to be public
      * (rejecting loopback, private, link-local, reserved and CGNAT ranges),
      * and HTTP redirects are disabled so a public URL cannot bounce to an
-     * internal one.
+     * internal one. The http/https response body is limited to
+     * MAX_REMOTE_CERT_BYTES; a longer body throws an Exception.
      *
      * @param string $url
      * @param null|array $options
@@ -2010,9 +2022,25 @@ class XMLSecurityDSig
             'https' => $streamOpts,
             'ssl' => $sslOpts,
         ));
-        $data = file_get_contents($fetchUrl, false, $context);
+        $handle = fopen($fetchUrl, 'rb', false, $context);
+        if ($handle === false) {
+            throw new Exception('Unable to load certificate from URL');
+        }
+        try {
+            /*
+             * Read at most one byte past the limit: that byte alone shows the
+             * body is too large. The rest of the body is never read; PHP's
+             * stream layer fetches in chunks of at most 8192 bytes.
+             */
+            $data = stream_get_contents($handle, self::MAX_REMOTE_CERT_BYTES + 1);
+        } finally {
+            fclose($handle);
+        }
         if ($data === false) {
             throw new Exception('Unable to load certificate from URL');
+        }
+        if (strlen($data) > self::MAX_REMOTE_CERT_BYTES) {
+            throw new Exception('Remote certificate exceeds the maximum size of '.self::MAX_REMOTE_CERT_BYTES.' bytes');
         }
         return $data;
     }

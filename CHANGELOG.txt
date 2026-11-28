@@ -100,6 +100,18 @@ Bug Fixes:
 - XMLSecurityKey::loadKey() validates a symmetric key before storing it.
   PEM, certificate, DER, and too-short input is rejected without replacing
   a key already loaded on the object.
+- add509Cert() and staticAdd509Cert() limit a certificate downloaded over
+  http or https to XMLSecurityDSig::MAX_REMOTE_CERT_BYTES (1048576 bytes,
+  1 MiB). The limit applies to the body as it is read, so it also holds when
+  the server sends no Content-Length header. A body of exactly the limit is
+  accepted. Reading stops once one more byte shows the body is larger, and a
+  longer response throws "Remote certificate exceeds the maximum size of
+  1048576 bytes" before the data is parsed and before KeyInfo is created or
+  changed; an existing KeyInfo is left as it was. The stream is closed on
+  success and on failure. Inline certificates, file:// sources enabled with
+  allow_file_scheme, the URL and host restrictions, redirect handling and the
+  timeout are unchanged. A certificate response larger than 1 MiB that was
+  accepted before is now rejected.
 - Reject a symmetric key shorter than the algorithm requires when the key
   is used (AES-128: 16 bytes, AES-192: 24, AES-256: 32, TripleDES: 24,
   for CBC and GCM). Encryption names the short key; decryption uses the
