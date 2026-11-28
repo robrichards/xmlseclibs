@@ -66,7 +66,12 @@ function tryAssign($label, $material)
 {
     $key = new XMLSecurityKey(XMLSecurityKey::HMAC_SHA1);
     $key->key = $material;
-    echo $label."_VERIFY: ".$key->verifySignature('signed-payload', 'not-a-signature')."\n";
+    try {
+        $key->verifySignature('signed-payload', 'not-a-signature');
+        echo $label."_VERIFY: not rejected\n";
+    } catch (Exception $e) {
+        echo $label."_VERIFY: ".$e->getMessage()."\n";
+    }
     try {
         $key->signData('signed-payload');
         echo $label."_SIGN: not rejected\n";
@@ -95,19 +100,19 @@ LOAD_SM2_PEM: Asymmetric key material cannot be used as an HMAC key
 LOAD_SM2_DER: Asymmetric key material cannot be used as an HMAC key
 LOAD_SM2_B64: Asymmetric key material cannot be used as an HMAC key
 LOAD_SM2_B64_COMPACT: Asymmetric key material cannot be used as an HMAC key
-ASSIGN_SM2_PEM_VERIFY: -1
+ASSIGN_SM2_PEM_VERIFY: Asymmetric key material cannot be used as an HMAC key
 ASSIGN_SM2_PEM_SIGN: Asymmetric key material cannot be used as an HMAC key
-ASSIGN_SM2_DER_VERIFY: -1
+ASSIGN_SM2_DER_VERIFY: Asymmetric key material cannot be used as an HMAC key
 ASSIGN_SM2_DER_SIGN: Asymmetric key material cannot be used as an HMAC key
-ASSIGN_SM2_B64_VERIFY: -1
+ASSIGN_SM2_B64_VERIFY: Asymmetric key material cannot be used as an HMAC key
 ASSIGN_SM2_B64_SIGN: Asymmetric key material cannot be used as an HMAC key
 LOAD_DH_PEM: Asymmetric key material cannot be used as an HMAC key
 LOAD_DH_DER: Asymmetric key material cannot be used as an HMAC key
 LOAD_DH_B64: Asymmetric key material cannot be used as an HMAC key
 LOAD_DH_B64_COMPACT: Asymmetric key material cannot be used as an HMAC key
-ASSIGN_DH_PEM_VERIFY: -1
+ASSIGN_DH_PEM_VERIFY: Asymmetric key material cannot be used as an HMAC key
 ASSIGN_DH_PEM_SIGN: Asymmetric key material cannot be used as an HMAC key
-ASSIGN_DH_DER_VERIFY: -1
+ASSIGN_DH_DER_VERIFY: Asymmetric key material cannot be used as an HMAC key
 ASSIGN_DH_DER_SIGN: Asymmetric key material cannot be used as an HMAC key
-ASSIGN_DH_B64_VERIFY: -1
+ASSIGN_DH_B64_VERIFY: Asymmetric key material cannot be used as an HMAC key
 ASSIGN_DH_B64_SIGN: Asymmetric key material cannot be used as an HMAC key
