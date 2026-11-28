@@ -1090,6 +1090,27 @@ class XMLSecurityDSig
             $attname = $prefix.':'.$attname;
         }
 
+        /*
+         * A Reference without a URI is resolved by the verifier as the whole
+         * document. Only a DOMDocument, or the document element standing for
+         * it, can therefore be referenced without a URI. A nested element
+         * needs a URI so the verifier can find it again; reject it before
+         * anything is added to SignedInfo.
+         */
+        if ($omit_uri && ! $node instanceof DOMDocument) {
+            $ownerDoc = $node->ownerDocument;
+            if ($ownerDoc === null
+                || $ownerDoc->documentElement === null
+                || ! $node->isSameNode($ownerDoc->documentElement)) {
+                throw new Exception(
+                    'omit_uri is only supported for a DOMDocument or its document element; '
+                    . 'a nested element must be referenced by URI'
+                );
+            }
+            /* The omitted URI identifies the document, so digest the document. */
+            $node = $ownerDoc;
+        }
+
         $refNode = $this->createNewSignNode('Reference');
         $sinfoNode->appendChild($refNode);
 
@@ -1139,8 +1160,22 @@ class XMLSecurityDSig
             }
         }
 
-        $canonicalData = $this->processTransforms($refNode, $node, true, true);
-        $digValue = $this->calculateDigest($algorithm, $canonicalData);
+        /*
+         * Every Reference written here has no URI, URI="" or URI="#id". The
+         * verifier dereferences all three without comments, so a
+         * WithComments canonicalization transform sees no comments on either
+         * side. Digest the same node set the verifier will.
+         */
+        try {
+            $canonicalData = $this->processTransforms($refNode, $node, false, true);
+            $digValue = $this->calculateDigest($algorithm, $canonicalData);
+        } catch (\Throwable $e) {
+            /* Leave no half-built Reference behind. */
+            if ($refNode->parentNode !== null) {
+                $refNode->parentNode->removeChild($refNode);
+            }
+            throw $e;
+        }
 
         $digestMethod = $this->createNewSignNode('DigestMethod');
         $refNode->appendChild($digestMethod);

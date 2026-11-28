@@ -2,6 +2,21 @@ xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 XX, Nov 2026, 4.1.0
 Bug Fixes:
+- addReference() and addReferenceList() digest a reference without
+  comments, matching verification. xmlseclibs resolves an omitted URI as
+  the whole document (XMLDSig leaves an omitted-URI target to application
+  context). URI="" and URI="#id" follow their own specified
+  comment-removal rules. Those three forms are digested without comments,
+  so a WithComments canonicalization transform sees no comments on either
+  side. Previously a reference with a WithComments transform over XML
+  that contained comments produced a digest that validateReference() and
+  verifyDocument() could not reproduce. XML without comments, and every
+  transform that is not WithComments, produce the same digest as before.
+  Signatures with WithComments over XML containing comments produced by
+  earlier versions did not verify and must be re-signed.
+- addReference() and addReferenceList() no longer leave a partly built
+  Reference in SignedInfo when an exception is thrown while the Reference
+  is being built.
 - A failed verifyDocument(), validateReference(), or verify() leaves
   getValidatedNodes() with no nodes, including when the failure is not
   an Exception. Nodes recorded for an earlier reference are cleared when
@@ -159,6 +174,13 @@ BREAKING CHANGES:
   argument to null to apply no data-encryption allowlist. A null list is
   left null by enableLegacyMode(). Encryption still uses the algorithm of
   the caller-supplied key.
+
+Compatibility:
+- omit_uri on a nested element now throws an Exception before a Reference
+  is added. omit_uri on the document element digests the whole document,
+  including any processing instruction before the root, as omit_uri on a
+  DOMDocument does. Reference a nested element by ID instead. An omitted
+  URI and URI="" (force_uri) remain separate options.
 
 14, Nov 2026, 4.0.2
 Bug Fixes:
