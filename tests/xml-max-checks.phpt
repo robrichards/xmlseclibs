@@ -54,7 +54,7 @@ foreach ($arTests AS $testName=>$testFile) {
 	print "\n";
 }
 
-/* Stricter override: reject with a lower limit than the default. */
+/* A property above 1 is still capped at one XPath transform per reference. */
 try {
 	$doc->load(dirname(__FILE__) . '/xml-max-transforms.xml');
 	$objXMLSecDSig = new XMLSecurityDSig();
@@ -70,7 +70,8 @@ try {
 	print $e->getMessage()."\n";
 }
 
-/* Relaxed override: raise limits so these fixtures pass the DoS checks. */
+/* Raising maxXPathTransforms above 1 does not allow more than one.
+   Raising maxXPathNamespaces still raises the namespace limit. */
 try {
 	$doc->load(dirname(__FILE__) . '/xml-max-transforms.xml');
 	$objXMLSecDSig = new XMLSecurityDSig();
@@ -110,10 +111,27 @@ try {
 		print "RELAXED_NAMESPACES: limit not enforced\n";
 	}
 }
+
+/* A value below 1 is still honored for a reference with one XPath transform. */
+try {
+	$doc->load(dirname(__FILE__) . '/xml-max-namespaces.xml');
+	$objXMLSecDSig = new XMLSecurityDSig();
+	$objXMLSecDSig->allowXPathTransforms = true;
+	$objXMLSecDSig->maxXPathTransforms = 0;
+	$objDSig = $objXMLSecDSig->locateSignature($doc);
+	$objXMLSecDSig->canonicalizeSignedInfo();
+	$objXMLSecDSig->idKeys = array('wsu:Id');
+	$objXMLSecDSig->idNS = array('wsu'=>'http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd');
+	$objXMLSecDSig->validateReference();
+	print "ZERO_TRANSFORMS: unexpected success\n";
+} catch (Exception $e) {
+	print $e->getMessage()."\n";
+}
 ?>
 --EXPECTF--
-Too many XPath Transformations found (12) with a max allowed of 5
+Too many XPath Transformations found (12) with a max allowed of 1
 Too many namespaces in XPath Transformation found (27)  with a max allowed of 20
-Too many XPath Transformations found (12) with a max allowed of 2
-RELAXED_TRANSFORMS: limit not enforced
+Too many XPath Transformations found (12) with a max allowed of 1
+RELAXED_TRANSFORMS: still capped
 RELAXED_NAMESPACES: limit not enforced
+Too many XPath Transformations found (2) with a max allowed of 0

@@ -2,6 +2,29 @@ xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 XX, Nov 2026, 4.1.0
 Bug Fixes:
+- A failed verifyDocument(), validateReference(), or verify() leaves
+  getValidatedNodes() with no nodes, including when the failure is not
+  an Exception. Nodes recorded for an earlier reference are cleared when
+  a later reference in the same call fails.
+  A later call on the same object does not keep nodes from an earlier
+  success. verify() leaves those nodes in place when it returns 1.
+- verifyDocument() checks the SignatureValue with the supplied key after
+  SignedInfo is canonicalized and before any reference is looked up,
+  canonicalized, or digested. An invalid signature fails before reference
+  processing. Reference transforms are checked after the signature and
+  before reference digests.
+- verifyDocument() accepts only canonicalization transforms (c14n, c14n
+  with comments, exclusive c14n, and exclusive c14n with comments) and the
+  enveloped-signature transform. Any other transform, including XPath, is
+  rejected before it is applied. This includes legacy mode.
+- On validateReference(), verify(), and getValidatedNodes(), the returned
+  node is the reference target. It may hold content outside the transformed
+  data that was digested. Callers using XPath filtering must apply their own
+  understanding of the transforms.
+- Only one XPath transform per reference is supported, when signing and
+  when verifying. Signing throws before it changes the document.
+  $maxXPathTransforms remains and is effectively capped at 1; a lower value
+  is still honored.
 - XMLSecurityDSig::verify() throws when the key is not a signature key,
   including when allowedSignatureAlgorithms is null and the key comes from
   locateKey(). XMLSecurityKey::verifySignature() returns 0 for those key types.
