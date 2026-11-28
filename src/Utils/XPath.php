@@ -72,6 +72,38 @@ class XPath
 
 
     /**
+     * Quote a string as an XPath 1.0 string literal without changing it.
+     *
+     * A value holding both quote characters is written as a concat() of
+     * literals, so the literal evaluates to exactly the input.
+     *
+     * @param string $value The value to quote.
+     *
+     * @return string The XPath expression for the value.
+     */
+    public static function quoteValue($value)
+    {
+        $value = (string) $value;
+        if (strpos($value, '"') === false) {
+            return '"'.$value.'"';
+        }
+        if (strpos($value, '\'') === false) {
+            return "'".$value."'";
+        }
+        $parts = array();
+        foreach (explode('"', $value) as $i => $piece) {
+            if ($i > 0) {
+                $parts[] = "'\"'";
+            }
+            if ($piece !== '') {
+                $parts[] = '"'.$piece.'"';
+            }
+        }
+        return 'concat('.implode(', ', $parts).')';
+    }
+
+
+    /**
      * Filter an attribute name for save inclusion in an XPath query.
      *
      * @param string $name The attribute name to filter.
