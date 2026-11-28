@@ -1012,11 +1012,17 @@ class XMLSecurityDSig
      * Callers using XPath filtering must apply their own understanding of
      * the transforms.
      *
+     * On failure, getValidatedNodes() returns null. That includes a failure
+     * of a later reference after an earlier reference in the same call
+     * succeeded.
+     *
      * @return bool
      * @throws Exception
      */
     public function validateReference()
     {
+        $this->validatedNodes = null;
+
         $xpath = $this->getXPathObj();
         $query = "./secdsig:SignedInfo[1]/secdsig:Reference";
         $nodeset = $xpath->query($query, $this->sigNode, false);
@@ -1034,15 +1040,18 @@ class XMLSecurityDSig
          * enveloped-signature Transform removes sigNode only when it is a
          * proper descendant of the node being digested.
          */
-        foreach ($nodeset AS $refNode) {
-            if (! $refNode instanceof DOMElement) {
-                throw new Exception("Reference validation failed");
+        try {
+            foreach ($nodeset AS $refNode) {
+                if (! $refNode instanceof DOMElement) {
+                    throw new Exception("Reference validation failed");
+                }
+                if (! $this->processRefNode($refNode)) {
+                    throw new Exception("Reference validation failed");
+                }
             }
-            if (! $this->processRefNode($refNode)) {
-                /* Clear the list of validated nodes. */
-                $this->validatedNodes = null;
-                throw new Exception("Reference validation failed");
-            }
+        } catch (Exception $e) {
+            $this->validatedNodes = null;
+            throw $e;
         }
         return true;
     }
@@ -1255,6 +1264,10 @@ class XMLSecurityDSig
      * content outside the transformed data that was digested. Callers using
      * XPath filtering must apply their own understanding of the transforms.
      *
+     * A return other than 1, and any exception thrown here, leaves
+     * getValidatedNodes() null. A return of 1 leaves nodes already recorded
+     * by validateReference() in place.
+     *
      * NOTE: be very careful when checking the int return value, because in
      * PHP, -1 will be cast to True when in boolean context. Always check the
      * return value in a strictly typed way, e.g. "$obj->verify(...) === 1".
@@ -1265,52 +1278,62 @@ class XMLSecurityDSig
      */
     public function verify($objKey)
     {
-        $doc = $this->sigNode->ownerDocument;
-        $xpath = new DOMXPath($doc);
-        $xpath->registerNamespace('secdsig', self::XMLDSIGNS);
+        try {
+            $doc = $this->sigNode->ownerDocument;
+            $xpath = new DOMXPath($doc);
+            $xpath->registerNamespace('secdsig', self::XMLDSIGNS);
 
-        $query = "./secdsig:SignedInfo/secdsig:SignatureMethod";
-        $nodeset = $xpath->query($query, $this->sigNode, false);
-        if ($nodeset === false || $nodeset->length !== 1) {
-            throw new Exception('Invalid structure - Expected exactly one SignatureMethod element');
-        }
-        $sigMethodNode = $nodeset->item(0);
-        if (! $sigMethodNode instanceof DOMElement) {
-            throw new Exception('Invalid structure - Expected exactly one SignatureMethod element');
-        }
-        $sigMethod = $sigMethodNode->getAttribute('Algorithm');
+            $query = "./secdsig:SignedInfo/secdsig:SignatureMethod";
+            $nodeset = $xpath->query($query, $this->sigNode, false);
+            if ($nodeset === false || $nodeset->length !== 1) {
+                throw new Exception('Invalid structure - Expected exactly one SignatureMethod element');
+            }
+            $sigMethodNode = $nodeset->item(0);
+            if (! $sigMethodNode instanceof DOMElement) {
+                throw new Exception('Invalid structure - Expected exactly one SignatureMethod element');
+            }
+            $sigMethod = $sigMethodNode->getAttribute('Algorithm');
 
-        /*
-         * Always bind the document's declared SignatureMethod to the algorithm
-         * of the caller-supplied key. The key's algorithm is fixed by the
-         * caller -- or, in the locateKey() flow, derived from the same document
-         * -- so a mismatch always signals tampering.
-         */
-        if ($objKey->type !== $sigMethod) {
-            throw new Exception('SignatureMethod algorithm does not match the supplied key type');
-        }
+            /*
+             * Always bind the document's declared SignatureMethod to the algorithm
+             * of the caller-supplied key. The key's algorithm is fixed by the
+             * caller -- or, in the locateKey() flow, derived from the same document
+             * -- so a mismatch is rejected.
+             */
+            if ($objKey->type !== $sigMethod) {
+                throw new Exception('SignatureMethod algorithm does not match the supplied key type');
+            }
 
-        $objKey->assertSignatureKey();
+            $objKey->assertSignatureKey();
 
-        if ($this->allowedSignatureAlgorithms !== null
-            && ! in_array($sigMethod, $this->allowedSignatureAlgorithms, true)) {
-            throw new Exception("SignatureMethod algorithm is not allowed: '$sigMethod'");
-        }
+            if ($this->allowedSignatureAlgorithms !== null
+                && ! in_array($sigMethod, $this->allowedSignatureAlgorithms, true)) {
+                throw new Exception("SignatureMethod algorithm is not allowed: '$sigMethod'");
+            }
 
-        $query = "./secdsig:SignatureValue";
-        $nodeset = $xpath->query($query, $this->sigNode, false);
-        if ($nodeset === false || $nodeset->length !== 1) {
-            throw new Exception('Invalid structure - Expected exactly one SignatureValue element');
+            $query = "./secdsig:SignatureValue";
+            $nodeset = $xpath->query($query, $this->sigNode, false);
+            if ($nodeset === false || $nodeset->length !== 1) {
+                throw new Exception('Invalid structure - Expected exactly one SignatureValue element');
+            }
+            $sigValue = $nodeset->item(0)->textContent;
+            if ($sigValue === '') {
+                throw new Exception("Unable to locate SignatureValue");
+            }
+            $decoded = base64_decode($sigValue, true);
+            if ($decoded === false) {
+                $result = -1;
+            } else {
+                $result = $objKey->verifySignature($this->signedInfo, $decoded);
+            }
+        } catch (Exception $e) {
+            $this->validatedNodes = null;
+            throw $e;
         }
-        $sigValue = $nodeset->item(0)->textContent;
-        if ($sigValue === '') {
-            throw new Exception("Unable to locate SignatureValue");
+        if ($result !== 1) {
+            $this->validatedNodes = null;
         }
-        $decoded = base64_decode($sigValue, true);
-        if ($decoded === false) {
-            return -1;
-        }
-        return $objKey->verifySignature($this->signedInfo, $decoded);
+        return $result;
     }
 
     /**
@@ -1440,6 +1463,8 @@ class XMLSecurityDSig
      *    signature check and before the transform is applied. This includes
      *    legacy mode. There is no option to allow other transforms on this
      *    path.
+     *  - A failed call leaves getValidatedNodes() null, including when this
+     *    object previously verified a different document.
      *
      * @param XMLSecurityKey|null  $objKey Trusted/pinned verification key.
      * @param DOMDocument|DOMNode  $objDoc Document (or node) to verify.
@@ -1449,6 +1474,8 @@ class XMLSecurityDSig
      */
     public function verifyDocument($objKey, $objDoc, $pos = 0)
     {
+        $this->resetVerificationState();
+
         if (! $objKey instanceof XMLSecurityKey) {
             throw new Exception('A trusted key must be supplied to verifyDocument()');
         }
@@ -1470,7 +1497,6 @@ class XMLSecurityDSig
         }
 
         try {
-            $this->resetXPathObj();
             if (! $this->locateSignature($objDoc, $pos)) {
                 throw new Exception('Cannot locate Signature Node');
             }
@@ -1493,10 +1519,23 @@ class XMLSecurityDSig
                 throw new Exception('Signature verified but no signed nodes were validated');
             }
             return $validatedNodes;
+        } catch (Exception $e) {
+            $this->validatedNodes = null;
+            throw $e;
         } finally {
             $this->allowedSignatureAlgorithms = $prevSigAlgs;
             $this->allowedDigestAlgorithms = $prevDigAlgs;
         }
+    }
+
+    /**
+     * Drop nodes and canonical data recorded by a previous verification.
+     */
+    private function resetVerificationState()
+    {
+        $this->validatedNodes = null;
+        $this->signedInfo = null;
+        $this->resetXPathObj();
     }
 
     /**
@@ -2087,6 +2126,10 @@ class XMLSecurityDSig
      * Each value is the reference target. It may hold content outside the
      * transformed data that was digested. Callers using XPath filtering must
      * apply their own understanding of the transforms.
+     *
+     * Returns null when verification has not succeeded, and after a failed
+     * verifyDocument(), validateReference(), or verify(). A successful
+     * verify() leaves nodes recorded by validateReference() in place.
      *
      * Returns:
      *  An associative array of validated nodes or null if no nodes have been validated.
