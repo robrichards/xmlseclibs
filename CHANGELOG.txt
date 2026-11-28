@@ -12,8 +12,13 @@ Bug Fixes:
 - Encrypted Element data now carries its in-scope namespace declarations,
   and xmlns="" is written where needed, so decryptors that do not parse in
   context restore the same namespaces.
-- Restored nodes keep their namespace declarations in place, so
-  canonicalized output matches the original.
+- Encrypting a whole DOMDocument now writes xmlns="" on descendants that
+  have no namespace and sit under a default namespace (for example, nodes
+  created with createElement), so they come back with no namespace after
+  decryption. The caller's document is left unchanged.
+- Signatures over encrypted-then-decrypted content (inclusive and exclusive
+  c14n, enveloped and external references, Element and Content modes)
+  previously failed to verify in several cases and now verify.
 - A failed verifyDocument(), validateReference(), or verify() leaves
   getValidatedNodes() with no nodes, including when the failure is not
   an Exception. Nodes recorded for an earlier reference are cleared when

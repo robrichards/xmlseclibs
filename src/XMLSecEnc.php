@@ -584,6 +584,22 @@ class XMLSecEnc
      */
     private static function serializeInContext(DOMDocument $doc, DOMNode $node, $declare)
     {
+        if ($node instanceof DOMDocument) {
+            /* A whole document: no ancestors to declare, but descendants still
+             * need the same xmlns="" handling as an element subtree. */
+            $root = $node->documentElement;
+            if ($root === null) {
+                return $doc->saveXML($node);
+            }
+            $marked = self::markMissingEmptyDefaults($root);
+            try {
+                return $doc->saveXML($node);
+            } finally {
+                foreach ($marked as $markedElement) {
+                    $markedElement->removeAttribute('xmlns');
+                }
+            }
+        }
         if (! $node instanceof DOMElement) {
             return $doc->saveXML($node);
         }
