@@ -19,7 +19,7 @@ xmlseclibs requires PHP version 8.3 or greater and phpseclib 3.0.58 or later. Op
 ## Security notes
 
 * Prefer the safe-by-default verifier `verifyDocument()` (see below). It requires a caller-supplied (pinned) key, never derives the key from the document's `KeyInfo`, enforces an algorithm allowlist for both the `SignatureMethod` and every `DigestMethod`, and only reports success when every reference validated. It checks the signature before reference lookup, reference canonicalization, or digest computation. It accepts only canonicalization and enveloped-signature transforms, and returns the validated nodes for you to operate on. A failed call leaves no validated nodes, including nodes from an earlier successful call on the same object.
-* If you use the low-level primitives directly, always check verification with a strict comparison: `$objDSig->verify($key) === 1`. A return of `-1` is an error and is truthy in boolean context.
+* If you use the low-level primitives directly, `$objDSig->verify($key)` and `$objKey->verifySignature($data, $signature)` have three outcomes: `1` (verified), `0` (the signature does not match) and an `Exception` (verification could not be completed, for example a `SignatureValue` that is not valid Base64, or a key that is missing or of the wrong type). They return only the integers `1` or `0`; there is no `-1`. Keep checking with a strict comparison (`$objDSig->verify($key) === 1`). To treat every failure as an ordinary rejection, catch the exception at your verification boundary. See [Migrating verify() error handling](#migrating-verify-error-handling).
 * After a successful `validateReference()`, `getValidatedNodes()` returns the reference target. That node may hold content outside the transformed data that was digested, so callers using XPath filtering must apply their own understanding of the transforms. Do not re-select assertions by Id from the whole document. A failed `validateReference()` or `verify()` leaves no validated nodes, including when an earlier reference in that call had already matched. A return of `1` from `verify()` leaves those nodes in place.
 * Read element values with `textContent` rather than `firstChild` or `nodeValue`. Comments are excluded from the digest of same-document references.
 * Do not trust a signing certificate from `KeyInfo` alone. Load and pin trusted keys yourself.
@@ -120,6 +120,34 @@ compatible `array` type. Otherwise-compatible overrides of
 `staticLocateKeyInfo()` and `fromEncryptedKeyElement()` may keep a
 `?array` or untyped parameter.
 
+## Migrating verify() error handling
+
+`XMLSecurityDSig::verify()` and `XMLSecurityKey::verifySignature()` now report three distinct outcomes:
+
+| Outcome | Result |
+| --- | --- |
+| Verified | returns `1` |
+| Signature mismatch | returns `0` |
+| Verification could not be completed | throws an `Exception` |
+
+Earlier versions returned `-1` for the third outcome. The return value is still an integer and is only ever `1` or `0`; it is not a `bool`. `verify()` throws if the supplied key's `verifySignature()` returns any other value.
+
+Checks of the form `$objDSig->verify($key) === 1` keep working for valid and mismatched signatures. On a processing error that expression previously evaluated to false. It now throws before the comparison runs. This also affects callers that never checked for `-1`.
+
+Processing errors include a `SignatureValue` that is not valid Base64, a key that has not been loaded or cannot be parsed, a key of the wrong type for the algorithm (for example an EC key used with an RSA algorithm, or private key material where a public key is required), and asymmetric key material used as an HMAC key. A key type that is not a signature key keeps its existing behavior: `verifySignature()` returns `0` and `verify()` throws.
+
+If you need every verification failure to become an ordinary rejection, catch the exception at your verification boundary:
+
+```php
+try {
+    $verified = ($objDSig->verify($objKey) === 1);
+} catch (Exception $e) {
+    $verified = false; // verification could not be completed
+}
+```
+
+After a `0` result or an exception, `getValidatedNodes()` returns `null`, including when the same object had previously succeeded. The same verification return values and exception behavior apply in legacy mode.
+
 ## Breaking changes (3.1 → 4.0)
 
 ### Platform
@@ -136,7 +164,7 @@ compatible `array` type. Otherwise-compatible overrides of
 - **HMAC keys cannot be loaded from certificates or asymmetric keys**
 - **References fail closed**: unresolved, external, or duplicate-Id URIs throw; same-document only
 - **Unknown CanonicalizationMethod rejected**
-- **HMAC verify returns `1`/`0`** — always check `=== 1`
+- **`verify()` and `verifySignature()` return only `1` or `0`**; a processing error throws instead of returning `-1` (see [Migrating verify() error handling](#migrating-verify-error-handling)). Keep checking `=== 1`
 
 ### Encryption / decryption
 - **Key transport restricted to RSA-OAEP by default** (`allowedKeyAlgorithms = XMLSecEnc::DEFAULT_KEY_ALGORITHMS`, since 4.1). Widen the list explicitly (`XMLSecEnc::SUPPORTED_KEY_ALGORITHMS` lists every supported algorithm)

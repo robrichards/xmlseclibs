@@ -40,7 +40,9 @@ $allowed = XMLSecurityKey::EC_CURVE_OIDS + $secp256k1;
 $signature = ecKey('private', 'ec-secp256k1-key.pem', $allowed)->signData($data);
 print "allowed sign secp256k1: " . strlen($signature) . " bytes\n";
 print "allowed verify secp256k1: " . ecKey('public', 'ec-secp256k1-cert.pem', $allowed)->verifySignature($data, $signature) . "\n";
-print "default verify secp256k1: " . ecKey('public', 'ec-secp256k1-cert.pem')->verifySignature($data, $signature) . "\n";
+attempt('default verify secp256k1', function () use ($data, $signature) {
+    return ecKey('public', 'ec-secp256k1-cert.pem')->verifySignature($data, $signature);
+});
 
 /* A narrower allowlist rejects default curves too. */
 attempt('P-256 only, sign P-384', function () use ($data) {
@@ -86,7 +88,7 @@ default sign secp256k1: EC curve is not allowed: 'secp256k1'
 default ECKeyValue secp256k1: EC curve is not allowed: 'secp256k1'
 allowed sign secp256k1: 64 bytes
 allowed verify secp256k1: 1
-default verify secp256k1: -1
+default verify secp256k1: Cannot verify signature: EC curve is not allowed: 'secp256k1'
 P-256 only, sign P-384: EC curve is not allowed: 'secp384r1'
 allowlisted Ed25519: ECDSA requires a key on a named prime curve
 KeyInfo ECKeyValue secp256k1, default: Unsupported ECKeyValue curve

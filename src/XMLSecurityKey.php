@@ -1352,18 +1352,22 @@ class XMLSecurityKey
     /**
      * Verifies the data (string) against the given signature using the extension assigned to the type in the constructor.
      *
-     * Returns:
-     *  1 on succesful signature verification,
-     *  0 when signature verification failed, or the key is not a signature key,
-     *  -1 if an error occurred during processing.
+     * Returns an integer (never a bool):
+     *  1 on successful signature verification,
+     *  0 when the signature does not match, or the key is not a signature key.
      *
-     * NOTE: be very careful when checking the return value, because in PHP,
-     * -1 will be cast to True when in boolean context. So always check the
-     * return value in a strictly typed way, e.g. "$obj->verify(...) === 1".
+     * Throws an Exception when verification cannot be completed, for example
+     * when the key is missing, cannot be loaded, or is of the wrong type for
+     * the algorithm. An Exception is never reported as a return value.
+     *
+     * Existing strict checks such as "$obj->verifySignature(...) === 1" keep
+     * working for valid and mismatched signatures. A processing error now
+     * throws before the comparison runs.
      *
      * @param string $data
      * @param string $signature
-     * @return int
+     * @return int 1 or 0
+     * @throws Exception when verification could not be completed
      */
     public function verifySignature($data, $signature)
     {
@@ -1375,49 +1379,56 @@ class XMLSecurityKey
         }
         switch ($this->cryptParams['library'] ?? null) {
             case 'phpseclib':
+                if (! is_string($this->key)) {
+                    throw new Exception('Cannot verify signature: no key has been loaded');
+                }
                 try {
-                    if (! is_string($this->key)) {
-                        return -1;
-                    }
                     if ($this->isECDSA()) {
                         $public = $this->configureECKey(PublicKeyLoader::load($this->key));
-                        if (! $public instanceof ECPublicKey) {
-                            return -1;
-                        }
-                        /*
-                         * r || s must not be wider than twice the curve size.
-                         * Shorter values are accepted on purpose: some signers
-                         * (e.g. Apache Santuario) strip leading zero bytes, so
-                         * about 1 in 4 of their P-521 signatures are 130 bytes
-                         * instead of 132. phpseclib splits the value in half.
-                         */
-                        $maxLength = 2 * (int) ceil($public->getLength() / 8);
-                        if (strlen($signature) > $maxLength) {
-                            return 0;
-                        }
-                        $result = $public->verify($data, $signature);
-                        return $result === true ? 1 : 0;
+                    } else {
+                        $public = $this->configureRSAKey(PublicKeyLoader::load($this->key));
                     }
-                    $public = $this->configureRSAKey(PublicKeyLoader::load($this->key));
-                    if (! $public instanceof RSAPublicKey) {
-                        return -1;
-                    }
-                    $result = $public->verify($data, $signature);
-                    return $result === true ? 1 : 0;
                 } catch (Exception $e) {
-                    return -1;
+                    throw new Exception('Cannot verify signature: ' . $e->getMessage(), 0, $e);
                 }
+                if ($this->isECDSA()) {
+                    if (! $public instanceof ECPublicKey) {
+                        throw new Exception('Cannot verify signature: the key is not an EC public key');
+                    }
+                    /*
+                     * r || s must not be wider than twice the curve size.
+                     * Shorter values are accepted on purpose: some signers
+                     * (e.g. Apache Santuario) strip leading zero bytes, so
+                     * about 1 in 4 of their P-521 signatures are 130 bytes
+                     * instead of 132. phpseclib splits the value in half.
+                     */
+                    $maxLength = 2 * (int) ceil($public->getLength() / 8);
+                    if (strlen($signature) > $maxLength) {
+                        return 0;
+                    }
+                } elseif (! $public instanceof RSAPublicKey) {
+                    throw new Exception('Cannot verify signature: the key is not an RSA public key');
+                }
+                try {
+                    $result = $public->verify($data, $signature);
+                } catch (Exception $e) {
+                    throw new Exception('Cannot verify signature: ' . $e->getMessage(), 0, $e);
+                }
+                return $result === true ? 1 : 0;
             case (self::HMAC_SHA1):
                 /* Defense in depth against key/algorithm confusion: refuse to
                  * HMAC with asymmetric material even if it was assigned to
                  * $key without loadKey() (see loadKey()). */
-                if (! is_string($this->key) || self::isAsymmetricKeyMaterial($this->key)) {
-                    return -1;
+                if (! is_string($this->key)) {
+                    throw new Exception('Cannot verify signature: no HMAC key has been loaded');
+                }
+                if (self::isAsymmetricKeyMaterial($this->key)) {
+                    throw new Exception('Asymmetric key material cannot be used as an HMAC key');
                 }
                 $expectedSignature = hash_hmac("sha1", $data, $this->key, true);
                 return hash_equals($expectedSignature, $signature) ? 1 : 0;
         }
-        return -1;
+        throw new Exception('Unsupported key type for verification');
     }
 
     /**

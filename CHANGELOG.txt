@@ -249,6 +249,25 @@ BREAKING CHANGES:
   compatible array type; a missing or nullable type is a PHP fatal
   error. Otherwise-compatible overrides of staticLocateKeyInfo() and
   fromEncryptedKeyElement() may keep a ?array or untyped parameter.
+- XMLSecurityDSig::verify() and XMLSecurityKey::verifySignature() no longer
+  return -1. They report three outcomes: verified (1), signature mismatch (0)
+  and verification could not be completed (an Exception is thrown). The
+  return value is still an integer and is only ever 1 or 0; it is not a
+  bool. The conditions that returned -1 now throw: a SignatureValue that is
+  not valid Base64, a key that has not been loaded or cannot be parsed, a
+  key of the wrong type for the algorithm, and asymmetric key material used
+  as an HMAC key. A key type that is not a signature key is unchanged:
+  verifySignature() returns 0 and verify() throws.
+  verify(...) === 1 still works for valid and mismatched signatures. On a
+  processing error that expression previously evaluated to false; now
+  verify() throws before the comparison runs. This also affects callers
+  that never checked for -1. Implementers who need every verification
+  failure to become an ordinary rejection should catch the exception at
+  their verification boundary. A 0 result or an exception leaves
+  getValidatedNodes() null, including after an earlier success on the same
+  object. verify() also throws when the key's verifySignature() returns
+  anything other than the integer 1 or 0. The same verification return values
+  and exception behavior apply in legacy mode.
 - Remove XMLSecurityDSig::generate_GUID(), deprecated since 1.4.1.
   Use XMLSecurityDSig::generateGUID().
 - Remove XMLSecurityKey::getAlgorith(). Use XMLSecurityKey::getAlgorithm().

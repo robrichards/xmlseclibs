@@ -1489,30 +1489,35 @@ class XMLSecurityDSig
     }
 
     /**
-     * Returns an int for all signature algorithms (including HMAC-SHA1):
-     *    1 on successful signature verification,
-     *    0 when signature verification failed,
-     *   -1 if an error occurred during processing.
+     * Returns an int for all signature algorithms (including HMAC-SHA1).
+     * There are three outcomes:
+     *    1 the signature is verified,
+     *    0 the signature does not match,
+     *    an Exception is thrown when verification could not be completed,
+     *      for example a SignatureValue that is not valid Base64, a key of the
+     *      wrong type or one that cannot be loaded, or a SignedInfo structure
+     *      that cannot be processed.
+     * The return value is only ever 1 or 0. A key whose verifySignature()
+     * returns anything else causes an Exception.
      *
-     * A key that is not a signature key throws, including when
-     * $allowedSignatureAlgorithms is null.
+     * A key that is not a signature key throws.
      *
      * This does not replace the nodes from validateReference().
      * getValidatedNodes() returns each reference target, which may hold
      * content outside the transformed data that was digested. Callers using
      * XPath filtering must apply their own understanding of the transforms.
      *
-     * A return other than 1, and any throwable thrown here, leaves
+     * A return of 0, and any throwable thrown here, leaves
      * getValidatedNodes() null. A return of 1 leaves nodes already recorded
      * by validateReference() in place.
      *
-     * NOTE: be very careful when checking the int return value, because in
-     * PHP, -1 will be cast to True when in boolean context. Always check the
-     * return value in a strictly typed way, e.g. "$obj->verify(...) === 1".
+     * "$obj->verify(...) === 1" works for valid and mismatched signatures.
+     * Callers that need every failure to be an ordinary rejection should
+     * catch the exception at their verification boundary.
      *
      * @param XMLSecurityKey $objKey
-     * @return int
-     * @throws Exception
+     * @return int 1 or 0
+     * @throws Exception when verification could not be completed
      */
     public function verify($objKey)
     {
@@ -1559,9 +1564,11 @@ class XMLSecurityDSig
             }
             $decoded = base64_decode($sigValue, true);
             if ($decoded === false) {
-                $result = -1;
-            } else {
-                $result = $objKey->verifySignature($this->signedInfo, $decoded);
+                throw new Exception('SignatureValue is not valid Base64');
+            }
+            $result = $objKey->verifySignature($this->signedInfo, $decoded);
+            if ($result !== 0 && $result !== 1) {
+                throw new Exception('Key returned an unexpected verification result');
             }
         } catch (\Throwable $e) {
             $this->validatedNodes = null;
@@ -1704,7 +1711,9 @@ class XMLSecurityDSig
      * @param DOMDocument|DOMNode  $objDoc Document (or node) to verify.
      * @param int                  $pos    Which Signature element to verify (default: first).
      * @return array Associative array of validated nodes (id => node). Never empty on success.
-     * @throws Exception on any verification failure.
+     * @throws Exception on any verification failure, including a signature
+     *         mismatch (verify() returned 0) and a processing error
+     *         (verify() threw).
      */
     public function verifyDocument($objKey, $objDoc, $pos = 0)
     {

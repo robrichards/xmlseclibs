@@ -72,7 +72,12 @@ tryLoad('LOAD_ENC_PKCS8', $priv->withPassword('secret')->toString('PKCS8'));
 /* Direct assignment bypasses loadKey(); verify/sign must still refuse. */
 $key = new XMLSecurityKey(XMLSecurityKey::HMAC_SHA1);
 $key->key = $derPub;
-echo "VERIFY_DER_PUB: ".$key->verifySignature('signed-payload', 'not-a-signature')."\n";
+try {
+    $key->verifySignature('signed-payload', 'not-a-signature');
+    echo "VERIFY_DER_PUB: not rejected\n";
+} catch (Exception $e) {
+    echo "VERIFY_DER_PUB: ".$e->getMessage()."\n";
+}
 try {
     $key->signData('signed-payload');
     echo "SIGN_DER_PUB: not rejected\n";
@@ -102,7 +107,7 @@ LOAD_B64_PUB: Asymmetric key material cannot be used as an HMAC key
 LOAD_B64_CERT_COMPACT: Asymmetric key material cannot be used as an HMAC key
 LOAD_B64_PUB_COMPACT: Asymmetric key material cannot be used as an HMAC key
 LOAD_ENC_PKCS8: Asymmetric key material cannot be used as an HMAC key
-VERIFY_DER_PUB: -1
+VERIFY_DER_PUB: Asymmetric key material cannot be used as an HMAC key
 SIGN_DER_PUB: Asymmetric key material cannot be used as an HMAC key
 HMAC_BIN: yes
 HMAC_B64: yes
