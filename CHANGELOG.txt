@@ -216,17 +216,39 @@ BREAKING CHANGES:
   $allowedDataAlgorithms, are typed array properties, and the
   $allowedKeyAlgorithms and $allowedDataAlgorithms arguments of
   staticLocateKeyInfo() and XMLSecurityKey::fromEncryptedKeyElement() are
-  typed array. Assigning or passing null throws a TypeError instead of
-  removing the restriction. An empty array allows no algorithm. verify(),
-  validateDigest(), validateReference() and verifyDocument() apply the
-  configured lists in the same way; verifyDocument() no longer substitutes
-  the defaults for a missing list. To accept every supported algorithm,
-  assign the new constants XMLSecurityDSig::SUPPORTED_SIGNATURE_ALGORITHMS,
-  SUPPORTED_DIGEST_ALGORITHMS, XMLSecEnc::SUPPORTED_KEY_ALGORITHMS or
-  SUPPORTED_DATA_ALGORITHMS. enableLegacyMode() adds its algorithms to
-  every list, which now always exists. Subclasses that redeclare these
-  properties without the array type fail with a PHP fatal error, and
-  overrides of the two static methods need the array parameter types.
+  typed array. Assigning or passing null throws a TypeError. An empty
+  array allows no algorithm. verify(), validateDigest(),
+  validateReference() and verifyDocument() apply the configured lists in
+  the same way; verifyDocument() no longer substitutes the defaults for a
+  missing list.
+  Migration depends on how null was used. For verifyDocument(), remove
+  the assignment on a fresh instance, or assign the corresponding
+  DEFAULT_* constant to reset an already configured instance. For
+  low-level verification (verify(), validateDigest(), validateReference())
+  or decryption, list the algorithms the integration requires. Reserve
+  the new constants XMLSecurityDSig::SUPPORTED_SIGNATURE_ALGORITHMS,
+  SUPPORTED_DIGEST_ALGORITHMS, XMLSecEnc::SUPPORTED_KEY_ALGORITHMS and
+  SUPPORTED_DATA_ALGORITHMS for callers that deliberately want every
+  supported algorithm in that category. Moving a verifyDocument()
+  caller from null to SUPPORTED_* broadens its policy to include SHA-1
+  and RIPEMD-160.
+  A null assignment still needs an edit even if the next line calls
+  enableLegacyMode(). For the standard legacy profile, remove the null
+  assignment and call enableLegacyMode() on the default configuration.
+  That call enables several compatibility settings at once: on
+  XMLSecurityDSig it allows a DOCTYPE when locating a signature, allows
+  XPath transforms on the low-level verify path (at most one per
+  reference), raises the XPath transform and namespace limits, and adds
+  rsa-sha1, hmac-sha1 and the sha1 digest to the allowlists; on XMLSecEnc
+  it sets allowRSA15KeyTransport, adds RSA-1.5 to allowedKeyAlgorithms,
+  and adds AES-CBC and TripleDES-CBC (LEGACY_DATA_ALGORITHMS) to
+  allowedDataAlgorithms. It does not change the transforms
+  verifyDocument() accepts. If only one additional algorithm is needed,
+  widen just that list instead of calling enableLegacyMode().
+  Subclasses that redeclare these public properties must use the
+  compatible array type; a missing or nullable type is a PHP fatal
+  error. Otherwise-compatible overrides of staticLocateKeyInfo() and
+  fromEncryptedKeyElement() may keep a ?array or untyped parameter.
 - Remove XMLSecurityDSig::generate_GUID(), deprecated since 1.4.1.
   Use XMLSecurityDSig::generateGUID().
 - Remove XMLSecurityKey::getAlgorith(). Use XMLSecurityKey::getAlgorithm().
