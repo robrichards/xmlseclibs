@@ -1014,7 +1014,7 @@ class XMLSecurityDSig
      *
      * On failure, getValidatedNodes() returns null. That includes a failure
      * of a later reference after an earlier reference in the same call
-     * succeeded.
+     * succeeded, and a failure that is not an Exception.
      *
      * @return bool
      * @throws Exception
@@ -1049,7 +1049,7 @@ class XMLSecurityDSig
                     throw new Exception("Reference validation failed");
                 }
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $this->validatedNodes = null;
             throw $e;
         }
@@ -1264,7 +1264,7 @@ class XMLSecurityDSig
      * content outside the transformed data that was digested. Callers using
      * XPath filtering must apply their own understanding of the transforms.
      *
-     * A return other than 1, and any exception thrown here, leaves
+     * A return other than 1, and any throwable thrown here, leaves
      * getValidatedNodes() null. A return of 1 leaves nodes already recorded
      * by validateReference() in place.
      *
@@ -1326,7 +1326,7 @@ class XMLSecurityDSig
             } else {
                 $result = $objKey->verifySignature($this->signedInfo, $decoded);
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $this->validatedNodes = null;
             throw $e;
         }
@@ -1464,7 +1464,8 @@ class XMLSecurityDSig
      *    legacy mode. There is no option to allow other transforms on this
      *    path.
      *  - A failed call leaves getValidatedNodes() null, including when this
-     *    object previously verified a different document.
+     *    object previously verified a different document and when the
+     *    failure is not an Exception.
      *
      * @param XMLSecurityKey|null  $objKey Trusted/pinned verification key.
      * @param DOMDocument|DOMNode  $objDoc Document (or node) to verify.
@@ -1519,7 +1520,7 @@ class XMLSecurityDSig
                 throw new Exception('Signature verified but no signed nodes were validated');
             }
             return $validatedNodes;
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             $this->validatedNodes = null;
             throw $e;
         } finally {
