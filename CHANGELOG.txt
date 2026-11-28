@@ -284,6 +284,9 @@ Compatibility:
   including any processing instruction before the root, as omit_uri on a
   DOMDocument does. Reference a nested element by ID instead. An omitted
   URI and URI="" (force_uri) remain separate options.
+- composer.json declares ext-dom and ext-libxml, and xmlseclibs.php finds the
+  Composer autoloader when the package is installed as a dependency. Including
+  xmlseclibs.php directly keeps working.
 
 14, Nov 2026, 4.0.2
 Bug Fixes:
