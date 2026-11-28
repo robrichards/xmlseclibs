@@ -265,8 +265,10 @@ BREAKING CHANGES:
   failure to become an ordinary rejection should catch the exception at
   their verification boundary. A 0 result or an exception leaves
   getValidatedNodes() null, including after an earlier success on the same
-  object. enableLegacyMode() is unaffected: rsa-sha1 and hmac-sha1
-  signatures return 1 or 0, and throw in the same cases.
+  object. verify() also throws when the key's verifySignature() returns
+  anything other than the integer 1 or 0. enableLegacyMode() is
+  unaffected: rsa-sha1 and hmac-sha1 signatures return 1 or 0, and throw in
+  the same cases.
 - Remove XMLSecurityDSig::generate_GUID(), deprecated since 1.4.1.
   Use XMLSecurityDSig::generateGUID().
 - Remove XMLSecurityKey::getAlgorith(). Use XMLSecurityKey::getAlgorithm().

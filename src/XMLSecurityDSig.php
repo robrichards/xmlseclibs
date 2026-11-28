@@ -1497,7 +1497,8 @@ class XMLSecurityDSig
      *      for example a SignatureValue that is not valid Base64, a key of the
      *      wrong type or one that cannot be loaded, or a SignedInfo structure
      *      that cannot be processed.
-     * The return value is only ever 1 or 0.
+     * The return value is only ever 1 or 0. A key whose verifySignature()
+     * returns anything else causes an Exception.
      *
      * A key that is not a signature key throws.
      *
@@ -1566,6 +1567,9 @@ class XMLSecurityDSig
                 throw new Exception('SignatureValue is not valid Base64');
             }
             $result = $objKey->verifySignature($this->signedInfo, $decoded);
+            if ($result !== 0 && $result !== 1) {
+                throw new Exception('Key returned an unexpected verification result');
+            }
         } catch (\Throwable $e) {
             $this->validatedNodes = null;
             throw $e;

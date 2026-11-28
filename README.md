@@ -130,7 +130,7 @@ compatible `array` type. Otherwise-compatible overrides of
 | Signature mismatch | returns `0` |
 | Verification could not be completed | throws an `Exception` |
 
-Earlier versions returned `-1` for the third outcome. The return value is still an integer and is only ever `1` or `0`; it is not a `bool`.
+Earlier versions returned `-1` for the third outcome. The return value is still an integer and is only ever `1` or `0`; it is not a `bool`. `verify()` throws if the supplied key's `verifySignature()` returns any other value.
 
 Checks of the form `$objDSig->verify($key) === 1` keep working for valid and mismatched signatures. On a processing error that expression previously evaluated to false. It now throws before the comparison runs. This also affects callers that never checked for `-1`.
 
