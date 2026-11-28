@@ -1,6 +1,7 @@
 <?php
 namespace RobRichards\XMLSecLibs;
 
+use DOMAttr;
 use DOMDocument;
 use DOMElement;
 use DOMNode;
@@ -1090,57 +1091,106 @@ class XMLSecurityDSig
             $attname = $prefix.':'.$attname;
         }
 
+        /*
+         * A Reference without a URI is resolved by the verifier as the whole
+         * document. Only a DOMDocument, or the document element standing for
+         * it, can therefore be referenced without a URI. A nested element
+         * needs a URI so the verifier can find it again; reject it before
+         * anything is added to SignedInfo.
+         */
+        if ($omit_uri && ! $node instanceof DOMDocument) {
+            $ownerDoc = $node->ownerDocument;
+            if ($ownerDoc === null
+                || $ownerDoc->documentElement === null
+                || ! $node->isSameNode($ownerDoc->documentElement)) {
+                throw new Exception(
+                    'omit_uri is only supported for a DOMDocument or its document element; '
+                    . 'a nested element must be referenced by URI'
+                );
+            }
+            /* The omitted URI identifies the document, so digest the document. */
+            $node = $ownerDoc;
+        }
+
         $refNode = $this->createNewSignNode('Reference');
         $sinfoNode->appendChild($refNode);
 
-        if (! $omit_uri) {
-            if (! $node instanceof DOMDocument) {
-                $uri = null;
-                if (! $overwrite_id) {
-                    $uri = $prefix_ns ? $node->getAttributeNS($prefix_ns, $id_name) : $node->getAttribute($id_name);
+        /*
+         * The Reference is now in SignedInfo. Any failure below removes it
+         * and rethrows the original exception. An ID written for this
+         * Reference is removed again, and an ID that was overwritten is
+         * put back. An ID that was only read is left as it was.
+         */
+        $idSnapshot = null;
+        $nsSnapshot = null;
+        $idWritten = false;
+        try {
+            if (! $omit_uri) {
+                if (! $node instanceof DOMDocument) {
+                    $uri = null;
+                    if (! $overwrite_id) {
+                        $uri = $prefix_ns ? $node->getAttributeNS($prefix_ns, $id_name) : $node->getAttribute($id_name);
+                    }
+                    if (empty($uri)) {
+                        $uri = self::generateGUID();
+                        $idSnapshot = $this->captureIdAttribute($node, $prefix_ns, $id_name, $attname);
+                        $nsSnapshot = $this->captureNamespaceSnapshot($node);
+                        $node->setAttributeNS($prefix_ns, $attname, $uri);
+                        $idWritten = true;
+                    }
+                    $refNode->setAttribute("URI", '#'.$uri);
+                } elseif ($force_uri) {
+                    $refNode->setAttribute("URI", '');
                 }
-                if (empty($uri)) {
-                    $uri = self::generateGUID();
-                    $node->setAttributeNS($prefix_ns, $attname, $uri);
-                }
-                $refNode->setAttribute("URI", '#'.$uri);
-            } elseif ($force_uri) {
-                $refNode->setAttribute("URI", '');
             }
-        }
 
-        if ($transforms_elem) {
-            $transNodes = $this->createNewSignNode('Transforms');
-            $refNode->appendChild($transNodes);
+            if ($transforms_elem) {
+                $transNodes = $this->createNewSignNode('Transforms');
+                $refNode->appendChild($transNodes);
 
-            if (is_array($arTransforms)) {
-                foreach ($arTransforms AS $transform) {
+                if (is_array($arTransforms)) {
+                    foreach ($arTransforms AS $transform) {
+                        $transNode = $this->createNewSignNode('Transform');
+                        $transNodes->appendChild($transNode);
+                        if (is_array($transform) &&
+                            (! empty($transform['http://www.w3.org/TR/1999/REC-xpath-19991116'])) &&
+                            (! empty($transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['query']))) {
+                            $transNode->setAttribute('Algorithm', 'http://www.w3.org/TR/1999/REC-xpath-19991116');
+                            $XPathNode = $this->createNewSignNode('XPath', $transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['query']);
+                            $transNode->appendChild($XPathNode);
+                            if (! empty($transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['namespaces'])) {
+                                foreach ($transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['namespaces'] AS $prefix => $namespace) {
+                                    $XPathNode->setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:$prefix", $namespace);
+                                }
+                            }
+                        } else {
+                            $transNode->setAttribute('Algorithm', $transform);
+                        }
+                    }
+                } elseif (! empty($this->canonicalMethod)) {
                     $transNode = $this->createNewSignNode('Transform');
                     $transNodes->appendChild($transNode);
-                    if (is_array($transform) &&
-                        (! empty($transform['http://www.w3.org/TR/1999/REC-xpath-19991116'])) &&
-                        (! empty($transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['query']))) {
-                        $transNode->setAttribute('Algorithm', 'http://www.w3.org/TR/1999/REC-xpath-19991116');
-                        $XPathNode = $this->createNewSignNode('XPath', $transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['query']);
-                        $transNode->appendChild($XPathNode);
-                        if (! empty($transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['namespaces'])) {
-                            foreach ($transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['namespaces'] AS $prefix => $namespace) {
-                                $XPathNode->setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:$prefix", $namespace);
-                            }
-                        }
-                    } else {
-                        $transNode->setAttribute('Algorithm', $transform);
-                    }
+                    $transNode->setAttribute('Algorithm', $this->canonicalMethod);
                 }
-            } elseif (! empty($this->canonicalMethod)) {
-                $transNode = $this->createNewSignNode('Transform');
-                $transNodes->appendChild($transNode);
-                $transNode->setAttribute('Algorithm', $this->canonicalMethod);
             }
-        }
 
-        $canonicalData = $this->processTransforms($refNode, $node, true, true);
-        $digValue = $this->calculateDigest($algorithm, $canonicalData);
+            /*
+             * Every Reference written here has no URI, URI="" or URI="#id". The
+             * verifier dereferences all three without comments, so a
+             * WithComments canonicalization transform sees no comments on either
+             * side. Digest the same node set the verifier will.
+             */
+            $canonicalData = $this->processTransforms($refNode, $node, false, true);
+            $digValue = $this->calculateDigest($algorithm, $canonicalData);
+        } catch (\Throwable $e) {
+            if ($refNode->parentNode !== null) {
+                $refNode->parentNode->removeChild($refNode);
+            }
+            if ($idWritten && $node instanceof DOMElement) {
+                $this->revertWrittenIdAttribute($node, $prefix_ns, $id_name, $attname, $idSnapshot, $nsSnapshot);
+            }
+            throw $e;
+        }
 
         $digestMethod = $this->createNewSignNode('DigestMethod');
         $refNode->appendChild($digestMethod);
@@ -1148,6 +1198,184 @@ class XMLSecurityDSig
 
         $digestValue = $this->createNewSignNode('DigestValue', $digValue);
         $refNode->appendChild($digestValue);
+    }
+
+    /**
+     * Locate the ID attribute this call would write.
+     *
+     * A prefix_ns looks the attribute up by namespace. Otherwise the lookup
+     * is by the attribute name.
+     *
+     * @param DOMElement $node
+     * @param string|null $prefixNs
+     * @param string $idName
+     * @param string $attName
+     * @return DOMAttr|null
+     */
+    private function findIdAttribute(DOMElement $node, $prefixNs, $idName, $attName)
+    {
+        if (is_string($prefixNs) && $prefixNs !== '') {
+            $attr = $node->getAttributeNodeNS($prefixNs, $idName);
+        } else {
+            $attr = $node->getAttributeNode($attName);
+        }
+        return ($attr instanceof DOMAttr) ? $attr : null;
+    }
+
+    /**
+     * Record an existing ID attribute before it is overwritten.
+     *
+     * @param DOMElement $node
+     * @param string|null $prefixNs
+     * @param string $idName
+     * @param string $attName
+     * @return array{name: string, namespaceURI: ?string, prefix: ?string, value: string}|null
+     */
+    private function captureIdAttribute(DOMElement $node, $prefixNs, $idName, $attName)
+    {
+        $attr = $this->findIdAttribute($node, $prefixNs, $idName, $attName);
+        if (! $attr instanceof DOMAttr) {
+            return null;
+        }
+        return array(
+            'name' => $attr->nodeName,
+            'namespaceURI' => $attr->namespaceURI,
+            'prefix' => $attr->prefix,
+            'value' => $attr->value,
+        );
+    }
+
+    /**
+     * In-scope prefix to namespace URI map, omitting the xml prefix.
+     *
+     * @param DOMElement $node
+     * @return array<string, string>
+     */
+    private function inScopeNamespaceMap(DOMElement $node)
+    {
+        $map = array();
+        $owner = $node->ownerDocument;
+        if (! $owner instanceof DOMDocument) {
+            return $map;
+        }
+        $xpath = new DOMXPath($owner);
+        $nodes = $xpath->query('namespace::*', $node);
+        if ($nodes === false) {
+            return $map;
+        }
+        foreach ($nodes as $ns) {
+            /*
+             * namespace::* yields DOMNameSpaceNode, which is not a DOMNode
+             * on this PHP. Read the prefix and URI from the node directly.
+             */
+            if (! is_object($ns) || ! isset($ns->localName) || $ns->localName === 'xml') {
+                continue;
+            }
+            $map[$ns->localName] = $ns->nodeValue;
+        }
+        return $map;
+    }
+
+    /**
+     * Namespace bindings on the target before an ID is written.
+     *
+     * inScope is every prefix visible on the target. local is the subset
+     * declared on the target rather than inherited: a prefix is local when
+     * the parent does not bind it, or binds it to a different URI.
+     *
+     * @param DOMElement $node
+     * @return array{inScope: array<string, string>, local: array<string, string>}
+     */
+    private function captureNamespaceSnapshot(DOMElement $node)
+    {
+        $inScope = $this->inScopeNamespaceMap($node);
+        $inherited = array();
+        $parent = $node->parentNode;
+        if ($parent instanceof DOMElement) {
+            $inherited = $this->inScopeNamespaceMap($parent);
+        }
+        $local = array();
+        foreach ($inScope as $prefix => $uri) {
+            if (! array_key_exists($prefix, $inherited) || $inherited[$prefix] !== $uri) {
+                $local[$prefix] = $uri;
+            }
+        }
+        return array(
+            'inScope' => $inScope,
+            'local' => $local,
+        );
+    }
+
+    /**
+     * Drop local namespace declarations this call added.
+     *
+     * A declaration that was already on the target is kept. An inherited
+     * binding is kept. A new prefix, or a local redeclaration of a prefix
+     * to a different URI, is removed.
+     *
+     * @param DOMElement $node
+     * @param array<string, string> $originalLocal
+     */
+    private function removeAddedNamespaceDeclarations(DOMElement $node, array $originalLocal)
+    {
+        for ($i = 0; $i < 8; $i++) {
+            $removed = false;
+            $parent = $node->parentNode;
+            $inherited = ($parent instanceof DOMElement) ? $this->inScopeNamespaceMap($parent) : array();
+            foreach ($this->inScopeNamespaceMap($node) as $prefix => $uri) {
+                if ($prefix === '' || $prefix === 'xml') {
+                    continue;
+                }
+                $isLocal = ! array_key_exists($prefix, $inherited) || $inherited[$prefix] !== $uri;
+                if (! $isLocal) {
+                    continue;
+                }
+                if (array_key_exists($prefix, $originalLocal) && $originalLocal[$prefix] === $uri) {
+                    continue;
+                }
+                $node->removeAttributeNS($uri, $prefix);
+                $removed = true;
+                break;
+            }
+            if (! $removed) {
+                return;
+            }
+        }
+    }
+
+    /**
+     * Undo an ID attribute written for a Reference that was not finished.
+     *
+     * An attribute that was not present is removed. An attribute that was
+     * overwritten is restored with its text, qualified name, namespace and
+     * prefix. Namespace declarations added for that ID are removed. A
+     * binding that was already on the element or an ancestor is left in
+     * place.
+     *
+     * @param DOMElement $node
+     * @param string|null $prefixNs
+     * @param string $idName
+     * @param string $attName
+     * @param array{name: string, namespaceURI: ?string, prefix: ?string, value: string}|null $snapshot
+     * @param array{inScope: array<string, string>, local: array<string, string>}|null $nsSnapshot
+     */
+    private function revertWrittenIdAttribute(DOMElement $node, $prefixNs, $idName, $attName, $snapshot, $nsSnapshot)
+    {
+        $current = $this->findIdAttribute($node, $prefixNs, $idName, $attName);
+        if ($current instanceof DOMAttr) {
+            $node->removeAttributeNode($current);
+        }
+        if ($snapshot !== null) {
+            $ns = $snapshot['namespaceURI'];
+            if (is_string($ns) && $ns !== '') {
+                $node->setAttributeNS($ns, $snapshot['name'], $snapshot['value']);
+            } else {
+                $node->setAttribute($snapshot['name'], $snapshot['value']);
+            }
+        }
+        if (is_array($nsSnapshot)) {
+            $this->removeAddedNamespaceDeclarations($node, $nsSnapshot['local']);
+        }
     }
 
     /**
