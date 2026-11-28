@@ -1,6 +1,7 @@
 <?php
 namespace RobRichards\XMLSecLibs;
 
+use DOMAttr;
 use DOMDocument;
 use DOMElement;
 use DOMNode;
@@ -1114,65 +1115,77 @@ class XMLSecurityDSig
         $refNode = $this->createNewSignNode('Reference');
         $sinfoNode->appendChild($refNode);
 
-        if (! $omit_uri) {
-            if (! $node instanceof DOMDocument) {
-                $uri = null;
-                if (! $overwrite_id) {
-                    $uri = $prefix_ns ? $node->getAttributeNS($prefix_ns, $id_name) : $node->getAttribute($id_name);
+        /*
+         * The Reference is now in SignedInfo. Any failure below removes it
+         * and rethrows the original exception. An ID written for this
+         * Reference is removed again, and an ID that was overwritten is
+         * put back. An ID that was only read is left as it was.
+         */
+        $idSnapshot = null;
+        $idWritten = false;
+        try {
+            if (! $omit_uri) {
+                if (! $node instanceof DOMDocument) {
+                    $uri = null;
+                    if (! $overwrite_id) {
+                        $uri = $prefix_ns ? $node->getAttributeNS($prefix_ns, $id_name) : $node->getAttribute($id_name);
+                    }
+                    if (empty($uri)) {
+                        $uri = self::generateGUID();
+                        $idSnapshot = $this->captureIdAttribute($node, $prefix_ns, $id_name, $attname);
+                        $node->setAttributeNS($prefix_ns, $attname, $uri);
+                        $idWritten = true;
+                    }
+                    $refNode->setAttribute("URI", '#'.$uri);
+                } elseif ($force_uri) {
+                    $refNode->setAttribute("URI", '');
                 }
-                if (empty($uri)) {
-                    $uri = self::generateGUID();
-                    $node->setAttributeNS($prefix_ns, $attname, $uri);
-                }
-                $refNode->setAttribute("URI", '#'.$uri);
-            } elseif ($force_uri) {
-                $refNode->setAttribute("URI", '');
             }
-        }
 
-        if ($transforms_elem) {
-            $transNodes = $this->createNewSignNode('Transforms');
-            $refNode->appendChild($transNodes);
+            if ($transforms_elem) {
+                $transNodes = $this->createNewSignNode('Transforms');
+                $refNode->appendChild($transNodes);
 
-            if (is_array($arTransforms)) {
-                foreach ($arTransforms AS $transform) {
+                if (is_array($arTransforms)) {
+                    foreach ($arTransforms AS $transform) {
+                        $transNode = $this->createNewSignNode('Transform');
+                        $transNodes->appendChild($transNode);
+                        if (is_array($transform) &&
+                            (! empty($transform['http://www.w3.org/TR/1999/REC-xpath-19991116'])) &&
+                            (! empty($transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['query']))) {
+                            $transNode->setAttribute('Algorithm', 'http://www.w3.org/TR/1999/REC-xpath-19991116');
+                            $XPathNode = $this->createNewSignNode('XPath', $transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['query']);
+                            $transNode->appendChild($XPathNode);
+                            if (! empty($transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['namespaces'])) {
+                                foreach ($transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['namespaces'] AS $prefix => $namespace) {
+                                    $XPathNode->setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:$prefix", $namespace);
+                                }
+                            }
+                        } else {
+                            $transNode->setAttribute('Algorithm', $transform);
+                        }
+                    }
+                } elseif (! empty($this->canonicalMethod)) {
                     $transNode = $this->createNewSignNode('Transform');
                     $transNodes->appendChild($transNode);
-                    if (is_array($transform) &&
-                        (! empty($transform['http://www.w3.org/TR/1999/REC-xpath-19991116'])) &&
-                        (! empty($transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['query']))) {
-                        $transNode->setAttribute('Algorithm', 'http://www.w3.org/TR/1999/REC-xpath-19991116');
-                        $XPathNode = $this->createNewSignNode('XPath', $transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['query']);
-                        $transNode->appendChild($XPathNode);
-                        if (! empty($transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['namespaces'])) {
-                            foreach ($transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['namespaces'] AS $prefix => $namespace) {
-                                $XPathNode->setAttributeNS("http://www.w3.org/2000/xmlns/", "xmlns:$prefix", $namespace);
-                            }
-                        }
-                    } else {
-                        $transNode->setAttribute('Algorithm', $transform);
-                    }
+                    $transNode->setAttribute('Algorithm', $this->canonicalMethod);
                 }
-            } elseif (! empty($this->canonicalMethod)) {
-                $transNode = $this->createNewSignNode('Transform');
-                $transNodes->appendChild($transNode);
-                $transNode->setAttribute('Algorithm', $this->canonicalMethod);
             }
-        }
 
-        /*
-         * Every Reference written here has no URI, URI="" or URI="#id". The
-         * verifier dereferences all three without comments, so a
-         * WithComments canonicalization transform sees no comments on either
-         * side. Digest the same node set the verifier will.
-         */
-        try {
+            /*
+             * Every Reference written here has no URI, URI="" or URI="#id". The
+             * verifier dereferences all three without comments, so a
+             * WithComments canonicalization transform sees no comments on either
+             * side. Digest the same node set the verifier will.
+             */
             $canonicalData = $this->processTransforms($refNode, $node, false, true);
             $digValue = $this->calculateDigest($algorithm, $canonicalData);
         } catch (\Throwable $e) {
-            /* Leave no half-built Reference behind. */
             if ($refNode->parentNode !== null) {
                 $refNode->parentNode->removeChild($refNode);
+            }
+            if ($idWritten && $node instanceof DOMElement) {
+                $this->revertWrittenIdAttribute($node, $prefix_ns, $id_name, $attname, $idSnapshot);
             }
             throw $e;
         }
@@ -1183,6 +1196,89 @@ class XMLSecurityDSig
 
         $digestValue = $this->createNewSignNode('DigestValue', $digValue);
         $refNode->appendChild($digestValue);
+    }
+
+    /**
+     * Locate the ID attribute this call would write.
+     *
+     * A prefix_ns looks the attribute up by namespace. Otherwise the lookup
+     * is by the attribute name.
+     *
+     * @param DOMElement $node
+     * @param string|null $prefixNs
+     * @param string $idName
+     * @param string $attName
+     * @return DOMAttr|null
+     */
+    private function findIdAttribute(DOMElement $node, $prefixNs, $idName, $attName)
+    {
+        if (is_string($prefixNs) && $prefixNs !== '') {
+            $attr = $node->getAttributeNodeNS($prefixNs, $idName);
+        } else {
+            $attr = $node->getAttributeNode($attName);
+        }
+        return ($attr instanceof DOMAttr) ? $attr : null;
+    }
+
+    /**
+     * Record an existing ID attribute before it is overwritten.
+     *
+     * @param DOMElement $node
+     * @param string|null $prefixNs
+     * @param string $idName
+     * @param string $attName
+     * @return array{name: string, namespaceURI: ?string, prefix: ?string, value: string}|null
+     */
+    private function captureIdAttribute(DOMElement $node, $prefixNs, $idName, $attName)
+    {
+        $attr = $this->findIdAttribute($node, $prefixNs, $idName, $attName);
+        if (! $attr instanceof DOMAttr) {
+            return null;
+        }
+        return array(
+            'name' => $attr->nodeName,
+            'namespaceURI' => $attr->namespaceURI,
+            'prefix' => $attr->prefix,
+            'value' => $attr->value,
+        );
+    }
+
+    /**
+     * Undo an ID attribute written for a Reference that was not finished.
+     *
+     * An attribute that was not present is removed. An attribute that was
+     * overwritten is restored with its value, qualified name, namespace
+     * and prefix.
+     *
+     * @param DOMElement $node
+     * @param string|null $prefixNs
+     * @param string $idName
+     * @param string $attName
+     * @param array{name: string, namespaceURI: ?string, prefix: ?string, value: string}|null $snapshot
+     */
+    private function revertWrittenIdAttribute(DOMElement $node, $prefixNs, $idName, $attName, $snapshot)
+    {
+        $current = $this->findIdAttribute($node, $prefixNs, $idName, $attName);
+        if ($current instanceof DOMAttr) {
+            $node->removeAttributeNode($current);
+        }
+        if ($snapshot === null) {
+            return;
+        }
+        $doc = $node->ownerDocument;
+        if (! $doc instanceof DOMDocument) {
+            return;
+        }
+        $ns = $snapshot['namespaceURI'];
+        if (is_string($ns) && $ns !== '') {
+            $attr = $doc->createAttributeNS($ns, $snapshot['name']);
+            $attr->value = $snapshot['value'];
+            $node->setAttributeNodeNS($attr);
+            return;
+        }
+        $attr = $doc->createAttribute($snapshot['name']);
+        $attr->value = $snapshot['value'];
+        $node->setAttributeNode($attr);
     }
 
     /**
