@@ -40,9 +40,29 @@
  * @version   4.1.0
  */
 
-require __DIR__ . '/vendor/autoload.php';
+// Load the Composer autoloader that provides phpseclib. Use the package's own
+// vendor/ directory (a git clone) or, when installed as a dependency
+// (<vendor-dir>/robrichards/xmlseclibs), the dependent project's autoloader.
+// Skip this when the dependencies are already available, for example when the
+// application has already loaded vendor/autoload.php.
+if (!class_exists('phpseclib3\\Crypt\\RSA')) {
+    $xmlseclibs_autoload = null;
+    foreach ([__DIR__ . '/vendor/autoload.php', dirname(__DIR__, 2) . '/autoload.php'] as $xmlseclibs_candidate) {
+        if (is_file($xmlseclibs_candidate)) {
+            $xmlseclibs_autoload = $xmlseclibs_candidate;
+            break;
+        }
+    }
+    if ($xmlseclibs_autoload === null) {
+        throw new RuntimeException(
+            'xmlseclibs: Composer autoloader not found. Run "composer install" or load vendor/autoload.php before including xmlseclibs.php.'
+        );
+    }
+    require_once $xmlseclibs_autoload;
+    unset($xmlseclibs_autoload, $xmlseclibs_candidate);
+}
 $xmlseclibs_srcdir = dirname(__FILE__) . '/src/';
-require $xmlseclibs_srcdir . '/XMLSecurityKey.php';
-require $xmlseclibs_srcdir . '/XMLSecurityDSig.php';
-require $xmlseclibs_srcdir . '/XMLSecEnc.php';
-require $xmlseclibs_srcdir . '/Utils/XPath.php';
+require_once $xmlseclibs_srcdir . '/XMLSecurityKey.php';
+require_once $xmlseclibs_srcdir . '/XMLSecurityDSig.php';
+require_once $xmlseclibs_srcdir . '/XMLSecEnc.php';
+require_once $xmlseclibs_srcdir . '/Utils/XPath.php';
