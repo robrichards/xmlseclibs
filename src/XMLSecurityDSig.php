@@ -65,10 +65,13 @@ class XMLSecurityDSig
     const EXC_C14N_COMMENTS = 'http://www.w3.org/2001/10/xml-exc-c14n#WithComments';
     const ENVELOPED = 'http://www.w3.org/2000/09/xmldsig#enveloped-signature';
 
-    /** Default maximum XPath transforms allowed per Reference (DoS protection). */
+    /**
+     * Default value of $maxXPathTransforms.
+     * Enforcement never applies more than one XPath transform per reference.
+     */
     const MAX_XPATH_TRANSFORMS = 5;
 
-    /** Default maximum namespaces allowed on a single XPath transform (DoS protection). */
+    /** Default maximum namespaces allowed on a single XPath transform. */
     const MAX_XPATH_NAMESPACES = 20;
 
     /**
@@ -131,8 +134,12 @@ class XMLSecurityDSig
     public $idNS = array();
 
     /**
-     * Maximum XPath transforms allowed per Reference (DoS protection).
-     * Defaults to MAX_XPATH_TRANSFORMS; override for stricter or more relaxed limits.
+     * Maximum XPath transforms allowed per Reference.
+     *
+     * Only one XPath transform per reference is supported, so a value above
+     * 1 is treated as 1. A lower value is still honored. Defaults to
+     * MAX_XPATH_TRANSFORMS.
+     *
      * @var int
      */
     public $maxXPathTransforms = self::MAX_XPATH_TRANSFORMS;
@@ -145,19 +152,19 @@ class XMLSecurityDSig
     public $maxXPathNamespaces = self::MAX_XPATH_NAMESPACES;
 
     /**
-     * Allow XPath (REC-xpath-19991116) Transforms while verifying references.
+     * Allow XPath (REC-xpath-19991116) transforms on the low-level verify path
+     * (validateReference() and the verification half of processTransforms()).
      *
-     * The XPath Filtering Transform evaluates an arbitrary, document-supplied
-     * XPath expression during validateReference() -- before any signature
-     * cryptography runs. The expression is an arbitrary XPath by design, so it 
-     * cannot be sanitized without breaking the feature.
-     * The maxXPath* caps only bound the count, not the cost of a single expression.
+     * verifyDocument() does not consult this flag. It accepts only
+     * canonicalization and enveloped-signature transforms, including when
+     * legacy mode is enabled.
      *
-     * SAML and WS-Security do not use XPath transforms, so this defaults to
-     * false (reject them on the verification path). Set to true only if you
-     * must verify signatures that legitimately rely on XPath transforms and you
-     * trust the document source. Signing is unaffected (the transforms are
-     * caller-supplied, not attacker-controlled).
+     * When this is true, getValidatedNodes() still returns each reference
+     * target. That node may hold content outside the transformed data that
+     * was digested, so callers using XPath filtering must apply their own
+     * understanding of the transforms. At most one XPath transform per
+     * reference is supported. Signing accepts a caller-supplied XPath
+     * transform subject to that same limit.
      *
      * @var bool
      */
@@ -271,10 +278,12 @@ class XMLSecurityDSig
      * Restore pre-4.0 interoperability defaults for signature verification.
      *
      * Use this only when you must accept documents/peers that rely on
-     * behaviours rejected by default (DOCTYPE, XPath Filtering Transforms,
-     * uncapped XPath transform counts, SHA-1 based SignatureMethod and
-     * DigestMethod algorithms). Prefer migrating peers and then removing the
-     * call.
+     * behaviours rejected by default (DOCTYPE, XPath transforms on the
+     * low-level verify path, SHA-1 based SignatureMethod and DigestMethod
+     * algorithms). verifyDocument() still accepts only canonicalization and
+     * enveloped-signature transforms. $maxXPathTransforms is raised, but
+     * only one XPath transform per reference is supported. Prefer migrating
+     * peers and then removing the call.
      *
      * The SHA-1 algorithms are added to $allowedSignatureAlgorithms and
      * $allowedDigestAlgorithms when those are lists; a null list is left
@@ -715,9 +724,10 @@ class XMLSecurityDSig
                         break;
                     case 'http://www.w3.org/TR/1999/REC-xpath-19991116':
                         /*
-                         * Reject attacker-controlled XPath transforms on the
-                         * verification path unless explicitly allowed. Signing uses
-                         * caller-supplied transforms and is always permitted.
+                         * The verify path rejects XPath transforms unless
+                         * allowXPathTransforms is set. At most one is applied
+                         * per reference; $maxXPathTransforms still applies
+                         * when it is lower.
                          */
                         if (! $signing && ! $this->allowXPathTransforms) {
                             throw new Exception(
@@ -726,9 +736,10 @@ class XMLSecurityDSig
                             );
                         }
                         $xpathTransformCount++;
-                        if ($xpathTransformCount > $this->maxXPathTransforms) {
+                        $xpathLimit = $this->effectiveXPathTransformLimit();
+                        if ($xpathTransformCount > $xpathLimit) {
                             throw new Exception(
-                                'Too many XPath Transformations found ('.$nodelist->length.') with a max allowed of '.$this->maxXPathTransforms
+                                'Too many XPath Transformations found ('.$nodelist->length.') with a max allowed of '.$xpathLimit
                             );
                         }
                         $node = $transform->firstChild;
@@ -939,7 +950,10 @@ class XMLSecurityDSig
             return false;
         }
 
-        /* Add this node to the list of validated nodes. */
+        /*
+         * Record the reference target. It may hold content outside the
+         * transformed data that was digested.
+         */
         if (! empty($resolved['identifier'])) {
             $this->validatedNodes[$resolved['identifier']] = $resolved['dataObject'];
         } else {
@@ -991,6 +1005,13 @@ class XMLSecurityDSig
     }
 
     /**
+     * Validate every Reference digest.
+     *
+     * On success, getValidatedNodes() returns each reference target. That
+     * node may hold content outside the transformed data that was digested.
+     * Callers using XPath filtering must apply their own understanding of
+     * the transforms.
+     *
      * @return bool
      * @throws Exception
      */
@@ -1035,6 +1056,8 @@ class XMLSecurityDSig
      */
     protected function addRefInternal($sinfoNode, $node, $algorithm, $arTransforms=null, $options=null)
     {
+        $this->assertAtMostOneXPathTransform($arTransforms);
+
         $prefix = null;
         $prefix_ns = null;
         $id_name = 'Id';
@@ -1227,6 +1250,11 @@ class XMLSecurityDSig
      * A key that is not a signature key throws, including when
      * $allowedSignatureAlgorithms is null.
      *
+     * This does not replace the nodes from validateReference().
+     * getValidatedNodes() returns each reference target, which may hold
+     * content outside the transformed data that was digested. Callers using
+     * XPath filtering must apply their own understanding of the transforms.
+     *
      * NOTE: be very careful when checking the int return value, because in
      * PHP, -1 will be cast to True when in boolean context. Always check the
      * return value in a strictly typed way, e.g. "$obj->verify(...) === 1".
@@ -1286,6 +1314,99 @@ class XMLSecurityDSig
     }
 
     /**
+     * Highest number of XPath transforms applied to one reference.
+     *
+     * $maxXPathTransforms is honored when it is below 1. Any higher value
+     * is treated as 1.
+     *
+     * @return int
+     */
+    private function effectiveXPathTransformLimit()
+    {
+        if ($this->maxXPathTransforms > 1) {
+            return 1;
+        }
+        return $this->maxXPathTransforms;
+    }
+
+    /**
+     * @param mixed $transform
+     * @return bool
+     */
+    private function isXPathTransformSpec($transform)
+    {
+        if ($transform === 'http://www.w3.org/TR/1999/REC-xpath-19991116') {
+            return true;
+        }
+        return is_array($transform)
+            && ! empty($transform['http://www.w3.org/TR/1999/REC-xpath-19991116'])
+            && ! empty($transform['http://www.w3.org/TR/1999/REC-xpath-19991116']['query']);
+    }
+
+    /**
+     * Reject more than one XPath transform before the document is changed.
+     *
+     * @param null|array $arTransforms
+     * @throws Exception
+     */
+    private function assertAtMostOneXPathTransform($arTransforms)
+    {
+        if (! is_array($arTransforms)) {
+            return;
+        }
+        $xpathCount = 0;
+        foreach ($arTransforms as $transform) {
+            if ($this->isXPathTransformSpec($transform)) {
+                $xpathCount++;
+            }
+        }
+        $xpathLimit = $this->effectiveXPathTransformLimit();
+        if ($xpathCount > $xpathLimit) {
+            throw new Exception(
+                'Too many XPath Transformations found ('.count($arTransforms).') with a max allowed of '.$xpathLimit
+            );
+        }
+    }
+
+    /**
+     * verifyDocument() accepts only canonicalization and enveloped-signature
+     * transforms. Any other transform, including XPath, is rejected before
+     * it is applied. This includes legacy mode.
+     *
+     * @throws Exception
+     */
+    private function assertWholeNodeTransforms()
+    {
+        $xpath = $this->getXPathObj();
+        if (! $xpath || ! $this->sigNode instanceof DOMElement) {
+            throw new Exception('Cannot locate Signature Node');
+        }
+        $allowed = array(
+            self::C14N,
+            self::C14N_COMMENTS,
+            self::EXC_C14N,
+            self::EXC_C14N_COMMENTS,
+            self::ENVELOPED,
+        );
+        $query = './secdsig:SignedInfo/secdsig:Reference/secdsig:Transforms/secdsig:Transform';
+        $nodeset = $xpath->query($query, $this->sigNode, false);
+        if ($nodeset === false) {
+            throw new Exception('verifyDocument() only accepts canonicalization and enveloped-signature transforms');
+        }
+        foreach ($nodeset as $transform) {
+            if (! $transform instanceof DOMElement) {
+                continue;
+            }
+            $algorithm = $transform->getAttribute('Algorithm');
+            if (! in_array($algorithm, $allowed, true)) {
+                throw new Exception(
+                    "verifyDocument() only accepts canonicalization and enveloped-signature transforms: '$algorithm'"
+                );
+            }
+        }
+    }
+
+    /**
      * Safe, high-level XML signature verification.
      *
      * This is the recommended entry point for relying parties (SAML,
@@ -1309,6 +1430,12 @@ class XMLSecurityDSig
      *    every Reference digest validated. The set of validated nodes is
      *    returned so callers never have to re-query the document (which would
      *    reintroduce XML Signature Wrapping).
+     *  - Every Reference Transform must be a canonicalization algorithm this
+     *    library supports (c14n, c14n with comments, exclusive c14n, or
+     *    exclusive c14n with comments) or the enveloped-signature transform.
+     *    Any other transform, including XPath, is rejected before it is
+     *    applied. This includes legacy mode. There is no option to allow
+     *    other transforms on this path.
      *
      * @param XMLSecurityKey|null  $objKey Trusted/pinned verification key.
      * @param DOMDocument|DOMNode  $objDoc Document (or node) to verify.
@@ -1343,6 +1470,7 @@ class XMLSecurityDSig
             if (! $this->locateSignature($objDoc, $pos)) {
                 throw new Exception('Cannot locate Signature Node');
             }
+            $this->assertWholeNodeTransforms();
             if ($this->canonicalizeSignedInfo() === null) {
                 throw new Exception('Cannot canonicalize SignedInfo');
             }
@@ -1949,6 +2077,10 @@ class XMLSecurityDSig
      *
      * The array will contain the id of the referenced node as the key and the node itself
      * as the value. Empty-URI references use numeric keys.
+     *
+     * Each value is the reference target. It may hold content outside the
+     * transformed data that was digested. Callers using XPath filtering must
+     * apply their own understanding of the transforms.
      *
      * Returns:
      *  An associative array of validated nodes or null if no nodes have been validated.
