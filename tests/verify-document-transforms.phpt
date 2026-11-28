@@ -43,9 +43,26 @@ function xpathFilteredSignature() {
 XML;
 }
 
-function rejectInVerifyDocument($legacy) {
+/* Sign SignedInfo only. Reference transforms are not applied here. */
+function withValidSignatureValue($xml) {
     $doc = new DOMDocument();
-    $doc->loadXML(xpathFilteredSignature());
+    $doc->loadXML($xml);
+    $signer = new XMLSecurityDSig();
+    $signer->locateSignature($doc);
+    $canonical = $signer->canonicalizeSignedInfo();
+    $signed = base64_encode(privateKey()->signData($canonical));
+    $xpath = new DOMXPath($doc);
+    $xpath->registerNamespace('ds', XMLSecurityDSig::XMLDSIGNS);
+    $sigValue = $xpath->query('//ds:SignatureValue')->item(0);
+    while ($sigValue->firstChild) {
+        $sigValue->removeChild($sigValue->firstChild);
+    }
+    $sigValue->appendChild($doc->createTextNode($signed));
+    return $doc;
+}
+
+function rejectInVerifyDocument($legacy) {
+    $doc = withValidSignatureValue(xpathFilteredSignature());
     $objDSig = new XMLSecurityDSig();
     if ($legacy) {
         $objDSig->enableLegacyMode();

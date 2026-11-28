@@ -1426,6 +1426,9 @@ class XMLSecurityDSig
      *    explicit list, including an empty array, is used unchanged. The
      *    caller's property values are restored before return. verify() and
      *    validateDigest() still treat null as no restriction.
+     *  - SignedInfo is canonicalized, then the SignatureValue is checked with
+     *    the supplied key. An invalid signature fails before any reference
+     *    is looked up, canonicalized, or digested.
      *  - Success is only reported when the SignedInfo signature is valid AND
      *    every Reference digest validated. The set of validated nodes is
      *    returned so callers never have to re-query the document (which would
@@ -1433,9 +1436,10 @@ class XMLSecurityDSig
      *  - Every Reference Transform must be a canonicalization algorithm this
      *    library supports (c14n, c14n with comments, exclusive c14n, or
      *    exclusive c14n with comments) or the enveloped-signature transform.
-     *    Any other transform, including XPath, is rejected before it is
-     *    applied. This includes legacy mode. There is no option to allow
-     *    other transforms on this path.
+     *    Any other transform, including XPath, is rejected after the
+     *    signature check and before the transform is applied. This includes
+     *    legacy mode. There is no option to allow other transforms on this
+     *    path.
      *
      * @param XMLSecurityKey|null  $objKey Trusted/pinned verification key.
      * @param DOMDocument|DOMNode  $objDoc Document (or node) to verify.
@@ -1470,17 +1474,19 @@ class XMLSecurityDSig
             if (! $this->locateSignature($objDoc, $pos)) {
                 throw new Exception('Cannot locate Signature Node');
             }
-            $this->assertWholeNodeTransforms();
             if ($this->canonicalizeSignedInfo() === null) {
                 throw new Exception('Cannot canonicalize SignedInfo');
             }
-
-            /* Throws on any unresolved/failed/duplicate reference (fail closed). */
-            $this->validateReference();
-
             if ($this->verify($objKey) !== 1) {
                 throw new Exception('Signature validation failed');
             }
+
+            /*
+             * Reference lookup, canonicalization, and digests run only after
+             * the signature has been checked.
+             */
+            $this->assertWholeNodeTransforms();
+            $this->validateReference();
 
             $validatedNodes = $this->getValidatedNodes();
             if (empty($validatedNodes)) {

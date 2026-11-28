@@ -23,7 +23,7 @@ try {
     print "VALID: ".$e->getMessage()."\n";
 }
 
-/* 2. Downgrade rejected: SHA-1 signature is not in the default allowlist. */
+/* 2. SHA-1 signature is not in the default allowlist. */
 $doc = new DOMDocument();
 $doc->load(dirname(__FILE__) . '/sign-basic-test.xml');
 $objXMLSecDSig = new XMLSecurityDSig();
@@ -31,9 +31,9 @@ try {
     $objKey = new XMLSecurityKey(XMLSecurityKey::RSA_SHA1, array('type' => 'public'));
     $objKey->loadKey(dirname(__FILE__) . '/mycert.pem', true, true);
     $objXMLSecDSig->verifyDocument($objKey, $doc);
-    print "DOWNGRADE: unexpected success\n";
+    print "SHA1: unexpected success\n";
 } catch (Exception $e) {
-    print "DOWNGRADE: ".$e->getMessage()."\n";
+    print "SHA1: ".$e->getMessage()."\n";
 }
 
 /* 3. A key must be supplied; KeyInfo is never trusted implicitly. */
@@ -49,5 +49,5 @@ try {
 ?>
 --EXPECTF--
 VALID: yes
-DOWNGRADE: DigestMethod algorithm is not allowed: 'http://www.w3.org/2000/09/xmldsig#sha1'
+SHA1: SignatureMethod algorithm is not allowed: 'http://www.w3.org/2000/09/xmldsig#rsa-sha1'
 NOKEY: A trusted key must be supplied to verifyDocument()

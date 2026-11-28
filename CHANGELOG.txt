@@ -2,6 +2,11 @@ xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 XX, Nov 2026, 4.1.0
 Bug Fixes:
+- verifyDocument() checks the SignatureValue with the supplied key after
+  SignedInfo is canonicalized and before any reference is looked up,
+  canonicalized, or digested. An invalid signature fails before reference
+  processing. Reference transforms are checked after the signature and
+  before reference digests.
 - verifyDocument() accepts only canonicalization transforms (c14n, c14n
   with comments, exclusive c14n, and exclusive c14n with comments) and the
   enveloped-signature transform. Any other transform, including XPath, is
