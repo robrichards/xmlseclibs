@@ -42,13 +42,13 @@ show('LOCATE_RETRIEVAL', viaLocateKeyInfo(
     $data
 ), $data);
 
-/* Static helpers: explicit argument, omitted (DEFAULT_DATA_ALGORITHMS), explicit null, and staticLocateKeyInfo(). */
+/* Static helpers: explicit argument, omitted (DEFAULT_DATA_ALGORITHMS), explicit full list, and staticLocateKeyInfo(). */
 $doc = new DOMDocument();
 $doc->loadXML('<Root '.NS.'>'.ek(XMLSecurityKey::RSA_OAEP, '', ek(XMLSecurityKey::RSA_OAEP_MGF1P)).'</Root>');
 $outer = $doc->getElementsByTagNameNS(XMLSecEnc::XMLENCNS, 'EncryptedKey')->item(0);
 show('STATIC_FROM', XMLSecurityKey::fromEncryptedKeyElement($outer, 0, false, XMLSecEnc::DEFAULT_KEY_ALGORITHMS, $data), $data);
 show('STATIC_FROM_OMITTED', XMLSecurityKey::fromEncryptedKeyElement($outer), XMLSecEnc::DEFAULT_DATA_ALGORITHMS);
-show('STATIC_FROM_NULL', XMLSecurityKey::fromEncryptedKeyElement($outer, 0, false, XMLSecEnc::DEFAULT_KEY_ALGORITHMS, null), null);
+show('STATIC_FROM_ALL', XMLSecurityKey::fromEncryptedKeyElement($outer, 0, false, XMLSecEnc::DEFAULT_KEY_ALGORITHMS, XMLSecEnc::SUPPORTED_DATA_ALGORITHMS), XMLSecEnc::SUPPORTED_DATA_ALGORITHMS);
 $base = new XMLSecurityKey(XMLSecurityKey::RSA_OAEP, array('type' => 'private'));
 show('STATIC_LOCATE_NESTED', XMLSecEnc::staticLocateKeyInfo($base, $outer, 0, false, XMLSecEnc::DEFAULT_KEY_ALGORITHMS, $data), $data);
 ?>
@@ -57,5 +57,5 @@ LOCATE_EMBEDDED: propagated / http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p
 LOCATE_RETRIEVAL: propagated / http://www.w3.org/2009/xmlenc11#rsa-oaep
 STATIC_FROM: propagated / http://www.w3.org/2009/xmlenc11#rsa-oaep
 STATIC_FROM_OMITTED: propagated / http://www.w3.org/2009/xmlenc11#rsa-oaep
-STATIC_FROM_NULL: propagated / http://www.w3.org/2009/xmlenc11#rsa-oaep
+STATIC_FROM_ALL: propagated / http://www.w3.org/2009/xmlenc11#rsa-oaep
 STATIC_LOCATE_NESTED: propagated / http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p

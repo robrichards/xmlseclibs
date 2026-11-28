@@ -91,8 +91,6 @@ class XMLSecurityDSig
      * SHA-1 based signatures (rsa-sha1, hmac-sha1) are not included;
      * enableLegacyMode() adds them (see LEGACY_SIGNATURE_ALGORITHMS), or set
      * $allowedSignatureAlgorithms explicitly. DSA signatures are not supported.
-     * verify() treats null as no restriction; verifyDocument() uses this list
-     * when the property is null.
      */
     const DEFAULT_SIGNATURE_ALGORITHMS = array(
         XMLSecurityKey::RSA_SHA256,
@@ -107,9 +105,7 @@ class XMLSecurityDSig
     /**
      * Default Reference DigestMethod allowlist ($allowedDigestAlgorithms).
      * SHA-1 and RIPEMD-160 are not included; enableLegacyMode() adds SHA-1.
-     * RIPEMD-160 requires an explicit list entry. verify()/validateDigest()
-     * treat a null list as no restriction; verifyDocument() uses this list
-     * when the property is null.
+     * RIPEMD-160 requires an explicit list entry.
      */
     const DEFAULT_DIGEST_ALGORITHMS = array(
         self::SHA256,
@@ -126,6 +122,25 @@ class XMLSecurityDSig
     /** DigestMethod algorithms enableLegacyMode() adds to $allowedDigestAlgorithms. */
     const LEGACY_DIGEST_ALGORITHMS = array(
         self::SHA1,
+    );
+
+    /**
+     * Every SignatureMethod algorithm this library can verify. Assign it to
+     * $allowedSignatureAlgorithms to accept all of them explicitly.
+     */
+    const SUPPORTED_SIGNATURE_ALGORITHMS = array(
+        ...self::DEFAULT_SIGNATURE_ALGORITHMS,
+        ...self::LEGACY_SIGNATURE_ALGORITHMS,
+    );
+
+    /**
+     * Every Reference DigestMethod algorithm this library can compute. Assign
+     * it to $allowedDigestAlgorithms to accept all of them explicitly.
+     */
+    const SUPPORTED_DIGEST_ALGORITHMS = array(
+        ...self::DEFAULT_DIGEST_ALGORITHMS,
+        ...self::LEGACY_DIGEST_ALGORITHMS,
+        self::RIPEMD160,
     );
 
     const BASE_TEMPLATE = '<Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
@@ -187,30 +202,33 @@ class XMLSecurityDSig
      * verify() (and therefore verifyDocument()).
      *
      * Defaults to DEFAULT_SIGNATURE_ALGORITHMS. enableLegacyMode() adds the
-     * SHA-1 based algorithms when this is a list; you can also add entries
+     * SHA-1 based algorithms; you can also add entries
      * (e.g. $dsig->allowedSignatureAlgorithms[] = XMLSecurityKey::RSA_SHA1)
-     * or set your own list. verify() treats null as no restriction.
-     * verifyDocument() substitutes DEFAULT_SIGNATURE_ALGORITHMS when this is
-     * null, for that call only, then restores the property. Signing is
-     * unaffected.
+     * or set your own list. The property is always an array: assigning null
+     * throws a TypeError. An empty array allows no algorithm, so every
+     * verification fails. To accept every supported algorithm, assign
+     * SUPPORTED_SIGNATURE_ALGORITHMS. verify() and verifyDocument() apply
+     * the same list. Signing is unaffected.
      *
-     * @var array|null
+     * @var array<int, string>
      */
-    public $allowedSignatureAlgorithms = self::DEFAULT_SIGNATURE_ALGORITHMS;
+    public array $allowedSignatureAlgorithms = self::DEFAULT_SIGNATURE_ALGORITHMS;
 
     /**
      * Allowlist of acceptable Reference DigestMethod algorithm URIs, enforced
      * by validateDigest() (and therefore validateReference()/verifyDocument()).
      *
-     * Defaults to DEFAULT_DIGEST_ALGORITHMS. enableLegacyMode() adds SHA-1
-     * when this is a list; set your own list to widen or narrow it.
-     * validateDigest() treats null as no restriction. verifyDocument()
-     * substitutes DEFAULT_DIGEST_ALGORITHMS when this is null, for that call
-     * only, then restores the property. Signing is unaffected.
+     * Defaults to DEFAULT_DIGEST_ALGORITHMS. enableLegacyMode() adds SHA-1;
+     * set your own list to widen or narrow it. The property is always an
+     * array: assigning null throws a TypeError. An empty array allows no
+     * algorithm, so every reference validation fails. To accept every
+     * supported algorithm, assign SUPPORTED_DIGEST_ALGORITHMS.
+     * validateDigest() (and therefore validateReference() and
+     * verifyDocument()) applies this list. Signing is unaffected.
      *
-     * @var array|null
+     * @var array<int, string>
      */
-    public $allowedDigestAlgorithms = self::DEFAULT_DIGEST_ALGORITHMS;
+    public array $allowedDigestAlgorithms = self::DEFAULT_DIGEST_ALGORITHMS;
 
     /**
      * Reject documents that carry a DOCTYPE when locating a Signature.
@@ -298,8 +316,8 @@ class XMLSecurityDSig
      * peers and then removing the call.
      *
      * The SHA-1 algorithms are added to $allowedSignatureAlgorithms and
-     * $allowedDigestAlgorithms when those are lists; a null list is left
-     * null. Assigning a list afterwards replaces it, so call this after
+     * $allowedDigestAlgorithms, without duplicating entries already present.
+     * Assigning a list afterwards replaces it, so call this after
      * configuring the lists.
      *
      * This does NOT weaken cryptographic checks that are always enforced in
@@ -314,18 +332,14 @@ class XMLSecurityDSig
         $this->allowXPathTransforms = true;
         $this->maxXPathTransforms = PHP_INT_MAX;
         $this->maxXPathNamespaces = PHP_INT_MAX;
-        if (is_array($this->allowedSignatureAlgorithms)) {
-            foreach (self::LEGACY_SIGNATURE_ALGORITHMS as $algorithm) {
-                if (! in_array($algorithm, $this->allowedSignatureAlgorithms, true)) {
-                    $this->allowedSignatureAlgorithms[] = $algorithm;
-                }
+        foreach (self::LEGACY_SIGNATURE_ALGORITHMS as $algorithm) {
+            if (! in_array($algorithm, $this->allowedSignatureAlgorithms, true)) {
+                $this->allowedSignatureAlgorithms[] = $algorithm;
             }
         }
-        if (is_array($this->allowedDigestAlgorithms)) {
-            foreach (self::LEGACY_DIGEST_ALGORITHMS as $algorithm) {
-                if (! in_array($algorithm, $this->allowedDigestAlgorithms, true)) {
-                    $this->allowedDigestAlgorithms[] = $algorithm;
-                }
+        foreach (self::LEGACY_DIGEST_ALGORITHMS as $algorithm) {
+            if (! in_array($algorithm, $this->allowedDigestAlgorithms, true)) {
+                $this->allowedDigestAlgorithms[] = $algorithm;
             }
         }
         return $this;
@@ -625,8 +639,7 @@ class XMLSecurityDSig
             throw new Exception('Invalid structure - Expected exactly one DigestMethod element');
         }
         $digestAlgorithm = $digestMethod->getAttribute('Algorithm');
-        if ($this->allowedDigestAlgorithms !== null
-            && ! in_array($digestAlgorithm, $this->allowedDigestAlgorithms, true)) {
+        if (! in_array($digestAlgorithm, $this->allowedDigestAlgorithms, true)) {
             throw new Exception("DigestMethod algorithm is not allowed: '$digestAlgorithm'");
         }
         $digValue = $this->calculateDigest($digestAlgorithm, $data, false);
@@ -1531,8 +1544,7 @@ class XMLSecurityDSig
 
             $objKey->assertSignatureKey();
 
-            if ($this->allowedSignatureAlgorithms !== null
-                && ! in_array($sigMethod, $this->allowedSignatureAlgorithms, true)) {
+            if (! in_array($sigMethod, $this->allowedSignatureAlgorithms, true)) {
                 throw new Exception("SignatureMethod algorithm is not allowed: '$sigMethod'");
             }
 
@@ -1666,14 +1678,10 @@ class XMLSecurityDSig
      *    so an attacker cannot both supply the message and the key that
      *    verifies it.
      *  - Both the SignatureMethod and every Reference DigestMethod are checked
-     *    against $allowedSignatureAlgorithms / $allowedDigestAlgorithms.
-     *    Each null list is replaced for this call only with
-     *    DEFAULT_SIGNATURE_ALGORITHMS / DEFAULT_DIGEST_ALGORITHMS.
-     *    enableLegacyMode() extends those lists only when they are arrays, so
-     *    a null property still falls back to the DEFAULT_* constants. An
-     *    explicit list, including an empty array, is used unchanged. The
-     *    caller's property values are restored before return. verify() and
-     *    validateDigest() still treat null as no restriction.
+     *    against $allowedSignatureAlgorithms / $allowedDigestAlgorithms,
+     *    the same lists verify() and validateDigest() apply. Both are always
+     *    arrays; an empty array allows nothing. The properties are not
+     *    modified.
      *  - SignedInfo is canonicalized, then the SignatureValue is checked with
      *    the supplied key. An invalid signature fails before any reference
      *    is looked up, canonicalized, or digested.
@@ -1706,22 +1714,6 @@ class XMLSecurityDSig
             throw new Exception('A trusted key must be supplied to verifyDocument()');
         }
 
-        /*
-         * Resolve each list on its own. Null falls back to the DEFAULT_*
-         * constant for this call; an explicit list, including [], is kept.
-         * enableLegacyMode() only appends LEGACY_* entries to non-null lists,
-         * so a null property still uses the constant (not the legacy additions).
-         * The caller's values are restored even when verification throws.
-         */
-        $prevSigAlgs = $this->allowedSignatureAlgorithms;
-        $prevDigAlgs = $this->allowedDigestAlgorithms;
-        if ($this->allowedSignatureAlgorithms === null) {
-            $this->allowedSignatureAlgorithms = self::DEFAULT_SIGNATURE_ALGORITHMS;
-        }
-        if ($this->allowedDigestAlgorithms === null) {
-            $this->allowedDigestAlgorithms = self::DEFAULT_DIGEST_ALGORITHMS;
-        }
-
         try {
             if (! $this->locateSignature($objDoc, $pos)) {
                 throw new Exception('Cannot locate Signature Node');
@@ -1748,9 +1740,6 @@ class XMLSecurityDSig
         } catch (\Throwable $e) {
             $this->validatedNodes = null;
             throw $e;
-        } finally {
-            $this->allowedSignatureAlgorithms = $prevSigAlgs;
-            $this->allowedDigestAlgorithms = $prevDigAlgs;
         }
     }
 

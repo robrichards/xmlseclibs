@@ -28,8 +28,8 @@ function resolved($xml) {
     $doc = new DOMDocument();
     $doc->loadXML($xml);
     $dec = new XMLSecEnc();
-    $dec->allowedKeyAlgorithms = null;
-    $dec->allowedDataAlgorithms = null;
+    $dec->allowedKeyAlgorithms = XMLSecEnc::SUPPORTED_KEY_ALGORITHMS;
+    $dec->allowedDataAlgorithms = XMLSecEnc::SUPPORTED_DATA_ALGORITHMS;
     $dec->setNode($dec->locateEncryptedData($doc));
     $key = $dec->locateKeyInfo($dec->locateKey());
     return $key->getAlgorithm().' encrypted='.($key->isEncrypted ? 'yes' : 'no');
@@ -68,10 +68,10 @@ function element($inner) {
 }
 
 attempt('FROM_FOREIGN_AES', function () use ($foreignAes) {
-    return XMLSecurityKey::fromEncryptedKeyElement(element($foreignAes), 0, true, null, null)->getAlgorithm();
+    return XMLSecurityKey::fromEncryptedKeyElement(element($foreignAes), 0, true, XMLSecEnc::SUPPORTED_KEY_ALGORITHMS, XMLSecEnc::SUPPORTED_DATA_ALGORITHMS)->getAlgorithm();
 });
 attempt('FROM_FOREIGN_RSA', function () use ($foreignRsa) {
-    return XMLSecurityKey::fromEncryptedKeyElement(element($foreignRsa), 0, true, null, null)->getAlgorithm();
+    return XMLSecurityKey::fromEncryptedKeyElement(element($foreignRsa), 0, true, XMLSecEnc::SUPPORTED_KEY_ALGORITHMS, XMLSecEnc::SUPPORTED_DATA_ALGORITHMS)->getAlgorithm();
 });
 ?>
 --EXPECTF--

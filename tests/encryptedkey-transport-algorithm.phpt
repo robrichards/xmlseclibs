@@ -34,7 +34,7 @@ function encryptedData($keyInfo, $after = '') {
 }
 
 /* Resolve the EncryptedKey through locateKeyInfo() with the given policy. */
-function resolve($xml, $keyAlgs, $dataAlgs = null) {
+function resolve($xml, $keyAlgs, $dataAlgs = XMLSecEnc::SUPPORTED_DATA_ALGORITHMS) {
     $doc = new DOMDocument();
     $doc->loadXML($xml);
     $dec = new XMLSecEnc();
@@ -50,31 +50,31 @@ $symmetric = array(
     'TRIPLEDES_CBC' => XMLSecurityKey::TRIPLEDES_CBC,
 );
 
-/* 1. Rejected under the default lists, under null lists, and when the data list names the algorithm. */
+/* 1. Rejected under the default lists, under the explicit full lists, and when the data list names the algorithm. */
 foreach ($symmetric as $label => $alg) {
     $xml = encryptedData(encryptedKey($alg));
     attempt("$label DEFAULT", function () use ($xml) {
         return resolve($xml, XMLSecEnc::DEFAULT_KEY_ALGORITHMS);
     });
-    attempt("$label NULL", function () use ($xml) {
-        return resolve($xml, null, null);
+    attempt("$label ALL", function () use ($xml) {
+        return resolve($xml, XMLSecEnc::SUPPORTED_KEY_ALGORITHMS, XMLSecEnc::SUPPORTED_DATA_ALGORITHMS);
     });
     attempt("$label DATA_LIST", function () use ($xml, $alg) {
-        return resolve($xml, null, array_unique(array(XMLSecurityKey::AES256_GCM, $alg)));
+        return resolve($xml, XMLSecEnc::SUPPORTED_KEY_ALGORITHMS, array_unique(array(XMLSecurityKey::AES256_GCM, $alg)));
     });
 }
 
 /* 2. Nested and RetrievalMethod-referenced EncryptedKeys. */
 $nested = encryptedData(encryptedKey(XMLSecurityKey::RSA_OAEP_MGF1P, '', encryptedKey(XMLSecurityKey::AES256_GCM)));
-attempt('NESTED NULL', function () use ($nested) {
-    return resolve($nested, null);
+attempt('NESTED ALL', function () use ($nested) {
+    return resolve($nested, XMLSecEnc::SUPPORTED_KEY_ALGORITHMS);
 });
 $retrieval = encryptedData(
     '<ds:RetrievalMethod URI="#ek1" Type="http://www.w3.org/2001/04/xmlenc#EncryptedKey"/>',
     str_replace('<xenc:EncryptedKey>', '<xenc:EncryptedKey '.NS.'>', encryptedKey(XMLSecurityKey::AES256_GCM, ' Id="ek1"'))
 );
-attempt('RETRIEVAL NULL', function () use ($retrieval) {
-    return resolve($retrieval, null);
+attempt('RETRIEVAL ALL', function () use ($retrieval) {
+    return resolve($retrieval, XMLSecEnc::SUPPORTED_KEY_ALGORITHMS);
 });
 
 /* 3. Static helpers, with every allowlist disabled. */
@@ -82,12 +82,12 @@ $doc = new DOMDocument();
 $doc->loadXML($nested);
 $outer = $doc->getElementsByTagNameNS(XMLSecEnc::XMLENCNS, 'EncryptedKey')->item(0);
 $inner = $doc->getElementsByTagNameNS(XMLSecEnc::XMLENCNS, 'EncryptedKey')->item(1);
-attempt('STATIC_FROM NULL', function () use ($inner) {
-    return XMLSecurityKey::fromEncryptedKeyElement($inner, 0, true, null, null)->getAlgorithm();
+attempt('STATIC_FROM ALL', function () use ($inner) {
+    return XMLSecurityKey::fromEncryptedKeyElement($inner, 0, true, XMLSecEnc::SUPPORTED_KEY_ALGORITHMS, XMLSecEnc::SUPPORTED_DATA_ALGORITHMS)->getAlgorithm();
 });
-attempt('STATIC_LOCATE NULL', function () use ($outer) {
+attempt('STATIC_LOCATE ALL', function () use ($outer) {
     $base = new XMLSecurityKey(XMLSecurityKey::RSA_OAEP_MGF1P, array('type' => 'private'));
-    return XMLSecEnc::staticLocateKeyInfo($base, $outer, 0, true, null, null)->getAlgorithm();
+    return XMLSecEnc::staticLocateKeyInfo($base, $outer, 0, true, XMLSecEnc::SUPPORTED_KEY_ALGORITHMS, XMLSecEnc::SUPPORTED_DATA_ALGORITHMS)->getAlgorithm();
 });
 
 /* 4. Caller-built EncryptedKey context: decryptKey()/decryptNode() check the key's algorithm first. */
@@ -99,13 +99,13 @@ function symmetricEncryptedKey() {
 }
 attempt('DECRYPTKEY ENCRYPTEDKEY_NODE', function () use ($inner) {
     $ctx = new XMLSecEnc();
-    $ctx->allowedKeyAlgorithms = null;
+    $ctx->allowedKeyAlgorithms = XMLSecEnc::SUPPORTED_KEY_ALGORITHMS;
     $ctx->setNode($inner);
     return bin2hex($ctx->decryptKey(symmetricEncryptedKey()));
 });
 attempt('DECRYPTNODE ENCRYPTEDKEY_NODE', function () use ($inner) {
     $ctx = new XMLSecEnc();
-    $ctx->allowedKeyAlgorithms = null;
+    $ctx->allowedKeyAlgorithms = XMLSecEnc::SUPPORTED_KEY_ALGORITHMS;
     $ctx->setNode($inner);
     return bin2hex($ctx->decryptNode(symmetricEncryptedKey(), false));
 });
@@ -113,12 +113,12 @@ attempt('DECRYPTKEY OTHER_NODE', function () {
     $d = new DOMDocument();
     $d->loadXML(encryptedData(''));
     $ctx = new XMLSecEnc();
-    $ctx->allowedKeyAlgorithms = null;
+    $ctx->allowedKeyAlgorithms = XMLSecEnc::SUPPORTED_KEY_ALGORITHMS;
     $ctx->setNode($ctx->locateEncryptedData($d));
     return bin2hex($ctx->decryptKey(symmetricEncryptedKey()));
 });
 
-/* 5. Normal RSA-OAEP flows are unchanged (default list and null). */
+/* 5. Normal RSA-OAEP flows are unchanged (default list and explicit full list). */
 function roundtrip($transport, $keyAlgs) {
     $public = new XMLSecurityKey($transport, array('type' => 'public'));
     $public->loadKey(__DIR__ . '/mycert.pem', true, true);
@@ -147,8 +147,8 @@ foreach (array('OAEP' => XMLSecurityKey::RSA_OAEP, 'OAEP_MGF1P' => XMLSecurityKe
     attempt("ROUNDTRIP $label DEFAULT", function () use ($alg) {
         return roundtrip($alg, XMLSecEnc::DEFAULT_KEY_ALGORITHMS);
     });
-    attempt("ROUNDTRIP $label NULL", function () use ($alg) {
-        return roundtrip($alg, null);
+    attempt("ROUNDTRIP $label ALL", function () use ($alg) {
+        return roundtrip($alg, XMLSecEnc::SUPPORTED_KEY_ALGORITHMS);
     });
 }
 
@@ -184,25 +184,25 @@ attempt('LOADKEY HMAC', function () {
 ?>
 --EXPECTF--
 AES128_CBC DEFAULT: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2001/04/xmlenc#aes128-cbc'
-AES128_CBC NULL: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2001/04/xmlenc#aes128-cbc'
+AES128_CBC ALL: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2001/04/xmlenc#aes128-cbc'
 AES128_CBC DATA_LIST: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2001/04/xmlenc#aes128-cbc'
 AES256_GCM DEFAULT: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2009/xmlenc11#aes256-gcm'
-AES256_GCM NULL: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2009/xmlenc11#aes256-gcm'
+AES256_GCM ALL: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2009/xmlenc11#aes256-gcm'
 AES256_GCM DATA_LIST: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2009/xmlenc11#aes256-gcm'
 TRIPLEDES_CBC DEFAULT: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2001/04/xmlenc#tripledes-cbc'
-TRIPLEDES_CBC NULL: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2001/04/xmlenc#tripledes-cbc'
+TRIPLEDES_CBC ALL: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2001/04/xmlenc#tripledes-cbc'
 TRIPLEDES_CBC DATA_LIST: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2001/04/xmlenc#tripledes-cbc'
-NESTED NULL: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2009/xmlenc11#aes256-gcm'
-RETRIEVAL NULL: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2009/xmlenc11#aes256-gcm'
-STATIC_FROM NULL: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2009/xmlenc11#aes256-gcm'
-STATIC_LOCATE NULL: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2009/xmlenc11#aes256-gcm'
+NESTED ALL: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2009/xmlenc11#aes256-gcm'
+RETRIEVAL ALL: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2009/xmlenc11#aes256-gcm'
+STATIC_FROM ALL: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2009/xmlenc11#aes256-gcm'
+STATIC_LOCATE ALL: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2009/xmlenc11#aes256-gcm'
 DECRYPTKEY ENCRYPTEDKEY_NODE: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2009/xmlenc11#aes256-gcm'
 DECRYPTNODE ENCRYPTEDKEY_NODE: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2009/xmlenc11#aes256-gcm'
 DECRYPTKEY OTHER_NODE: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2009/xmlenc11#aes256-gcm'
 ROUNDTRIP OAEP DEFAULT: OK
-ROUNDTRIP OAEP NULL: OK
+ROUNDTRIP OAEP ALL: OK
 ROUNDTRIP OAEP_MGF1P DEFAULT: OK
-ROUNDTRIP OAEP_MGF1P NULL: OK
+ROUNDTRIP OAEP_MGF1P ALL: OK
 LOADKEY PEM_PRIVATE_FILE: Asymmetric key material cannot be used as a symmetric key
 LOADKEY PEM_CERT: Asymmetric key material cannot be used as a symmetric key
 LOADKEY CERT_FLAG: An X.509 certificate cannot be used as a symmetric key

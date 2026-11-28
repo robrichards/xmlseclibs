@@ -1,5 +1,5 @@
 --TEST--
-verifyDocument() falls back to the default algorithm lists when a list is null
+verifyDocument() applies the configured algorithm lists unchanged
 --FILE--
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');
@@ -42,13 +42,12 @@ $sha256 = signDoc(XMLSecurityKey::RSA_SHA256, XMLSecurityDSig::SHA256);
 $digSha1 = signDoc(XMLSecurityKey::RSA_SHA256, XMLSecurityDSig::SHA1);
 $rsaSha1 = signDoc(XMLSecurityKey::RSA_SHA1, XMLSecurityDSig::SHA256);
 
-/* Null digest list: a SHA-1 Reference is rejected and the property stays null. */
+/* Default lists: a SHA-1 Reference is rejected and the properties are untouched. */
 list($result, $dsig) = runDoc($digSha1, XMLSecurityKey::RSA_SHA256, function ($d) {
-    $d->allowedDigestAlgorithms = null;
 });
-echo 'NULL DIGEST: ', $result, "\n";
-echo 'NULL DIGEST PROP: ', ($dsig->allowedDigestAlgorithms === null ? 'null' : 'set'), "\n";
-echo 'NULL DIGEST SIG PROP: ', ($dsig->allowedSignatureAlgorithms === XMLSecurityDSig::DEFAULT_SIGNATURE_ALGORITHMS ? 'default' : 'changed'), "\n";
+echo 'DEFAULT DIGEST: ', $result, "\n";
+echo 'DEFAULT DIGEST PROP: ', ($dsig->allowedDigestAlgorithms === XMLSecurityDSig::DEFAULT_DIGEST_ALGORITHMS ? 'default' : 'changed'), "\n";
+echo 'DEFAULT DIGEST SIG PROP: ', ($dsig->allowedSignatureAlgorithms === XMLSecurityDSig::DEFAULT_SIGNATURE_ALGORITHMS ? 'default' : 'changed'), "\n";
 
 /* Explicit digest list including SHA-1 (and SHA-256) verifies. */
 $explicitDigests = array(XMLSecurityDSig::SHA256, XMLSecurityDSig::SHA1);
@@ -58,13 +57,12 @@ list($result, $dsig) = runDoc($digSha1, XMLSecurityKey::RSA_SHA256, function ($d
 echo 'EXPLICIT DIGEST: ', $result, "\n";
 echo 'EXPLICIT DIGEST PROP: ', ($dsig->allowedDigestAlgorithms === $explicitDigests ? 'same' : 'changed'), "\n";
 
-/* Null signature list: RSA-SHA1 is rejected and the property stays null. */
+/* Default lists: RSA-SHA1 is rejected and the properties are untouched. */
 list($result, $dsig) = runDoc($rsaSha1, XMLSecurityKey::RSA_SHA1, function ($d) {
-    $d->allowedSignatureAlgorithms = null;
 });
-echo 'NULL SIG: ', $result, "\n";
-echo 'NULL SIG PROP: ', ($dsig->allowedSignatureAlgorithms === null ? 'null' : 'set'), "\n";
-echo 'NULL SIG DIG PROP: ', ($dsig->allowedDigestAlgorithms === XMLSecurityDSig::DEFAULT_DIGEST_ALGORITHMS ? 'default' : 'changed'), "\n";
+echo 'DEFAULT SIG: ', $result, "\n";
+echo 'DEFAULT SIG PROP: ', ($dsig->allowedSignatureAlgorithms === XMLSecurityDSig::DEFAULT_SIGNATURE_ALGORITHMS ? 'default' : 'changed'), "\n";
+echo 'DEFAULT SIG DIG PROP: ', ($dsig->allowedDigestAlgorithms === XMLSecurityDSig::DEFAULT_DIGEST_ALGORITHMS ? 'default' : 'changed'), "\n";
 
 /* Explicit signature list including RSA-SHA1 verifies. */
 $explicitSigs = array(XMLSecurityKey::RSA_SHA256, XMLSecurityKey::RSA_SHA1);
@@ -74,13 +72,10 @@ list($result, $dsig) = runDoc($rsaSha1, XMLSecurityKey::RSA_SHA1, function ($d) 
 echo 'EXPLICIT SIG: ', $result, "\n";
 echo 'EXPLICIT SIG PROP: ', ($dsig->allowedSignatureAlgorithms === $explicitSigs ? 'same' : 'changed'), "\n";
 
-/* Null lists still accept the default algorithms, then stay null. */
+/* Default algorithms verify with the default lists. */
 list($result, $dsig) = runDoc($sha256, XMLSecurityKey::RSA_SHA256, function ($d) {
-    $d->allowedSignatureAlgorithms = null;
-    $d->allowedDigestAlgorithms = null;
 });
-echo 'NULL DEFAULTS: ', $result, "\n";
-echo 'NULL DEFAULTS PROPS: ', ($dsig->allowedSignatureAlgorithms === null && $dsig->allowedDigestAlgorithms === null ? 'null' : 'set'), "\n";
+echo 'DEFAULTS: ', $result, "\n";
 
 /* An empty list is used unchanged and does not fall back to the defaults. */
 list($result, $dsig) = runDoc($sha256, XMLSecurityKey::RSA_SHA256, function ($d) {
@@ -89,28 +84,29 @@ list($result, $dsig) = runDoc($sha256, XMLSecurityKey::RSA_SHA256, function ($d)
 echo 'EMPTY DIGEST: ', $result, "\n";
 echo 'EMPTY DIGEST PROP: ', ($dsig->allowedDigestAlgorithms === array() ? 'empty' : 'other'), "\n";
 
-/* enableLegacyMode() leaves a null list null, so the fallback stays DEFAULT_*. */
+/* Legacy mode extends the lists that verifyDocument() applies. */
 list($result, $dsig) = runDoc($digSha1, XMLSecurityKey::RSA_SHA256, function ($d) {
-    $d->allowedDigestAlgorithms = null;
     $d->enableLegacyMode();
 });
-echo 'LEGACY NULL DIGEST: ', $result, "\n";
-echo 'LEGACY NULL DIGEST PROP: ', ($dsig->allowedDigestAlgorithms === null ? 'null' : 'set'), "\n";
+echo 'LEGACY DIGEST: ', $result, "\n";
+list($result, $dsig) = runDoc($rsaSha1, XMLSecurityKey::RSA_SHA1, function ($d) {
+    $d->enableLegacyMode();
+});
+echo 'LEGACY SIG: ', $result, "\n";
 ?>
 --EXPECTF--
-NULL DIGEST: DigestMethod algorithm is not allowed: 'http://www.w3.org/2000/09/xmldsig#sha1'
-NULL DIGEST PROP: null
-NULL DIGEST SIG PROP: default
+DEFAULT DIGEST: DigestMethod algorithm is not allowed: 'http://www.w3.org/2000/09/xmldsig#sha1'
+DEFAULT DIGEST PROP: default
+DEFAULT DIGEST SIG PROP: default
 EXPLICIT DIGEST: OK
 EXPLICIT DIGEST PROP: same
-NULL SIG: SignatureMethod algorithm is not allowed: 'http://www.w3.org/2000/09/xmldsig#rsa-sha1'
-NULL SIG PROP: null
-NULL SIG DIG PROP: default
+DEFAULT SIG: SignatureMethod algorithm is not allowed: 'http://www.w3.org/2000/09/xmldsig#rsa-sha1'
+DEFAULT SIG PROP: default
+DEFAULT SIG DIG PROP: default
 EXPLICIT SIG: OK
 EXPLICIT SIG PROP: same
-NULL DEFAULTS: OK
-NULL DEFAULTS PROPS: null
+DEFAULTS: OK
 EMPTY DIGEST: DigestMethod algorithm is not allowed: 'http://www.w3.org/2001/04/xmlenc#sha256'
 EMPTY DIGEST PROP: empty
-LEGACY NULL DIGEST: DigestMethod algorithm is not allowed: 'http://www.w3.org/2000/09/xmldsig#sha1'
-LEGACY NULL DIGEST PROP: null
+LEGACY DIGEST: OK
+LEGACY SIG: OK

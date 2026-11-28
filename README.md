@@ -23,8 +23,8 @@ xmlseclibs requires PHP version 8.3 or greater and phpseclib 3.0.58 or later. Op
 * After a successful `validateReference()`, `getValidatedNodes()` returns the reference target. That node may hold content outside the transformed data that was digested, so callers using XPath filtering must apply their own understanding of the transforms. Do not re-select assertions by Id from the whole document. A failed `validateReference()` or `verify()` leaves no validated nodes, including when an earlier reference in that call had already matched. A return of `1` from `verify()` leaves those nodes in place.
 * Read element values with `textContent` rather than `firstChild` or `nodeValue`. Comments are excluded from the digest of same-document references.
 * Do not trust a signing certificate from `KeyInfo` alone. Load and pin trusted keys yourself.
-* Signature verification (`verifyDocument()` as well as `verify()` / `validateReference()`) accepts by default only SHA-256/384/512 digests and RSA-SHA-256/384/512 (and RSA-PSS) and ECDSA-SHA-256/384/512 signatures (`$objDSig->allowedSignatureAlgorithms` / `$objDSig->allowedDigestAlgorithms` default to `XMLSecurityDSig::DEFAULT_SIGNATURE_ALGORITHMS` / `DEFAULT_DIGEST_ALGORITHMS`). To accept SHA-1 (rsa-sha1, hmac-sha1 and sha1 digests), call `$objDSig->enableLegacyMode()` or widen the lists explicitly, e.g. `$objDSig->allowedSignatureAlgorithms[] = XMLSecurityKey::RSA_SHA1;` and `$objDSig->allowedDigestAlgorithms[] = XMLSecurityDSig::SHA1;`. DSA signatures are not supported. In `verifyDocument()`, a null list falls back to the corresponding default for that call and the property is restored afterwards (null stays null). Callers that need an extra algorithm (for example SHA-1 digests) should add it to the list explicitly. The low-level methods `verify()` and `validateReference()` treat a null list as no restriction. Signing is unaffected. ECDSA keys are limited to the P-256, P-384 and P-521 curves (`XMLSecurityKey::EC_CURVE_OIDS`); to accept another curve, add it explicitly to `$objKey->allowedECCurves`.
-* Prefer RSA-OAEP and AES-GCM for encryption. RSA-1.5 key transport is **denied by default** on decryption (Bleichenbacher risk); opt in with `$objenc->allowRSA15KeyTransport = true;` plus `$objenc->allowedKeyAlgorithms[] = XMLSecurityKey::RSA_1_5;` only for legacy interop. Key transport is restricted by default to RSA-OAEP (`$objenc->allowedKeyAlgorithms` defaults to `XMLSecEnc::DEFAULT_KEY_ALGORITHMS`); widen the list explicitly, or set it to `null` to apply no key-transport allowlist. Symmetric data encryption (an EncryptedData whose EncryptionMethod is AES or 3DES) accepts only AES-GCM by default (`$objenc->allowedDataAlgorithms` defaults to `XMLSecEnc::DEFAULT_DATA_ALGORITHMS`). An EncryptedData encrypted directly with an RSA key-transport algorithm is governed by `allowedKeyAlgorithms` and `allowRSA15KeyTransport`, not `allowedDataAlgorithms`. AES-CBC and TripleDES-CBC require `$objenc->enableLegacyMode()` (adds `XMLSecEnc::LEGACY_DATA_ALGORITHMS`) or an explicit list. Set the list to `null` to apply no data-encryption allowlist. Encryption still uses the algorithm of the caller-supplied key. `encryptKey()` accepts only a key-transport algorithm (RSA-1.5, RSA-OAEP, RSA-OAEP-MGF1P). A symmetric key must be at least as long as its algorithm requires (AES-128: 16 bytes, AES-192: 24, AES-256: 32, TripleDES: 24, CBC and GCM); longer keys are truncated to that length.
+* Signature verification (`verifyDocument()` as well as `verify()` / `validateReference()`) accepts by default only SHA-256/384/512 digests and RSA-SHA-256/384/512 (and RSA-PSS) and ECDSA-SHA-256/384/512 signatures (`$objDSig->allowedSignatureAlgorithms` / `$objDSig->allowedDigestAlgorithms` default to `XMLSecurityDSig::DEFAULT_SIGNATURE_ALGORITHMS` / `DEFAULT_DIGEST_ALGORITHMS`). To accept SHA-1 (rsa-sha1, hmac-sha1 and sha1 digests), call `$objDSig->enableLegacyMode()` or widen the lists explicitly, e.g. `$objDSig->allowedSignatureAlgorithms[] = XMLSecurityKey::RSA_SHA1;` and `$objDSig->allowedDigestAlgorithms[] = XMLSecurityDSig::SHA1;`. DSA signatures are not supported. Both lists are always arrays: null is rejected with a `TypeError`, and an empty array allows no algorithm. `verify()`, `validateReference()` and `verifyDocument()` apply the same lists. Reserve `XMLSecurityDSig::SUPPORTED_SIGNATURE_ALGORITHMS` / `SUPPORTED_DIGEST_ALGORITHMS` for callers that deliberately want every supported algorithm in that category. See [Migrating null algorithm allowlists](#migrating-null-algorithm-allowlists) if you previously assigned null. Signing is unaffected. ECDSA keys are limited to the P-256, P-384 and P-521 curves (`XMLSecurityKey::EC_CURVE_OIDS`); to accept another curve, add it explicitly to `$objKey->allowedECCurves`.
+* Prefer RSA-OAEP and AES-GCM for encryption. RSA-1.5 key transport is **denied by default** on decryption (Bleichenbacher risk); opt in with `$objenc->allowRSA15KeyTransport = true;` plus `$objenc->allowedKeyAlgorithms[] = XMLSecurityKey::RSA_1_5;` only for legacy interop. Key transport is restricted by default to RSA-OAEP (`$objenc->allowedKeyAlgorithms` defaults to `XMLSecEnc::DEFAULT_KEY_ALGORITHMS`); widen the list explicitly (`XMLSecEnc::SUPPORTED_KEY_ALGORITHMS` lists every supported algorithm). The lists are always arrays: null is rejected with a `TypeError`, and an empty array allows no algorithm. Symmetric data encryption (an EncryptedData whose EncryptionMethod is AES or 3DES) accepts only AES-GCM by default (`$objenc->allowedDataAlgorithms` defaults to `XMLSecEnc::DEFAULT_DATA_ALGORITHMS`). An EncryptedData encrypted directly with an RSA key-transport algorithm is governed by `allowedKeyAlgorithms` and `allowRSA15KeyTransport`, not `allowedDataAlgorithms`. AES-CBC and TripleDES-CBC require `$objenc->enableLegacyMode()` (adds `XMLSecEnc::LEGACY_DATA_ALGORITHMS`) or an explicit list. To accept every data-encryption algorithm, assign `XMLSecEnc::SUPPORTED_DATA_ALGORITHMS`. Encryption still uses the algorithm of the caller-supplied key. `encryptKey()` accepts only a key-transport algorithm (RSA-1.5, RSA-OAEP, RSA-OAEP-MGF1P). A symmetric key must be at least as long as its algorithm requires (AES-128: 16 bytes, AES-192: 24, AES-256: 32, TripleDES: 24, CBC and GCM); longer keys are truncated to that length.
 * `verifyDocument()` checks the signature, then accepts only the canonicalization algorithms this library supports (c14n, c14n with comments, exclusive c14n, exclusive c14n with comments) and the enveloped-signature transform. Any other transform, including XPath, is rejected before it is applied. This holds in legacy mode. There is no setting that allows other transforms on this path.
 * On the low-level path (`validateReference()`, `verify()`, `getValidatedNodes()`), XPath (`REC-xpath-19991116`) transforms are rejected unless `$objDSig->allowXPathTransforms` is true (`enableLegacyMode()` sets it). The node returned for a reference is the reference target and may hold content outside the transformed data that was digested.
 * Only one XPath transform per reference is supported, when signing and when verifying. `$maxXPathTransforms` remains for compatibility and is effectively capped at 1; a lower value is still honored. `$maxXPathNamespaces` (default 20) still limits namespaces on that transform.
@@ -41,6 +41,85 @@ This release requires PHP 8.3 or later (4.0 required PHP 8.0 or later) and phpse
 
 Signing requires a signature key type (for example, `XMLSecurityKey::RSA_SHA256` or `XMLSecurityKey::ECDSA_SHA256`), not an encryption/key-transport type such as `RSA_1_5` or `RSA_OAEP`. `signData()` and `XMLSecurityDSig::sign()` now throw for this misuse, before emitting a SignatureMethod. `XMLSecurityDSig::verify()` throws for a non-signature key type as well. `verifySignature()` returns `0` for those key types. This also applies in legacy mode. Encryption/key transport is unchanged.
 
+
+## Migrating null algorithm allowlists
+
+Assigning or passing `null` for `$allowedSignatureAlgorithms`,
+`$allowedDigestAlgorithms`, `$allowedKeyAlgorithms` or
+`$allowedDataAlgorithms` (including the arguments of
+`staticLocateKeyInfo()` and `fromEncryptedKeyElement()`) now throws a
+`TypeError`. An empty array allows no algorithm. Choose the replacement
+based on what the null assignment was for.
+
+**`verifyDocument()`:** on a fresh instance, remove the assignment (the
+properties already default to `DEFAULT_*`). To reset an already
+configured instance, assign the corresponding `DEFAULT_*` constant:
+
+```php
+$dsig = new XMLSecurityDSig();
+// Previously: $dsig->allowedSignatureAlgorithms = null;
+// Previously: $dsig->allowedDigestAlgorithms = null;
+$dsig->verifyDocument($key, $doc);
+
+// Already configured:
+$dsig->allowedSignatureAlgorithms = XMLSecurityDSig::DEFAULT_SIGNATURE_ALGORITHMS;
+$dsig->allowedDigestAlgorithms = XMLSecurityDSig::DEFAULT_DIGEST_ALGORITHMS;
+```
+
+Do not switch a `verifyDocument()` caller from `null` to a `SUPPORTED_*`
+constant. That broadens the policy to include SHA-1 and RIPEMD-160.
+
+**Low-level verification or decryption:** list the algorithms the
+integration requires, for example:
+
+```php
+$dsig->allowedSignatureAlgorithms[] = XMLSecurityKey::RSA_SHA1;
+$dsig->allowedDigestAlgorithms[] = XMLSecurityDSig::SHA1;
+$enc->allowedKeyAlgorithms[] = XMLSecurityKey::RSA_1_5;
+$enc->allowRSA15KeyTransport = true;
+$enc->allowedDataAlgorithms[] = XMLSecurityKey::AES256_CBC;
+```
+
+Reserve `XMLSecurityDSig::SUPPORTED_SIGNATURE_ALGORITHMS`,
+`SUPPORTED_DIGEST_ALGORITHMS`, `XMLSecEnc::SUPPORTED_KEY_ALGORITHMS` and
+`SUPPORTED_DATA_ALGORITHMS` for callers that deliberately want every
+supported algorithm in that category.
+
+**Legacy mode:** a `null` assignment still needs an edit, even if the
+next line calls `enableLegacyMode()`. For the standard legacy profile,
+remove the null assignment and call `enableLegacyMode()` on the default
+configuration:
+
+```php
+$dsig = new XMLSecurityDSig();
+$dsig->enableLegacyMode();
+
+$enc = new XMLSecEnc();
+$enc->enableLegacyMode();
+```
+
+That call enables several compatibility settings at once:
+
+- `XMLSecurityDSig::enableLegacyMode()` sets `forbidDoctype` to false
+  (a DOCTYPE is allowed when locating a signature), sets
+  `allowXPathTransforms` to true (XPath is allowed on the low-level
+  verify path, at most one transform per reference), raises
+  `$maxXPathTransforms` and `$maxXPathNamespaces`, and adds rsa-sha1
+  and hmac-sha1 to `$allowedSignatureAlgorithms` and the sha1 digest to
+  `$allowedDigestAlgorithms`.
+- `XMLSecEnc::enableLegacyMode()` sets `allowRSA15KeyTransport` to
+  true, adds RSA-1.5 to `$allowedKeyAlgorithms`, and adds AES-CBC and
+  TripleDES-CBC (`LEGACY_DATA_ALGORITHMS`) to `$allowedDataAlgorithms`.
+
+`verifyDocument()` still accepts only canonicalization and
+enveloped-signature transforms. If only one additional algorithm is
+needed, widen just that list instead of calling `enableLegacyMode()`.
+
+**Subclasses:** redeclaring the public allowlist properties requires the
+compatible `array` type. Otherwise-compatible overrides of
+`staticLocateKeyInfo()` and `fromEncryptedKeyElement()` may keep a
+`?array` or untyped parameter.
+
 ## Breaking changes (3.1 → 4.0)
 
 ### Platform
@@ -51,7 +130,8 @@ Signing requires a signature key type (for example, `XMLSecurityKey::RSA_SHA256`
 - **DOCTYPE rejected by default** during verification (`locateSignature` / `verifyDocument`). Opt out: `$dsig->forbidDoctype = false` or `enableLegacyMode()`
 - **XPath Filtering Transforms rejected by default** on the low-level verify path. Opt in: `$dsig->allowXPathTransforms = true` or `enableLegacyMode()`. `verifyDocument()` rejects XPath and any transform other than canonicalization or enveloped-signature, including in legacy mode. Only one XPath transform per reference is supported when signing or verifying
 - **XPath limits**: `$maxXPathTransforms` is effectively capped at 1 (a lower value is still honored). `$maxXPathNamespaces` defaults to 20 and is raised by `enableLegacyMode()`
-- **SHA-2 SignatureMethod/DigestMethod algorithms by default** (since 4.1): `allowedSignatureAlgorithms` / `allowedDigestAlgorithms` default to `XMLSecurityDSig::DEFAULT_SIGNATURE_ALGORITHMS` / `DEFAULT_DIGEST_ALGORITHMS` for `verify()`, `validateReference()` and `verifyDocument()`. SHA-1 (rsa-sha1, hmac-sha1, sha1 digest): `enableLegacyMode()` or add them to the lists. DSA signatures are not supported. RIPEMD-160 digests: add to the list. In `verifyDocument()`, a null list falls back to the defaults; add an extra algorithm (for example a SHA-1 digest) explicitly. Low-level methods treat null as no restriction. Signing unchanged
+- **Algorithm allowlists are always arrays**: `allowedSignatureAlgorithms`, `allowedDigestAlgorithms`, `allowedKeyAlgorithms` and `allowedDataAlgorithms` (and the matching arguments of `staticLocateKeyInfo()` / `fromEncryptedKeyElement()`) no longer accept `null`; it throws a `TypeError`. An empty array allows no algorithm. See [Migrating null algorithm allowlists](#migrating-null-algorithm-allowlists) for how to replace a previous `null` assignment, including `verifyDocument()`, low-level verification, decryption, `enableLegacyMode()` and subclasses
+- **SHA-2 SignatureMethod/DigestMethod algorithms by default** (since 4.1): `allowedSignatureAlgorithms` / `allowedDigestAlgorithms` default to `XMLSecurityDSig::DEFAULT_SIGNATURE_ALGORITHMS` / `DEFAULT_DIGEST_ALGORITHMS` for `verify()`, `validateReference()` and `verifyDocument()`. SHA-1 (rsa-sha1, hmac-sha1, sha1 digest): `enableLegacyMode()` or add them to the lists. DSA signatures are not supported. RIPEMD-160 digests: add to the list. The lists are always arrays (null throws a `TypeError`, an empty array allows nothing) and are applied identically by `verify()`, `validateReference()` and `verifyDocument()`. Reserve `SUPPORTED_*` for a deliberate full list; see [Migrating null algorithm allowlists](#migrating-null-algorithm-allowlists). Signing unchanged
 - **`verify()` always requires SignatureMethod === key algorithm**; mismatch throws (not restored by legacy mode)
 - **HMAC keys cannot be loaded from certificates or asymmetric keys**
 - **References fail closed**: unresolved, external, or duplicate-Id URIs throw; same-document only
@@ -59,10 +139,10 @@ Signing requires a signature key type (for example, `XMLSecurityKey::RSA_SHA256`
 - **HMAC verify returns `1`/`0`** — always check `=== 1`
 
 ### Encryption / decryption
-- **Key transport restricted to RSA-OAEP by default** (`allowedKeyAlgorithms = XMLSecEnc::DEFAULT_KEY_ALGORITHMS`, since 4.1). Widen the list explicitly, or set it to `null` for no key-transport allowlist
-- **EncryptedKey must use RSA key transport** (RSA-1.5, RSA-OAEP, RSA-OAEP-MGF1P), even when `allowedKeyAlgorithms` is `null`. `encryptKey()` rejects any other wrapping key before changing the document. AES/3DES `loadKey()` refuses certificates and PEM/DER key material and leaves the previous key in place. A symmetric key shorter than the algorithm requires is rejected (AES-128: 16 bytes, AES-192: 24, AES-256: 32, TripleDES: 24, CBC and GCM); longer keys are truncated to that length
+- **Key transport restricted to RSA-OAEP by default** (`allowedKeyAlgorithms = XMLSecEnc::DEFAULT_KEY_ALGORITHMS`, since 4.1). Widen the list explicitly (`XMLSecEnc::SUPPORTED_KEY_ALGORITHMS` lists every supported algorithm)
+- **EncryptedKey must use RSA key transport** (RSA-1.5, RSA-OAEP, RSA-OAEP-MGF1P), independent of `allowedKeyAlgorithms`. `encryptKey()` rejects any other wrapping key before changing the document. AES/3DES `loadKey()` refuses certificates and PEM/DER key material and leaves the previous key in place. A symmetric key shorter than the algorithm requires is rejected (AES-128: 16 bytes, AES-192: 24, AES-256: 32, TripleDES: 24, CBC and GCM); longer keys are truncated to that length
 - **RSA-1.5 key transport denied by default**. Opt in: `$enc->allowRSA15KeyTransport = true` and `$enc->allowedKeyAlgorithms[] = XMLSecurityKey::RSA_1_5`, or `enableLegacyMode()`
-- **Symmetric data decryption restricted to AES-GCM by default** (`allowedDataAlgorithms = XMLSecEnc::DEFAULT_DATA_ALGORITHMS`, since 4.1). This allowlist applies to an EncryptedData whose EncryptionMethod is AES or 3DES. An EncryptedData encrypted directly with an RSA key-transport algorithm is governed by `allowedKeyAlgorithms` and `allowRSA15KeyTransport`, not `allowedDataAlgorithms`. AES-CBC and TripleDES-CBC: `enableLegacyMode()` or add `LEGACY_DATA_ALGORITHMS`. `null` applies no data-encryption allowlist. `staticLocateKeyInfo()` and `XMLSecurityKey::fromEncryptedKeyElement()` accept `$allowedDataAlgorithms` and copy it onto the inner context; it does not affect decryption. Encryption of a caller-chosen algorithm is unchanged
+- **Symmetric data decryption restricted to AES-GCM by default** (`allowedDataAlgorithms = XMLSecEnc::DEFAULT_DATA_ALGORITHMS`, since 4.1). This allowlist applies to an EncryptedData whose EncryptionMethod is AES or 3DES. An EncryptedData encrypted directly with an RSA key-transport algorithm is governed by `allowedKeyAlgorithms` and `allowRSA15KeyTransport`, not `allowedDataAlgorithms`. AES-CBC and TripleDES-CBC: `enableLegacyMode()` or add `LEGACY_DATA_ALGORITHMS`. The list is always an array (null throws a `TypeError`); `XMLSecEnc::SUPPORTED_DATA_ALGORITHMS` accepts every supported algorithm. `staticLocateKeyInfo()` and `XMLSecurityKey::fromEncryptedKeyElement()` accept `$allowedDataAlgorithms` and copy it onto the inner context; it does not affect decryption. Encryption of a caller-chosen algorithm is unchanged
 - **Single decrypt error message**: `Failure decrypting Data` (do not branch on exception text). A symmetric key shorter than the algorithm requires uses that same message on decryption; encryption names the short key
 - **DOCTYPE rejected in decrypted XML** (not restored by legacy mode)
 - **EncryptedKey/RetrievalMethod depth capped**
@@ -84,12 +164,12 @@ enforced for that key. `allowedDataAlgorithms` is copied onto the key's
 `encryptedCtx` and does not affect decryption. Callers of the static methods
 pass them explicitly; when omitted, `$allowedKeyAlgorithms` defaults to
 `XMLSecEnc::DEFAULT_KEY_ALGORITHMS` and `$allowedDataAlgorithms` defaults to
-`XMLSecEnc::DEFAULT_DATA_ALGORITHMS`. Passing `null` for `allowedKeyAlgorithms`
-applies no key-transport allowlist. Passing `null` for `allowedDataAlgorithms`
-copies null and still does not affect decryption.
+`XMLSecEnc::DEFAULT_DATA_ALGORITHMS`. Passing `null` for either argument throws a
+`TypeError`. List the algorithms the integration requires, or see
+[Migrating null algorithm allowlists](#migrating-null-algorithm-allowlists).
 
 ### Legacy mode
-`$dsig->enableLegacyMode()` / `$enc->enableLegacyMode()` restores **DOCTYPE (verify), XPath transforms on the low-level verify path (at most one per reference), SHA-1 signature/digest algorithms (verify), RSA-1.5, and CBC data decryption** only (DSA signatures are not supported; on the signature side it adds rsa-sha1, hmac-sha1 and the sha1 digest to `allowedSignatureAlgorithms` / `allowedDigestAlgorithms` when those lists are set; on the encryption side it sets `allowRSA15KeyTransport`, adds RSA-1.5 to `allowedKeyAlgorithms` when that list is set, and adds `LEGACY_DATA_ALGORITHMS` — AES-CBC and TripleDES-CBC — to `allowedDataAlgorithms` when that list is set; a null list is left null, and `verifyDocument()` still falls back to the default signature and digest lists when either of those properties is null; assigning any of these lists afterwards replaces it, so call `enableLegacyMode()` after configuring them). It does **not** undo the transforms `verifyDocument()` accepts, algorithm/key binding, uniform decrypt errors, decrypted-XML DOCTYPE rejection, Reference fail-closed behavior, SSRF rules, or the PHP/phpseclib requirements.
+`$dsig->enableLegacyMode()` / `$enc->enableLegacyMode()` restores **DOCTYPE (verify), XPath transforms on the low-level verify path (at most one per reference), SHA-1 signature/digest algorithms (verify), RSA-1.5, and CBC data decryption** only (DSA signatures are not supported; on the signature side it adds rsa-sha1, hmac-sha1 and the sha1 digest to `allowedSignatureAlgorithms` / `allowedDigestAlgorithms`; on the encryption side it sets `allowRSA15KeyTransport`, adds RSA-1.5 to `allowedKeyAlgorithms`, and adds `LEGACY_DATA_ALGORITHMS` — AES-CBC and TripleDES-CBC — to `allowedDataAlgorithms`; assigning any of these lists afterwards replaces it, so call `enableLegacyMode()` after configuring them). A previous `null` assignment still needs an edit, even if the next line calls `enableLegacyMode()`; for the standard legacy profile, remove the assignment and call it on the default configuration. That call enables several compatibility settings at once, so if only one additional algorithm is needed, widen just that list instead. See [Migrating null algorithm allowlists](#migrating-null-algorithm-allowlists). It does **not** undo the transforms `verifyDocument()` accepts, algorithm/key binding, uniform decrypt errors, decrypted-XML DOCTYPE rejection, Reference fail-closed behavior, SSRF rules, or the PHP/phpseclib requirements.
 
 **Migration tip:** Prefer `verifyDocument()` with a pinned key. Use legacy mode only while updating peers.
 
