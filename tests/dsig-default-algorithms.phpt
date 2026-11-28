@@ -66,7 +66,10 @@ function highLevel($xml, $sigAlg, $configure = null) {
 }
 
 $legacy = function ($d) { $d->enableLegacyMode(); };
-$nullLists = function ($d) { $d->allowedSignatureAlgorithms = null; $d->allowedDigestAlgorithms = null; };
+$allLists = function ($d) {
+    $d->allowedSignatureAlgorithms = XMLSecurityDSig::SUPPORTED_SIGNATURE_ALGORITHMS;
+    $d->allowedDigestAlgorithms = XMLSecurityDSig::SUPPORTED_DIGEST_ALGORITHMS;
+};
 
 /* Defaults. */
 $d = new XMLSecurityDSig();
@@ -107,25 +110,18 @@ $d->enableLegacyMode();
 echo 'LEGACY SIG LIST: ', ($d->allowedSignatureAlgorithms === array_merge(XMLSecurityDSig::DEFAULT_SIGNATURE_ALGORITHMS, array(XMLSecurityKey::RSA_SHA1, XMLSecurityKey::HMAC_SHA1)) ? 'yes' : 'no'), "\n";
 echo 'LEGACY DIG LIST: ', ($d->allowedDigestAlgorithms === array(XMLSecurityDSig::SHA256, XMLSecurityDSig::SHA384, XMLSecurityDSig::SHA512, XMLSecurityDSig::SHA1) ? 'yes' : 'no'), "\n";
 
-/* enableLegacyMode() leaves null lists null. */
-$d = new XMLSecurityDSig();
-$d->allowedSignatureAlgorithms = null;
-$d->allowedDigestAlgorithms = null;
-$d->enableLegacyMode();
-echo 'LEGACY NULL: ', ($d->allowedSignatureAlgorithms === null && $d->allowedDigestAlgorithms === null ? 'yes' : 'no'), "\n";
+/* Explicit full lists accept every supported algorithm on both flows. */
+echo 'ALL RSA-SHA1 low: ', lowLevel($rsaSha1, XMLSecurityKey::RSA_SHA1, $allLists), "\n";
+echo 'ALL RSA-SHA1 doc: ', highLevel($rsaSha1, XMLSecurityKey::RSA_SHA1, $allLists), "\n";
+echo 'ALL DIG-SHA1 doc: ', highLevel($digSha1, XMLSecurityKey::RSA_SHA256, $allLists), "\n";
+echo 'ALL RIPEMD low: ', lowLevel($ripemd, XMLSecurityKey::RSA_SHA256, $allLists), "\n";
+echo 'ALL RIPEMD doc: ', highLevel($ripemd, XMLSecurityKey::RSA_SHA256, $allLists), "\n";
 
-/* Null lists apply no allowlist on the low-level flow.
-   verifyDocument() falls back to the default lists. */
-echo 'NULL RSA-SHA1 low: ', lowLevel($rsaSha1, XMLSecurityKey::RSA_SHA1, $nullLists), "\n";
-echo 'NULL RSA-SHA1 doc: ', highLevel($rsaSha1, XMLSecurityKey::RSA_SHA1, $nullLists), "\n";
-echo 'NULL DIG-SHA1 doc: ', highLevel($digSha1, XMLSecurityKey::RSA_SHA256, $nullLists), "\n";
-echo 'NULL RIPEMD low: ', lowLevel($ripemd, XMLSecurityKey::RSA_SHA256, $nullLists), "\n";
-
-/* A null list only lifts its own restriction. */
-echo 'NULL SIG ONLY: ', lowLevel(signDoc(XMLSecurityKey::RSA_SHA1, XMLSecurityDSig::SHA1), XMLSecurityKey::RSA_SHA1,
-    function ($d) { $d->allowedSignatureAlgorithms = null; }), "\n";
-echo 'NULL DIG ONLY: ', lowLevel(signDoc(XMLSecurityKey::RSA_SHA1, XMLSecurityDSig::SHA1), XMLSecurityKey::RSA_SHA1,
-    function ($d) { $d->allowedDigestAlgorithms = null; }), "\n";
+/* Widening one list leaves the other at its default. */
+echo 'ALL SIG ONLY: ', lowLevel(signDoc(XMLSecurityKey::RSA_SHA1, XMLSecurityDSig::SHA1), XMLSecurityKey::RSA_SHA1,
+    function ($d) { $d->allowedSignatureAlgorithms = XMLSecurityDSig::SUPPORTED_SIGNATURE_ALGORITHMS; }), "\n";
+echo 'ALL DIG ONLY: ', lowLevel(signDoc(XMLSecurityKey::RSA_SHA1, XMLSecurityDSig::SHA1), XMLSecurityKey::RSA_SHA1,
+    function ($d) { $d->allowedDigestAlgorithms = XMLSecurityDSig::SUPPORTED_DIGEST_ALGORITHMS; }), "\n";
 
 /* Custom lists replace the defaults. */
 echo 'CUSTOM SIG narrow: ', lowLevel($sha256, XMLSecurityKey::RSA_SHA256,
@@ -161,13 +157,13 @@ LEGACY SHA256 low: OK
 LEGACY RIPEMD low: DigestMethod algorithm is not allowed: 'http://www.w3.org/2001/04/xmlenc#ripemd160'
 LEGACY SIG LIST: yes
 LEGACY DIG LIST: yes
-LEGACY NULL: yes
-NULL RSA-SHA1 low: OK
-NULL RSA-SHA1 doc: SignatureMethod algorithm is not allowed: 'http://www.w3.org/2000/09/xmldsig#rsa-sha1'
-NULL DIG-SHA1 doc: DigestMethod algorithm is not allowed: 'http://www.w3.org/2000/09/xmldsig#sha1'
-NULL RIPEMD low: OK
-NULL SIG ONLY: DigestMethod algorithm is not allowed: 'http://www.w3.org/2000/09/xmldsig#sha1'
-NULL DIG ONLY: SignatureMethod algorithm is not allowed: 'http://www.w3.org/2000/09/xmldsig#rsa-sha1'
+ALL RSA-SHA1 low: OK
+ALL RSA-SHA1 doc: OK
+ALL DIG-SHA1 doc: OK
+ALL RIPEMD low: OK
+ALL RIPEMD doc: OK
+ALL SIG ONLY: DigestMethod algorithm is not allowed: 'http://www.w3.org/2000/09/xmldsig#sha1'
+ALL DIG ONLY: SignatureMethod algorithm is not allowed: 'http://www.w3.org/2000/09/xmldsig#rsa-sha1'
 CUSTOM SIG narrow: SignatureMethod algorithm is not allowed: 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256'
 CUSTOM DIG narrow: DigestMethod algorithm is not allowed: 'http://www.w3.org/2001/04/xmlenc#sha256'
 CUSTOM DIG add sha1: OK

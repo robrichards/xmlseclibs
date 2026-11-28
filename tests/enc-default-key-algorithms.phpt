@@ -141,16 +141,16 @@ attempt('RSA15_LEGACY_MODE', function () use ($rsa15) {
     });
 });
 
-/* 5. Explicit null opts out of the allowlist (RSA-1.5 still needs its flag;
+/* 5. The explicit full list lifts the allowlist restriction (RSA-1.5 still needs its flag;
  *    non-key-transport EncryptedKey algorithms are always rejected). */
-attempt('NULL_RSA15_NO_FLAG', function () use ($rsa15) {
+attempt('ALL_RSA15_NO_FLAG', function () use ($rsa15) {
     return decrypt($rsa15->cloneNode(true), function ($dec) {
-        $dec->allowedKeyAlgorithms = null;
+        $dec->allowedKeyAlgorithms = XMLSecEnc::SUPPORTED_KEY_ALGORITHMS;
     });
 });
-attempt('NULL_RSA15_FLAG', function () use ($rsa15) {
+attempt('ALL_RSA15_FLAG', function () use ($rsa15) {
     return decrypt($rsa15->cloneNode(true), function ($dec) {
-        $dec->allowedKeyAlgorithms = null;
+        $dec->allowedKeyAlgorithms = XMLSecEnc::SUPPORTED_KEY_ALGORITHMS;
         $dec->allowRSA15KeyTransport = true;
     });
 });
@@ -162,16 +162,16 @@ $nonTransport = '<Root><xenc:EncryptedData '.ENC_NS.'>'
 attempt('NON_TRANSPORT_DEFAULT', function () use ($nonTransport) {
     return resolve($nonTransport);
 });
-attempt('NON_TRANSPORT_NULL', function () use ($nonTransport) {
+attempt('NON_TRANSPORT_ALL', function () use ($nonTransport) {
     return resolve($nonTransport, function ($dec) {
-        $dec->allowedKeyAlgorithms = null;
+        $dec->allowedKeyAlgorithms = XMLSecEnc::SUPPORTED_KEY_ALGORITHMS;
     });
 });
-attempt('LEGACY_NULL_STAYS_NULL', function () {
+attempt('LEGACY_ALL_LIST_UNCHANGED', function () {
     $dec = new XMLSecEnc();
-    $dec->allowedKeyAlgorithms = null;
+    $dec->allowedKeyAlgorithms = XMLSecEnc::SUPPORTED_KEY_ALGORITHMS;
     $dec->enableLegacyMode();
-    return var_export($dec->allowedKeyAlgorithms, true);
+    return $dec->allowedKeyAlgorithms === XMLSecEnc::SUPPORTED_KEY_ALGORITHMS ? 'same' : 'changed';
 });
 
 /* 6. The default applies to nested and RetrievalMethod-referenced EncryptedKeys.
@@ -193,24 +193,24 @@ $retrieval = '<Root '.ENC_NS.'><xenc:EncryptedData>'
 $flagOnly = function ($dec) {
     $dec->allowRSA15KeyTransport = true;
 };
-$flagAndNull = function ($dec) {
+$flagAndAll = function ($dec) {
     $dec->allowRSA15KeyTransport = true;
-    $dec->allowedKeyAlgorithms = null;
+    $dec->allowedKeyAlgorithms = XMLSecEnc::SUPPORTED_KEY_ALGORITHMS;
 };
 attempt('NESTED_DEFAULT', function () use ($nested, $flagOnly) {
     return resolve($nested, $flagOnly);
 });
-attempt('NESTED_NULL', function () use ($nested, $flagAndNull) {
-    return resolve($nested, $flagAndNull);
+attempt('NESTED_ALL', function () use ($nested, $flagAndAll) {
+    return resolve($nested, $flagAndAll);
 });
 attempt('RETRIEVAL_DEFAULT', function () use ($retrieval, $flagOnly) {
     return resolve($retrieval, $flagOnly);
 });
-attempt('RETRIEVAL_NULL', function () use ($retrieval, $flagAndNull) {
-    return resolve($retrieval, $flagAndNull);
+attempt('RETRIEVAL_ALL', function () use ($retrieval, $flagAndAll) {
+    return resolve($retrieval, $flagAndAll);
 });
 
-/* 7. Static entry points use the same default; explicit null opts out. */
+/* 7. Static entry points use the same default; an explicit full list is accepted. */
 $doc = new DOMDocument();
 $doc->loadXML($nested);
 $outer = $doc->getElementsByTagNameNS(XMLSecEnc::XMLENCNS, 'EncryptedKey')->item(0);
@@ -218,16 +218,16 @@ $inner = $doc->getElementsByTagNameNS(XMLSecEnc::XMLENCNS, 'EncryptedKey')->item
 attempt('STATIC_FROM_DEFAULT', function () use ($inner) {
     return XMLSecurityKey::fromEncryptedKeyElement($inner, 0, true)->getAlgorithm();
 });
-attempt('STATIC_FROM_NULL', function () use ($inner) {
-    return XMLSecurityKey::fromEncryptedKeyElement($inner, 0, true, null)->getAlgorithm();
+attempt('STATIC_FROM_ALL', function () use ($inner) {
+    return XMLSecurityKey::fromEncryptedKeyElement($inner, 0, true, XMLSecEnc::SUPPORTED_KEY_ALGORITHMS)->getAlgorithm();
 });
 attempt('STATIC_LOCATE_DEFAULT', function () use ($outer) {
     $base = new XMLSecurityKey(XMLSecurityKey::RSA_OAEP_MGF1P, array('type' => 'private'));
     return XMLSecEnc::staticLocateKeyInfo($base, $outer, 0, true)->getAlgorithm();
 });
-attempt('STATIC_LOCATE_NULL', function () use ($outer) {
+attempt('STATIC_LOCATE_ALL', function () use ($outer) {
     $base = new XMLSecurityKey(XMLSecurityKey::RSA_OAEP_MGF1P, array('type' => 'private'));
-    return XMLSecEnc::staticLocateKeyInfo($base, $outer, 0, true, null)->getAlgorithm();
+    return XMLSecEnc::staticLocateKeyInfo($base, $outer, 0, true, XMLSecEnc::SUPPORTED_KEY_ALGORITHMS)->getAlgorithm();
 });
 ?>
 --EXPECTF--
@@ -241,16 +241,16 @@ RSA15_FLAG_ONLY: Key transport algorithm is not allowed: 'http://www.w3.org/2001
 RSA15_FLAG_AND_LIST: OK
 RSA15_LIST_ONLY: RSA-1.5 key transport is disabled (Bleichenbacher risk); set allowRSA15KeyTransport = true to opt in
 RSA15_LEGACY_MODE: OK
-NULL_RSA15_NO_FLAG: RSA-1.5 key transport is disabled (Bleichenbacher risk); set allowRSA15KeyTransport = true to opt in
-NULL_RSA15_FLAG: OK
+ALL_RSA15_NO_FLAG: RSA-1.5 key transport is disabled (Bleichenbacher risk); set allowRSA15KeyTransport = true to opt in
+ALL_RSA15_FLAG: OK
 NON_TRANSPORT_DEFAULT: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256'
-NON_TRANSPORT_NULL: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256'
-LEGACY_NULL_STAYS_NULL: NULL
+NON_TRANSPORT_ALL: EncryptedKey algorithm is not a supported key transport algorithm: 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256'
+LEGACY_ALL_LIST_UNCHANGED: same
 NESTED_DEFAULT: Key transport algorithm is not allowed: 'http://www.w3.org/2001/04/xmlenc#rsa-1_5'; add XMLSecurityKey::RSA_1_5 to allowedKeyAlgorithms (property or static argument) to opt in
-NESTED_NULL: http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p
+NESTED_ALL: http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p
 RETRIEVAL_DEFAULT: Key transport algorithm is not allowed: 'http://www.w3.org/2001/04/xmlenc#rsa-1_5'; add XMLSecurityKey::RSA_1_5 to allowedKeyAlgorithms (property or static argument) to opt in
-RETRIEVAL_NULL: http://www.w3.org/2001/04/xmlenc#rsa-1_5
+RETRIEVAL_ALL: http://www.w3.org/2001/04/xmlenc#rsa-1_5
 STATIC_FROM_DEFAULT: Key transport algorithm is not allowed: 'http://www.w3.org/2001/04/xmlenc#rsa-1_5'; add XMLSecurityKey::RSA_1_5 to allowedKeyAlgorithms (property or static argument) to opt in
-STATIC_FROM_NULL: http://www.w3.org/2001/04/xmlenc#rsa-1_5
+STATIC_FROM_ALL: http://www.w3.org/2001/04/xmlenc#rsa-1_5
 STATIC_LOCATE_DEFAULT: Key transport algorithm is not allowed: 'http://www.w3.org/2001/04/xmlenc#rsa-1_5'; add XMLSecurityKey::RSA_1_5 to allowedKeyAlgorithms (property or static argument) to opt in
-STATIC_LOCATE_NULL: http://www.w3.org/2001/04/xmlenc#rsa-1_5
+STATIC_LOCATE_ALL: http://www.w3.org/2001/04/xmlenc#rsa-1_5

@@ -1616,10 +1616,10 @@ class XMLSecurityKey
      * @param DOMElement $element The EncryptedKey-element.
      * @param int $depth
      * @param bool $allowRSA15
-     * @param null|array<int, string> $allowedKeyAlgorithms Key-transport allowlist (see XMLSecEnc::$allowedKeyAlgorithms;
-     *                                                     defaults to XMLSecEnc::DEFAULT_KEY_ALGORITHMS, null = no restriction)
-     * @param null|array<int, string> $allowedDataAlgorithms Copied onto the inner XMLSecEnc context
-     *                                                     (defaults to XMLSecEnc::DEFAULT_DATA_ALGORITHMS; null copies null).
+     * @param array<int, string> $allowedKeyAlgorithms Key-transport allowlist (see XMLSecEnc::$allowedKeyAlgorithms;
+     *                                                 defaults to XMLSecEnc::DEFAULT_KEY_ALGORITHMS; null is a TypeError)
+     * @param array<int, string> $allowedDataAlgorithms Copied onto the inner XMLSecEnc context
+     *                                                 (defaults to XMLSecEnc::DEFAULT_DATA_ALGORITHMS).
      *                                                     It does not affect decryption.
      * @throws Exception
      *
@@ -1629,8 +1629,8 @@ class XMLSecurityKey
         DOMElement $element,
         int $depth = 0,
         bool $allowRSA15 = false,
-        ?array $allowedKeyAlgorithms = XMLSecEnc::DEFAULT_KEY_ALGORITHMS,
-        ?array $allowedDataAlgorithms = XMLSecEnc::DEFAULT_DATA_ALGORITHMS
+        array $allowedKeyAlgorithms = XMLSecEnc::DEFAULT_KEY_ALGORITHMS,
+        array $allowedDataAlgorithms = XMLSecEnc::DEFAULT_DATA_ALGORITHMS
     ): XMLSecurityKey {
         $objenc = new XMLSecEnc();
         $objenc->allowRSA15KeyTransport = $allowRSA15;

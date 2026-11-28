@@ -63,8 +63,8 @@ Bug Fixes:
   $maxXPathTransforms remains and is effectively capped at 1; a lower value
   is still honored.
 - XMLSecurityDSig::verify() throws when the key is not a signature key,
-  including when allowedSignatureAlgorithms is null and the key comes from
-  locateKey(). XMLSecurityKey::verifySignature() returns 0 for those key types.
+  including when the key comes from locateKey().
+  XMLSecurityKey::verifySignature() returns 0 for those key types.
 - staticLocateKeyInfo() resolves a RetrievalMethod of type EncryptedKey with
   a same-document URI (#id) only when exactly one XML Encryption EncryptedKey
   element carries that Id. The URI fragment is compared to the Id attribute
@@ -121,14 +121,6 @@ Bug Fixes:
   load leaves both unchanged.
 - XMLSecEnc::encryptKey() rejects a wrapping key that is not a key
   transport algorithm before it changes the document.
-- Restore default algorithm fallback in verifyDocument(). When
-  allowedSignatureAlgorithms or allowedDigestAlgorithms is null,
-  verifyDocument() uses DEFAULT_SIGNATURE_ALGORITHMS or
-  DEFAULT_DIGEST_ALGORITHMS for that call. An explicit list, including an
-  empty array, is used unchanged. The caller's property values are restored
-  afterwards. verify() and validateReference() still treat null as no
-  restriction. Callers that need an extra algorithm (for example SHA-1
-  digests) should add it to the list explicitly.
 - Parse RSA-OAEP parameters (ds:DigestMethod, xenc11:MGF, xenc:OAEPparams)
   from the EncryptionMethod of an EncryptedKey/EncryptedData, applying the
   XML Encryption defaults (SHA-1/MGF1-SHA1, empty label) when absent. Restores
@@ -177,15 +169,15 @@ BREAKING CHANGES:
   XMLSecurityKey::setOAEPParameters(), getOAEPParameters(), setOAEPKeySize() and
   assertSignatureKey() can likewise conflict with same-named subclass methods.
 - XMLSecEnc::$allowedKeyAlgorithms now defaults to
-  XMLSecEnc::DEFAULT_KEY_ALGORITHMS (RSA-OAEP and RSA-OAEP-MGF1P) instead of
-  null, a stricter default for key transport. The optional $allowedKeyAlgorithms
+  XMLSecEnc::DEFAULT_KEY_ALGORITHMS (RSA-OAEP and RSA-OAEP-MGF1P), a
+  stricter default for key transport. The optional $allowedKeyAlgorithms
   argument of staticLocateKeyInfo() and XMLSecurityKey::fromEncryptedKeyElement()
   has the same default. RSA-OAEP with SHA-1 parameters (e.g. Shibboleth IdP)
   is unaffected. Decrypting RSA-1.5 key transport now requires both
   allowRSA15KeyTransport = true and RSA-1.5 in the allowlist
   ($enc->allowedKeyAlgorithms[] = XMLSecurityKey::RSA_1_5); enableLegacyMode()
-  does both. Set allowedKeyAlgorithms (or the static argument) to null to
-  apply no key-transport allowlist.
+  does both. To accept every key transport algorithm, assign
+  XMLSecEnc::SUPPORTED_KEY_ALGORITHMS.
 - Requires PHP 8.3 or later
 - Requires phpseclib 3.0.58 or later (4.0.2 required 3.0.57 or later).
 - Parsing an RSA-OAEP EncryptionMethod now rejects unknown or
@@ -197,18 +189,16 @@ BREAKING CHANGES:
   XMLSecurityDSig::$allowedSignatureAlgorithms and $allowedDigestAlgorithms
   default to DEFAULT_SIGNATURE_ALGORITHMS (RSA-SHA256/384/512, RSA-PSS
   SHA256, ECDSA-SHA256/384/512) and DEFAULT_DIGEST_ALGORITHMS
-  (SHA-256/384/512) instead of null, and apply to verify() and
+  (SHA-256/384/512), and apply to verify() and
   validateReference() as well as verifyDocument(). Signing is unaffected.
   SHA-1 (rsa-sha1, hmac-sha1, sha1 digests) requires
   enableLegacyMode(), which adds them to the lists, or adding them to the
   lists explicitly; RIPEMD-160 digests require a list entry. DSA signatures
-  are not supported. verify() and
-  validateReference() treat a null list as no restriction.
-  verifyDocument() falls back to the corresponding DEFAULT_* list when a
-  list is null, for that call only, and restores the property afterwards.
+  are not supported. verify(), validateReference() and verifyDocument() apply
+  the same lists.
 - Data decryption now defaults to AES-GCM.
   XMLSecEnc::$allowedDataAlgorithms defaults to DEFAULT_DATA_ALGORITHMS
-  (AES-128/192/256-GCM) instead of null. This allowlist applies to an
+  (AES-128/192/256-GCM). This allowlist applies to an
   EncryptedData whose EncryptionMethod is AES or 3DES. An EncryptedData
   encrypted directly with an RSA key-transport algorithm is governed by
   allowedKeyAlgorithms and allowRSA15KeyTransport, not allowedDataAlgorithms.
@@ -217,10 +207,26 @@ BREAKING CHANGES:
   copied onto the inner context and does not affect decryption. AES-CBC and
   TripleDES-CBC
   require enableLegacyMode(), which adds LEGACY_DATA_ALGORITHMS, or an
-  explicit allowedDataAlgorithms list. Set the property or the static
-  argument to null to apply no data-encryption allowlist. A null list is
-  left null by enableLegacyMode(). Encryption still uses the algorithm of
-  the caller-supplied key.
+  explicit allowedDataAlgorithms list. To accept every data-encryption
+  algorithm, assign XMLSecEnc::SUPPORTED_DATA_ALGORITHMS. Encryption still
+  uses the algorithm of the caller-supplied key.
+- The algorithm allowlists are now always arrays and null is no longer
+  accepted. XMLSecurityDSig::$allowedSignatureAlgorithms and
+  $allowedDigestAlgorithms, and XMLSecEnc::$allowedKeyAlgorithms and
+  $allowedDataAlgorithms, are typed array properties, and the
+  $allowedKeyAlgorithms and $allowedDataAlgorithms arguments of
+  staticLocateKeyInfo() and XMLSecurityKey::fromEncryptedKeyElement() are
+  typed array. Assigning or passing null throws a TypeError instead of
+  removing the restriction. An empty array allows no algorithm. verify(),
+  validateDigest(), validateReference() and verifyDocument() apply the
+  configured lists in the same way; verifyDocument() no longer substitutes
+  the defaults for a missing list. To accept every supported algorithm,
+  assign the new constants XMLSecurityDSig::SUPPORTED_SIGNATURE_ALGORITHMS,
+  SUPPORTED_DIGEST_ALGORITHMS, XMLSecEnc::SUPPORTED_KEY_ALGORITHMS or
+  SUPPORTED_DATA_ALGORITHMS. enableLegacyMode() adds its algorithms to
+  every list, which now always exists. Subclasses that redeclare these
+  properties without the array type fail with a PHP fatal error, and
+  overrides of the two static methods need the array parameter types.
 - Remove XMLSecurityDSig::generate_GUID(), deprecated since 1.4.1.
   Use XMLSecurityDSig::generateGUID().
 - Remove XMLSecurityKey::getAlgorith(). Use XMLSecurityKey::getAlgorithm().

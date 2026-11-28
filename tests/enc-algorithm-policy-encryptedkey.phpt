@@ -22,7 +22,7 @@ function encryptedDocument($transportAlgorithm) {
     return $doc;
 }
 
-function decrypt(DOMDocument $doc, $allowedKey, $allowedData = null) {
+function decrypt(DOMDocument $doc, $allowedKey, $allowedData = XMLSecEnc::SUPPORTED_DATA_ALGORITHMS) {
     $dec = new XMLSecEnc();
     $dec->allowedKeyAlgorithms = $allowedKey;
     $dec->allowedDataAlgorithms = $allowedData;
@@ -53,8 +53,8 @@ attempt('allowed transport', function () {
 attempt('disallowed transport', function () {
     return decrypt(encryptedDocument(XMLSecurityKey::RSA_OAEP_MGF1P), array(XMLSecurityKey::RSA_OAEP));
 });
-attempt('no allowlist', function () {
-    return decrypt(encryptedDocument(XMLSecurityKey::RSA_OAEP), null);
+attempt('full allowlist', function () {
+    return decrypt(encryptedDocument(XMLSecurityKey::RSA_OAEP), XMLSecEnc::SUPPORTED_KEY_ALGORITHMS);
 });
 
 /* RetrievalMethod-referenced EncryptedKey elements use the same policy. */
@@ -102,7 +102,7 @@ attempt('static default', function () {
 --EXPECTF--
 allowed transport: OK
 disallowed transport: Key transport algorithm is not allowed: 'http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p'
-no allowlist: OK
+full allowlist: OK
 RetrievalMethod disallowed: Key transport algorithm is not allowed: 'http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p'
 RetrievalMethod allowed: http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p
 static disallowed: Key transport algorithm is not allowed: 'http://www.w3.org/2001/04/xmlenc#rsa-oaep-mgf1p'

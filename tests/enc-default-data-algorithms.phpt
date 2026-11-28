@@ -71,7 +71,7 @@ function decryptNodeDirect($dataAlg, ?callable $configure = null) {
 }
 
 $legacy = function ($dec) { $dec->enableLegacyMode(); };
-$nullList = function ($dec) { $dec->allowedDataAlgorithms = null; };
+$allList = function ($dec) { $dec->allowedDataAlgorithms = XMLSecEnc::SUPPORTED_DATA_ALGORITHMS; };
 
 /* 1. Default value, and the constant is not mutated by enableLegacyMode(). */
 $enc = new XMLSecEnc();
@@ -144,20 +144,20 @@ foreach ($dec->allowedDataAlgorithms as $algorithm) {
 }
 echo 'LEGACY_NO_DUPLICATE: '.($once === 1 && in_array(XMLSecurityKey::AES128_CBC, $dec->allowedDataAlgorithms, true) ? 'yes' : 'no')."\n";
 
-/* 5. A null list applies no allowlist and stays null. */
-attempt('NULL_STAYS_NULL', function () {
+/* 5. The explicit full list accepts every supported data algorithm. */
+attempt('ALL_LIST_UNCHANGED_BY_LEGACY', function () {
     $dec = new XMLSecEnc();
-    $dec->allowedDataAlgorithms = null;
+    $dec->allowedDataAlgorithms = XMLSecEnc::SUPPORTED_DATA_ALGORITHMS;
     $dec->enableLegacyMode();
-    return var_export($dec->allowedDataAlgorithms, true);
+    return $dec->allowedDataAlgorithms === XMLSecEnc::SUPPORTED_DATA_ALGORITHMS ? 'same' : 'changed';
 });
 foreach (array(
-    'NULL_CBC256' => XMLSecurityKey::AES256_CBC,
-    'NULL_TRIPLEDES' => XMLSecurityKey::TRIPLEDES_CBC,
-    'NULL_GCM128' => XMLSecurityKey::AES128_GCM,
+    'ALL_CBC256' => XMLSecurityKey::AES256_CBC,
+    'ALL_TRIPLEDES' => XMLSecurityKey::TRIPLEDES_CBC,
+    'ALL_GCM128' => XMLSecurityKey::AES128_GCM,
 ) as $name => $alg) {
-    attempt($name, function () use ($alg, $nullList) {
-        return decrypt(encryptedDocument($alg), $nullList);
+    attempt($name, function () use ($alg, $allList) {
+        return decrypt(encryptedDocument($alg), $allList);
     });
 }
 
@@ -203,7 +203,7 @@ attempt('PROPAGATED_CBC', function () {
     return 'unexpected success';
 });
 
-/* 8. Static helpers use the same default; explicit null opts out. */
+/* 8. Static helpers use the same default; an explicit full list is carried over. */
 $doc = encryptedDocument(XMLSecurityKey::AES256_GCM);
 $encData = $doc->getElementsByTagNameNS(XMLSecEnc::XMLENCNS, 'EncryptedData')->item(0);
 $encKey = $doc->getElementsByTagNameNS(XMLSecEnc::XMLENCNS, 'EncryptedKey')->item(0);
@@ -211,19 +211,19 @@ attempt('STATIC_FROM_OMITTED', function () use ($encKey) {
     $key = XMLSecurityKey::fromEncryptedKeyElement($encKey);
     return $key->encryptedCtx->allowedDataAlgorithms === XMLSecEnc::DEFAULT_DATA_ALGORITHMS ? 'DEFAULT' : 'other';
 });
-attempt('STATIC_FROM_NULL', function () use ($encKey) {
-    $key = XMLSecurityKey::fromEncryptedKeyElement($encKey, 0, false, XMLSecEnc::DEFAULT_KEY_ALGORITHMS, null);
-    return var_export($key->encryptedCtx->allowedDataAlgorithms, true);
+attempt('STATIC_FROM_ALL', function () use ($encKey) {
+    $key = XMLSecurityKey::fromEncryptedKeyElement($encKey, 0, false, XMLSecEnc::DEFAULT_KEY_ALGORITHMS, XMLSecEnc::SUPPORTED_DATA_ALGORITHMS);
+    return $key->encryptedCtx->allowedDataAlgorithms === XMLSecEnc::SUPPORTED_DATA_ALGORITHMS ? 'ALL' : 'other';
 });
 attempt('STATIC_LOCATE_OMITTED', function () use ($encData) {
     $base = new XMLSecurityKey(XMLSecurityKey::AES256_GCM);
     $key = XMLSecEnc::staticLocateKeyInfo($base, $encData);
     return $key->encryptedCtx->allowedDataAlgorithms === XMLSecEnc::DEFAULT_DATA_ALGORITHMS ? 'DEFAULT' : 'other';
 });
-attempt('STATIC_LOCATE_NULL', function () use ($encData) {
+attempt('STATIC_LOCATE_ALL', function () use ($encData) {
     $base = new XMLSecurityKey(XMLSecurityKey::AES256_GCM);
-    $key = XMLSecEnc::staticLocateKeyInfo($base, $encData, 0, false, XMLSecEnc::DEFAULT_KEY_ALGORITHMS, null);
-    return var_export($key->encryptedCtx->allowedDataAlgorithms, true);
+    $key = XMLSecEnc::staticLocateKeyInfo($base, $encData, 0, false, XMLSecEnc::DEFAULT_KEY_ALGORITHMS, XMLSecEnc::SUPPORTED_DATA_ALGORITHMS);
+    return $key->encryptedCtx->allowedDataAlgorithms === XMLSecEnc::SUPPORTED_DATA_ALGORITHMS ? 'ALL' : 'other';
 });
 
 /*
@@ -301,10 +301,10 @@ LEGACY_CBC256_NODE: OK
 LEGACY_LIST: yes
 LEGACY_CONST_UNCHANGED: yes
 LEGACY_NO_DUPLICATE: yes
-NULL_STAYS_NULL: NULL
-NULL_CBC256: OK
-NULL_TRIPLEDES: OK
-NULL_GCM128: OK
+ALL_LIST_UNCHANGED_BY_LEGACY: same
+ALL_CBC256: OK
+ALL_TRIPLEDES: OK
+ALL_GCM128: OK
 CUSTOM_GCM128: OK
 CUSTOM_GCM256_NARROW: Data encryption algorithm is not allowed: 'http://www.w3.org/2009/xmlenc11#aes256-gcm'
 CUSTOM_CBC256: OK
@@ -312,9 +312,9 @@ CUSTOM_GCM_ON_CBC_LIST: Data encryption algorithm is not allowed: 'http://www.w3
 PROPAGATED_DEFAULT: yes
 PROPAGATED_CBC: Data encryption algorithm is not allowed: 'http://www.w3.org/2001/04/xmlenc#aes256-cbc'
 STATIC_FROM_OMITTED: DEFAULT
-STATIC_FROM_NULL: NULL
+STATIC_FROM_ALL: ALL
 STATIC_LOCATE_OMITTED: DEFAULT
-STATIC_LOCATE_NULL: NULL
+STATIC_LOCATE_ALL: ALL
 KW_DEFAULT: Unable to locate algorithm for this Encrypted Key
 KW_ON_LISTS: Unable to locate algorithm for this Encrypted Key
 KW_AS_DATA: null

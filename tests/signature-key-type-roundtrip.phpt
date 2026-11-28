@@ -44,7 +44,7 @@ foreach ([
         $ok = $ok && hash_equals(hash_hmac('sha1', 'payload', 'signature-test-shared-secret', true), $signature);
     }
     $dsig = new XMLSecurityDSig();
-    $dsig->allowedSignatureAlgorithms = null; // Round-trips every key type, SHA-1 included.
+    $dsig->allowedSignatureAlgorithms = XMLSecurityDSig::SUPPORTED_SIGNATURE_ALGORITHMS; // Round-trips every signature key type, SHA-1 included.
     $dsig->setCanonicalMethod(XMLSecurityDSig::EXC_C14N);
     $dsig->sign($private);
     $dsig->canonicalizeSignedInfo();

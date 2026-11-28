@@ -1,5 +1,5 @@
 --TEST--
-verify() throws when locateKey() yields a key-transport SignatureMethod and the allowlist is null
+verify() throws when locateKey() yields a key-transport SignatureMethod even when the allowlist names that algorithm
 --FILE--
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');
@@ -24,7 +24,7 @@ $xml = '<r xmlns:ds="'.XMLSecurityDSig::XMLDSIGNS.'">'
 $doc = new DOMDocument();
 $doc->loadXML($xml);
 $dsig = new XMLSecurityDSig();
-$dsig->allowedSignatureAlgorithms = null;
+$dsig->allowedSignatureAlgorithms[] = XMLSecurityKey::RSA_OAEP_MGF1P;
 if (! $dsig->locateSignature($doc)) {
     echo "NO SIGNATURE\n";
     exit;
