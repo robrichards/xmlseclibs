@@ -17,7 +17,9 @@ Bug Fixes:
 - addReference() and addReferenceList() no longer leave a partly built
   Reference in SignedInfo when an exception is thrown while the Reference
   is being built. An ID attribute added for that Reference is removed, and
-  an ID attribute that was overwritten is restored.
+  an ID attribute that was overwritten is restored with its original text.
+  A namespace prefix binding added for that ID is removed with it. A
+  binding that was already in scope is left in place.
 - Decrypted Element and Content data is now parsed in the namespace context
   of the EncryptedData's parent, so prefixes and default namespaces inherited
   from ancestors resolve as they did before encryption. Existing ciphertext

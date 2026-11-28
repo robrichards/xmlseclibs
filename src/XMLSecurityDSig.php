@@ -1122,6 +1122,7 @@ class XMLSecurityDSig
          * put back. An ID that was only read is left as it was.
          */
         $idSnapshot = null;
+        $prefixBinding = null;
         $idWritten = false;
         try {
             if (! $omit_uri) {
@@ -1133,6 +1134,7 @@ class XMLSecurityDSig
                     if (empty($uri)) {
                         $uri = self::generateGUID();
                         $idSnapshot = $this->captureIdAttribute($node, $prefix_ns, $id_name, $attname);
+                        $prefixBinding = $this->capturePrefixBinding($node, $prefix);
                         $node->setAttributeNS($prefix_ns, $attname, $uri);
                         $idWritten = true;
                     }
@@ -1185,7 +1187,7 @@ class XMLSecurityDSig
                 $refNode->parentNode->removeChild($refNode);
             }
             if ($idWritten && $node instanceof DOMElement) {
-                $this->revertWrittenIdAttribute($node, $prefix_ns, $id_name, $attname, $idSnapshot);
+                $this->revertWrittenIdAttribute($node, $prefix_ns, $id_name, $attname, $idSnapshot, $prefixBinding);
             }
             throw $e;
         }
@@ -1244,41 +1246,61 @@ class XMLSecurityDSig
     }
 
     /**
+     * Record whether a prefix is already bound before an ID is written.
+     *
+     * @param DOMElement $node
+     * @param string|null $prefix
+     * @return array{prefix: string, inScope: bool, onElement: bool}|null
+     */
+    private function capturePrefixBinding(DOMElement $node, $prefix)
+    {
+        if (! is_string($prefix) || $prefix === '') {
+            return null;
+        }
+        $inScope = $node->lookupNamespaceURI($prefix);
+        return array(
+            'prefix' => $prefix,
+            'inScope' => is_string($inScope) && $inScope !== '',
+            'onElement' => $node->hasAttributeNS('http://www.w3.org/2000/xmlns/', $prefix),
+        );
+    }
+
+    /**
      * Undo an ID attribute written for a Reference that was not finished.
      *
      * An attribute that was not present is removed. An attribute that was
-     * overwritten is restored with its value, qualified name, namespace
-     * and prefix.
+     * overwritten is restored with its text, qualified name, namespace and
+     * prefix. A prefix binding this call added is removed. A binding that
+     * was already on the element or an ancestor is left in place.
      *
      * @param DOMElement $node
      * @param string|null $prefixNs
      * @param string $idName
      * @param string $attName
      * @param array{name: string, namespaceURI: ?string, prefix: ?string, value: string}|null $snapshot
+     * @param array{prefix: string, inScope: bool, onElement: bool}|null $prefixBinding
      */
-    private function revertWrittenIdAttribute(DOMElement $node, $prefixNs, $idName, $attName, $snapshot)
+    private function revertWrittenIdAttribute(DOMElement $node, $prefixNs, $idName, $attName, $snapshot, $prefixBinding)
     {
         $current = $this->findIdAttribute($node, $prefixNs, $idName, $attName);
         if ($current instanceof DOMAttr) {
             $node->removeAttributeNode($current);
         }
-        if ($snapshot === null) {
+        if ($snapshot !== null) {
+            $ns = $snapshot['namespaceURI'];
+            if (is_string($ns) && $ns !== '') {
+                $node->setAttributeNS($ns, $snapshot['name'], $snapshot['value']);
+            } else {
+                $node->setAttribute($snapshot['name'], $snapshot['value']);
+            }
+        }
+        if (! is_array($prefixBinding) || $prefixBinding['inScope'] || $prefixBinding['onElement']) {
             return;
         }
-        $doc = $node->ownerDocument;
-        if (! $doc instanceof DOMDocument) {
+        if (! is_string($prefixNs) || $prefixNs === '') {
             return;
         }
-        $ns = $snapshot['namespaceURI'];
-        if (is_string($ns) && $ns !== '') {
-            $attr = $doc->createAttributeNS($ns, $snapshot['name']);
-            $attr->value = $snapshot['value'];
-            $node->setAttributeNodeNS($attr);
-            return;
-        }
-        $attr = $doc->createAttribute($snapshot['name']);
-        $attr->value = $snapshot['value'];
-        $node->setAttributeNode($attr);
+        $node->removeAttributeNS($prefixNs, $prefixBinding['prefix']);
     }
 
     /**

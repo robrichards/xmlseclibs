@@ -6,8 +6,11 @@ the transforms. A DOMException from an invalid id name or prefix, and a
 TypeError from an array transform without a query, are rethrown unchanged.
 The Reference being built is removed. A previously completed Reference stays
 byte for byte. An ID that was absent stays absent. An ID that was overwritten
-keeps its value, qualified name, namespace and prefix. An ID only read
-(overwrite false) is left untouched. The signature still verifies.
+keeps its text, qualified name, namespace and prefix, including text
+that contains "&", "<" and a quote. A prefix binding added for a
+generated ID is removed with it. A binding already on the element or
+an ancestor stays. An ID only read (overwrite false) is left untouched.
+The signature still verifies. No PHP warning is emitted.
 --FILE--
 <?php
 require(dirname(__FILE__) . '/../xmlseclibs.php');
@@ -122,6 +125,65 @@ foreach ($cases as $case) {
 		' attrs=', $sameAttrs,
 		' verify=', verify($doc, $dsig), "\n";
 }
+
+$entity = 'a &amp; b &lt; c &quot; d';
+$entityPlain = '<?xml version="1.0"?><root><good>stable</good><target Id="' . $entity . '">payload</target></root>';
+$entityWsu = '<?xml version="1.0"?><root xmlns:wsu="' . WSU . '"><good>stable</good><target wsu:Id="' . $entity . '">payload</target></root>';
+$unbound = '<?xml version="1.0"?><root><good>stable</good><target>x</target></root>';
+$boundElement = '<?xml version="1.0"?><root><good>stable</good><target xmlns:p="urn:p">x</target></root>';
+$boundAncestor = '<?xml version="1.0"?><root xmlns:p="urn:p"><good>stable</good><target>x</target></root>';
+$pOptions = array('prefix' => 'p', 'prefix_ns' => 'urn:p', 'id_name' => 'Id');
+$wsuEntityOptions = array('prefix' => 'wsu', 'prefix_ns' => WSU, 'id_name' => 'Id');
+
+$textCases = array(
+	array('entity-plain', $entityPlain, null),
+	array('entity-wsu', $entityWsu, $wsuEntityOptions),
+	array('prefix-unbound', $unbound, $pOptions),
+	array('prefix-on-element', $boundElement, $pOptions),
+	array('prefix-on-ancestor', $boundAncestor, $pOptions),
+);
+
+foreach ($textCases as $case) {
+	list($label, $xml, $options) = $case;
+	list($doc, $dsig) = prepare($xml);
+	$target = $doc->getElementsByTagName('target')->item(0);
+	$beforeInfo = signedInfo($dsig)->C14N();
+	$beforeInc = $target->C14N(false, false);
+	$beforeExc = $target->C14N(true, false);
+	$warnings = array();
+	set_error_handler(function ($severity, $message) use (&$warnings) {
+		$warnings[] = $message;
+		return true;
+	});
+	$gotClass = '';
+	$gotMsg = '';
+	try {
+		$dsig->addReference($target, XMLSecurityDSig::SHA256, $badTransform, $options);
+		$gotClass = 'none';
+	} catch (Throwable $e) {
+		$gotClass = get_class($e);
+		$gotMsg = $e->getMessage();
+	}
+	restore_error_handler();
+	$sameInfo = (signedInfo($dsig)->C14N() === $beforeInfo) ? 'same' : 'DIFF';
+	$sameInc = ($target->C14N(false, false) === $beforeInc);
+	$sameExc = ($target->C14N(true, false) === $beforeExc);
+	if ($sameInc && $sameExc) {
+		$sameC14n = 'same';
+	} else {
+		$sameC14n = 'DIFF inc-before=' . $beforeInc
+			. ' inc-after=' . $target->C14N(false, false)
+			. ' exc-before=' . $beforeExc
+			. ' exc-after=' . $target->C14N(true, false);
+	}
+	$classOk = ($gotClass === 'TypeError' && $gotMsg === TYPE_MSG) ? 'ok' : ($gotClass . '|' . $gotMsg);
+	echo $label, ': exception=', $classOk,
+		' refs=', referenceCount($dsig),
+		' signedinfo=', $sameInfo,
+		' c14n=', $sameC14n,
+		' warnings=', count($warnings),
+		' verify=', verify($doc, $dsig), "\n";
+}
 ?>
 --EXPECTF--
 dom-plain-absent: exception=ok refs=1 signedinfo=same attrs=same verify=ok
@@ -134,3 +196,8 @@ type-ns-absent: exception=ok refs=1 signedinfo=same attrs=same verify=ok
 type-ns-existing: exception=ok refs=1 signedinfo=same attrs=same verify=ok
 type-plain-reuse: exception=ok refs=1 signedinfo=same attrs=same verify=ok
 type-ns-reuse: exception=ok refs=1 signedinfo=same attrs=same verify=ok
+entity-plain: exception=ok refs=1 signedinfo=same c14n=same warnings=0 verify=ok
+entity-wsu: exception=ok refs=1 signedinfo=same c14n=same warnings=0 verify=ok
+prefix-unbound: exception=ok refs=1 signedinfo=same c14n=same warnings=0 verify=ok
+prefix-on-element: exception=ok refs=1 signedinfo=same c14n=same warnings=0 verify=ok
+prefix-on-ancestor: exception=ok refs=1 signedinfo=same c14n=same warnings=0 verify=ok
