@@ -146,7 +146,7 @@ try {
 }
 ```
 
-After a `0` result or an exception, `getValidatedNodes()` returns `null`, including when the same object had previously succeeded. `enableLegacyMode()` only widens the algorithm lists; legacy rsa-sha1 and hmac-sha1 signatures return `1` or `0` and throw in the same cases.
+After a `0` result or an exception, `getValidatedNodes()` returns `null`, including when the same object had previously succeeded. The same verification return values and exception behavior apply in legacy mode.
 
 ## Breaking changes (3.1 → 4.0)
 
