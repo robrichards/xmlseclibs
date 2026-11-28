@@ -373,20 +373,6 @@ class XMLSecurityDSig
     }
 
     /**
-     * Generate guid
-     *
-     * @param string $prefix Prefix to use for guid. defaults to pfx
-     *
-     * @return string The generated guid
-     *
-     * @deprecated Method deprecated in Release 1.4.1
-     */
-    public static function generate_GUID($prefix='pfx')
-    {
-        return self::generateGUID($prefix);
-    }
-
-    /**
      * @param DOMNode $objDoc
      * @param int $pos
      * @return DOMElement|null
@@ -1837,14 +1823,6 @@ class XMLSecurityDSig
         } else {
             $this->sigNode->appendChild($sigValueNode);
         }
-    }
-
-    /**
-     * @deprecated Empty stub retained for API compatibility; use add509Cert().
-     */
-    public function appendCert()
-    {
-
     }
 
     /**

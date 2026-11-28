@@ -221,6 +221,11 @@ BREAKING CHANGES:
   argument to null to apply no data-encryption allowlist. A null list is
   left null by enableLegacyMode(). Encryption still uses the algorithm of
   the caller-supplied key.
+- Remove XMLSecurityDSig::generate_GUID(), deprecated since 1.4.1.
+  Use XMLSecurityDSig::generateGUID().
+- Remove XMLSecurityKey::getAlgorith(). Use XMLSecurityKey::getAlgorithm().
+- Remove the empty XMLSecurityDSig::appendCert() stub, deprecated in 4.0.0.
+  Use XMLSecurityDSig::add509Cert().
 
 Compatibility:
 - omit_uri on a nested element now throws an Exception before a Reference
