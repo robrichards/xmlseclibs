@@ -1421,16 +1421,6 @@ class XMLSecurityKey
     }
 
     /**
-     * @deprecated
-     * @see getAlgorithm()
-     * @return mixed
-     */
-    public function getAlgorith()
-    {
-        return $this->getAlgorithm();
-    }
-
-    /**
      * @return string
      */
     public function getAlgorithm()
