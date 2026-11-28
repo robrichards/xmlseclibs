@@ -26,7 +26,7 @@ composer install --no-interaction --quiet
 
 status=0
 for legacy in "" legacy; do
-  for mode in autoload direct direct-after-autoload; do
+  for mode in autoload direct direct-after-autoload direct-phpseclib-only; do
     php check.php "$mode" $legacy || status=1
   done
 done

@@ -3,13 +3,13 @@
  * Run by tests/consumer/run.sh inside a throw-away Composer project that has
  * installed this package as a dependency.
  *
- * Usage: php check.php <autoload|direct|direct-after-autoload> [legacy]
+ * Usage: php check.php <autoload|direct|direct-after-autoload|direct-phpseclib-only> [legacy]
  */
 
 use phpseclib3\Crypt\RSA;
+use RobRichards\XMLSecLibs\XMLSecEnc;
 use RobRichards\XMLSecLibs\XMLSecurityDSig;
 use RobRichards\XMLSecLibs\XMLSecurityKey;
-use RobRichards\XMLSecLibs\XMLSecEnc;
 
 $mode = $argv[1] ?? 'autoload';
 $legacy = ($argv[2] ?? '') === 'legacy';
@@ -26,6 +26,32 @@ switch ($mode) {
     case 'direct-after-autoload':
         require __DIR__ . '/vendor/autoload.php';
         class_exists(XMLSecurityDSig::class);
+        require $package;
+        break;
+    case 'direct-phpseclib-only':
+        // The application loads phpseclib through its own autoloader, which has no
+        // mapping for xmlseclibs, and then includes the package file directly.
+        $vendor = __DIR__ . '/vendor';
+        spl_autoload_register(static function (string $class) use ($vendor): void {
+            $maps = [
+                'phpseclib3\\' => $vendor . '/phpseclib/phpseclib/phpseclib/',
+                'ParagonIE\\ConstantTime\\' => $vendor . '/paragonie/constant_time_encoding/src/',
+            ];
+            foreach ($maps as $prefix => $dir) {
+                if (strncmp($class, $prefix, strlen($prefix)) === 0) {
+                    $file = $dir . str_replace('\\', '/', substr($class, strlen($prefix))) . '.php';
+                    if (is_file($file)) {
+                        require $file;
+                    }
+                    return;
+                }
+            }
+        });
+        require $vendor . '/phpseclib/phpseclib/phpseclib/bootstrap.php';
+        if (class_exists('RobRichards\\XMLSecLibs\\Internal\\KeyTransportAlgorithms')) {
+            fwrite(STDERR, "setup error: xmlseclibs is already resolvable\n");
+            exit(2);
+        }
         require $package;
         break;
     default:
@@ -81,13 +107,41 @@ try {
     $modifiedRejected = true;
 }
 
+// Key transport round trip: wrap a data key for an RSA key, then unwrap it and decrypt.
+$transportAlg = $legacy ? XMLSecurityKey::RSA_1_5 : XMLSecurityKey::RSA_OAEP;
+$encDoc = new DOMDocument();
+$encDoc->loadXML('<Root>payload</Root>');
+$enc = new XMLSecEnc();
+$enc->setNode($encDoc->documentElement);
+$enc->type = XMLSecEnc::Element;
+$session = new XMLSecurityKey(XMLSecurityKey::AES256_GCM);
+$session->generateSessionKey();
+$wrap = new XMLSecurityKey($transportAlg, ['type' => 'public']);
+$wrap->loadKey($publicPem);
+$enc->encryptKey($wrap, $session);
+$enc->encryptNode($session);
+
+$dec = new XMLSecEnc();
+if ($legacy) {
+    $dec->enableLegacyMode();
+}
+$dec->setNode($dec->locateEncryptedData($encDoc));
+$dec->type = XMLSecEnc::Element;
+$dataKey = $dec->locateKey();
+$unwrap = $dec->locateKeyInfo($dataKey);
+$unwrap->loadKey($privatePem);
+$dataKey->loadKey($unwrap->encryptedCtx->decryptKey($unwrap));
+$dec->decryptNode($dataKey, true);
+$transportOk = $encDoc->documentElement->textContent === 'payload';
+
 printf(
-    "%s %s alg=%s verify=%d references=%s modified_content_rejected=%s\n",
+    "%s %s alg=%s verify=%d references=%s modified_content_rejected=%s key_transport=%s\n",
     $mode,
     $legacy ? 'legacy' : 'default',
     $legacy ? 'rsa-sha1' : 'rsa-sha256',
     $result,
     $refs ? 'ok' : 'fail',
-    $modifiedRejected ? 'yes' : 'no'
+    $modifiedRejected ? 'yes' : 'no',
+    $transportOk ? ($legacy ? 'rsa-1_5 ok' : 'rsa-oaep ok') : 'fail'
 );
-exit($result === 1 && $refs && $modifiedRejected ? 0 : 1);
+exit($result === 1 && $refs && $modifiedRejected && $transportOk ? 0 : 1);

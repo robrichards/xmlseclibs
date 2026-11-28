@@ -40,12 +40,16 @@
  * @version   4.1.0
  */
 
-// Load the Composer autoloader that provides phpseclib. Use the package's own
-// vendor/ directory (a git clone) or, when installed as a dependency
-// (<vendor-dir>/robrichards/xmlseclibs), the dependent project's autoloader.
-// Skip this when the dependencies are already available, for example when the
-// application has already loaded vendor/autoload.php.
-if (!class_exists('phpseclib3\\Crypt\\RSA')) {
+// Make sure phpseclib and this package's classes can be autoloaded. Skip
+// Composer only when the active autoloaders already resolve both phpseclib and
+// the package's internal classes (for example the application loaded
+// vendor/autoload.php). Otherwise use the package's own vendor/ directory (a git
+// clone) or, when installed as a dependency (<vendor-dir>/robrichards/xmlseclibs),
+// the dependent project's autoloader.
+if (
+    !class_exists('phpseclib3\\Crypt\\RSA')
+    || !class_exists('RobRichards\\XMLSecLibs\\Internal\\KeyTransportAlgorithms')
+) {
     $xmlseclibs_autoload = null;
     foreach ([__DIR__ . '/vendor/autoload.php', dirname(__DIR__, 2) . '/autoload.php'] as $xmlseclibs_candidate) {
         if (is_file($xmlseclibs_candidate)) {
