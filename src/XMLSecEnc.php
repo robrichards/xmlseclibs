@@ -1,6 +1,8 @@
 <?php
 namespace RobRichards\XMLSecLibs;
 
+use DOMCharacterData;
+use DOMComment;
 use DOMDocument;
 use DOMElement;
 use DOMNode;
@@ -296,7 +298,7 @@ class XMLSecEnc
         }
         switch ($this->type) {
             case (self::Element):
-                $data = $doc->saveXML($this->rawNode);
+                $data = self::serializeInContext($doc, $this->rawNode, true);
                 if ($data === false) {
                     throw new Exception('Error serializing node for encryption');
                 }
@@ -305,7 +307,7 @@ class XMLSecEnc
             case (self::Content):
                 $children = $this->rawNode->childNodes;
                 foreach ($children AS $child) {
-                    $childXml = $doc->saveXML($child);
+                    $childXml = self::serializeInContext($doc, $child, false);
                     if ($childXml === false) {
                         throw new Exception('Error serializing node for encryption');
                     }
@@ -491,22 +493,28 @@ class XMLSecEnc
             if ($replace) {
                 switch ($this->type) {
                     case (self::Element):
-                        $newdoc = self::parseDecryptedXML($decrypted);
                         if ($rawNode->nodeType == XML_DOCUMENT_NODE) {
-                            return $newdoc;
+                            return self::parseDecryptedXML($decrypted);
                         }
                         $ownerDoc = $rawNode->ownerDocument;
-                        if ($ownerDoc === null || $newdoc->documentElement === null) {
+                        if ($ownerDoc === null) {
                             throw new Exception('Error parsing decrypted XML');
                         }
-                        $importEnc = $ownerDoc->importNode($newdoc->documentElement, true);
-                        if (! $importEnc instanceof DOMElement) {
-                            throw new Exception('Error importing decrypted XML');
+                        $nodes = self::parseDecryptedInContext($decrypted, $rawNode->parentNode, true);
+                        $elements = array_values(array_filter($nodes, function ($n) { return $n instanceof DOMElement; }));
+                        foreach ($nodes as $n) {
+                            if ($n instanceof DOMCharacterData && ! $n instanceof DOMComment && trim($n->data) !== '') {
+                                throw new Exception('Error parsing decrypted XML');
+                            }
+                        }
+                        if (count($elements) !== 1) {
+                            throw new Exception('Error parsing decrypted XML');
                         }
                         if ($rawNode->parentNode === null) {
                             throw new Exception('Cannot replace node without a parent');
                         }
-                        $rawNode->parentNode->replaceChild($importEnc, $rawNode);
+                        $importEnc = self::graft($ownerDoc, $elements[0], $rawNode->parentNode, $rawNode);
+                        $rawNode->parentNode->removeChild($rawNode);
                         return $importEnc;
                     case (self::Content):
                         if ($rawNode instanceof DOMDocument) {
@@ -517,20 +525,14 @@ class XMLSecEnc
                         if (! $doc instanceof DOMDocument) {
                             throw new Exception('Cannot resolve owner document for decryption');
                         }
-                        $tmp = self::parseDecryptedXML('<root>'.$decrypted.'</root>');
-                        $tmpRoot = $tmp->documentElement;
-                        if ($tmpRoot === null) {
-                            throw new Exception('Error parsing decrypted XML');
-                        }
-                        $newFrag = $doc->createDocumentFragment();
-                        foreach (iterator_to_array($tmpRoot->childNodes) as $child) {
-                            $newFrag->appendChild($doc->importNode($child, true));
-                        }
                         $parent = $rawNode->parentNode;
                         if ($parent === null) {
                             throw new Exception('Cannot replace node without a parent');
                         }
-                        $parent->replaceChild($newFrag, $rawNode);
+                        foreach (self::parseDecryptedInContext($decrypted, $parent) as $child) {
+                            self::graft($doc, $child, $parent, $rawNode);
+                        }
+                        $parent->removeChild($rawNode);
                         return $parent;
                     default:
                         return $decrypted;
@@ -541,6 +543,294 @@ class XMLSecEnc
         } else {
             throw new Exception("Cannot locate encrypted data");
         }
+    }
+
+    /**
+     * In-scope namespace bindings (prefix => URI, '' for the default namespace)
+     * for a node, excluding the implicit xml prefix.
+     *
+     * @param DOMNode|null $node
+     * @return array<string, string>
+     */
+    private static function inScopeNamespaces($node)
+    {
+        $map = array();
+        if (! $node instanceof DOMElement) {
+            return $map;
+        }
+        $xp = new DOMXPath($node->ownerDocument);
+        $list = $xp->query('namespace::*', $node);
+        if ($list === false) {
+            return $map;
+        }
+        foreach ($list as $ns) {
+            if ($ns->nodeName === 'xmlns:xml') {
+                continue;
+            }
+            $prefix = ($ns->nodeName === 'xmlns') ? '' : substr($ns->nodeName, 6);
+            $map[$prefix] = $ns->nodeValue;
+        }
+        return $map;
+    }
+
+    /**
+     * Serialize $node (element: $declare => add in-scope declarations on it).
+     * Always emits xmlns="" when a no-namespace element sits under a default namespace.
+     *
+     * @param DOMDocument $doc
+     * @param DOMNode $node
+     * @param bool $declare
+     * @return string|false
+     */
+    private static function serializeInContext(DOMDocument $doc, DOMNode $node, $declare)
+    {
+        if ($node instanceof DOMDocument) {
+            /* A whole document: no ancestors to declare, but descendants still
+             * need the same xmlns="" handling as an element subtree. */
+            $root = $node->documentElement;
+            if ($root === null) {
+                return $doc->saveXML($node);
+            }
+            $marked = self::markMissingEmptyDefaults($root);
+            try {
+                return $doc->saveXML($node);
+            } finally {
+                foreach ($marked as $markedElement) {
+                    $markedElement->removeAttribute('xmlns');
+                }
+            }
+        }
+        if (! $node instanceof DOMElement) {
+            return $doc->saveXML($node);
+        }
+        /* saveXML omits xmlns="" on a no-namespace element created through the DOM
+         * under a default namespace. Declare it on those descendants before
+         * serializing, then remove it so the caller's tree is unchanged.
+         * The serialized node itself is handled below, with the same rules. */
+        $marked = self::markMissingEmptyDefaults($node);
+        try {
+            $xml = $doc->saveXML($node);
+        } finally {
+            foreach ($marked as $markedElement) {
+                $markedElement->removeAttribute('xmlns');
+            }
+        }
+        if ($xml === false) {
+            return $xml;
+        }
+        $inScope = self::inScopeNamespaces($node->parentNode);
+        $own = self::startTagDeclaredPrefixes($xml);
+        $add = '';
+        foreach ($inScope as $prefix => $uri) {
+            if (isset($own[$prefix])) {
+                continue;   // the element declares this prefix itself
+            }
+            if ($prefix === '') {
+                if ($node->namespaceURI === null) {
+                    // XMLENC 4.5.3.1: keep a no-namespace element out of the context's default namespace
+                    $add .= ' xmlns=""';
+                    continue;
+                }
+                if (! $declare) {
+                    continue;
+                }
+            } elseif (! $declare) {
+                continue;
+            }
+            $add .= ' ' . ($prefix === '' ? 'xmlns' : 'xmlns:' . $prefix) . '="'
+                . htmlspecialchars($uri, ENT_QUOTES | ENT_XML1, 'UTF-8') . '"';
+        }
+        if ($add === '') {
+            return $xml;
+        }
+        $len = strlen('<' . $node->nodeName);
+        return substr($xml, 0, $len) . $add . substr($xml, $len);
+    }
+
+    /**
+     * Prefixes declared by attributes on the start tag of $xml ('' for the default).
+     * Attribute values are skipped, so text such as xmlns:p= inside a value is not
+     * treated as a declaration.
+     *
+     * @param string $xml
+     * @return array<string, bool>
+     */
+    private static function startTagDeclaredPrefixes($xml)
+    {
+        $own = array();
+        $len = strlen($xml);
+        if ($len < 2 || $xml[0] !== '<') {
+            return $own;
+        }
+        $i = 1;
+        while ($i < $len) {
+            $c = $xml[$i];
+            if ($c === ' ' || $c === "\t" || $c === "\n" || $c === "\r" || $c === '/' || $c === '>') {
+                break;
+            }
+            $i++;
+        }
+        while ($i < $len) {
+            while ($i < $len && ($xml[$i] === ' ' || $xml[$i] === "\t" || $xml[$i] === "\n" || $xml[$i] === "\r")) {
+                $i++;
+            }
+            if ($i >= $len || $xml[$i] === '>' || $xml[$i] === '/') {
+                break;
+            }
+            $nameStart = $i;
+            while ($i < $len) {
+                $c = $xml[$i];
+                if ($c === '=' || $c === ' ' || $c === "\t" || $c === "\n" || $c === "\r" || $c === '>' || $c === '/') {
+                    break;
+                }
+                $i++;
+            }
+            $attr = substr($xml, $nameStart, $i - $nameStart);
+            while ($i < $len && ($xml[$i] === ' ' || $xml[$i] === "\t" || $xml[$i] === "\n" || $xml[$i] === "\r")) {
+                $i++;
+            }
+            if ($i < $len && $xml[$i] === '=') {
+                $i++;
+                while ($i < $len && ($xml[$i] === ' ' || $xml[$i] === "\t" || $xml[$i] === "\n" || $xml[$i] === "\r")) {
+                    $i++;
+                }
+                if ($i < $len && ($xml[$i] === '"' || $xml[$i] === "'")) {
+                    $q = $xml[$i];
+                    $i++;
+                    while ($i < $len && $xml[$i] !== $q) {
+                        $i++;
+                    }
+                    if ($i < $len) {
+                        $i++;
+                    }
+                }
+            }
+            if ($attr === 'xmlns') {
+                $own[''] = true;
+            } elseif (strlen($attr) > 6 && strncmp($attr, 'xmlns:', 6) === 0) {
+                $own[substr($attr, 6)] = true;
+            }
+        }
+        return $own;
+    }
+
+    /**
+     * Set xmlns="" on descendant elements that are in no namespace while a
+     * non-empty default namespace is in scope, and that do not declare one.
+     * The serialized element itself is left alone. Returns the elements changed.
+     *
+     * @param DOMElement $node
+     * @return DOMElement[]
+     */
+    private static function markMissingEmptyDefaults(DOMElement $node)
+    {
+        $marked = array();
+        $suppress = false;
+        if ($node->hasAttribute('xmlns') && $node->getAttribute('xmlns') === '') {
+            $suppress = true;
+        } elseif ($node->namespaceURI === null && ! $node->hasAttribute('xmlns')) {
+            $scope = self::inScopeNamespaces($node->parentNode);
+            if (isset($scope['']) && $scope[''] !== '') {
+                $suppress = true;
+            }
+        }
+        foreach (iterator_to_array($node->childNodes) as $child) {
+            if ($child instanceof DOMElement) {
+                self::markEmptyDefault($child, $suppress, $marked);
+            }
+        }
+        return $marked;
+    }
+
+    /**
+     * @param DOMElement $el
+     * @param bool $parentSuppressesDefault true when an ancestor xmlns="" already covers $el
+     * @param DOMElement[] $marked
+     */
+    private static function markEmptyDefault(DOMElement $el, $parentSuppressesDefault, array &$marked)
+    {
+        $suppress = false;
+        if ($el->hasAttribute('xmlns') && $el->getAttribute('xmlns') === '') {
+            $suppress = true;
+        } elseif ($el->namespaceURI === null && ! $el->hasAttribute('xmlns')) {
+            if ($parentSuppressesDefault) {
+                $suppress = true;
+            } else {
+                $scope = self::inScopeNamespaces($el);
+                if (isset($scope['']) && $scope[''] !== '') {
+                    $el->setAttribute('xmlns', '');
+                    $marked[] = $el;
+                    $suppress = true;
+                }
+            }
+        }
+        foreach (iterator_to_array($el->childNodes) as $child) {
+            if ($child instanceof DOMElement) {
+                self::markEmptyDefault($child, $suppress, $marked);
+            }
+        }
+    }
+
+    /**
+     * Copy $src (and descendants) into $doc as a child of $parent, in front of $before,
+     * one node at a time. Inserting a whole imported subtree lets PHP's namespace
+     * reconciliation hoist an attribute's declaration from its element onto the subtree
+     * root, which changes inclusive C14N output; per-node insertion keeps declarations
+     * exactly where they were parsed.
+     *
+     * @param DOMDocument $doc
+     * @param DOMNode $src
+     * @param DOMNode $parent
+     * @param DOMNode|null $before
+     * @return DOMNode
+     */
+    private static function graft(DOMDocument $doc, DOMNode $src, DOMNode $parent, $before = null)
+    {
+        $copy = $doc->importNode($src, false);
+        if ($before !== null) {
+            $parent->insertBefore($copy, $before);
+        } else {
+            $parent->appendChild($copy);
+        }
+        foreach ($src->childNodes as $child) {
+            self::graft($doc, $child, $copy);
+        }
+        return $copy;
+    }
+
+    /**
+     * Parse decrypted octets in the namespace context of $context (XMLENC 4.5.1).
+     *
+     * @param string $xml
+     * @param DOMNode|null $context
+     * @param bool $elementMode
+     * @return DOMNode[] the parsed top-level nodes
+     */
+    private static function parseDecryptedInContext($xml, $context, $elementMode = false)
+    {
+        $original = $xml;
+        try {
+            if ($elementMode && preg_match('/^(?:\xEF\xBB\xBF)?<\?xml\s/', $xml)) {
+                /* A declaration cannot sit inside the wrapper. Parse the payload once on its own
+                 * (this honours a declared encoding and rejects a DOCTYPE, as before) and carry on
+                 * with its UTF-8 serialization without the declaration. */
+                $standalone = self::parseDecryptedXML($xml);
+                $xml = $standalone->saveXML($standalone->documentElement);
+            }
+            $decl = '';
+            foreach (self::inScopeNamespaces($context) as $prefix => $uri) {
+                $decl .= ' ' . ($prefix === '' ? 'xmlns' : 'xmlns:' . $prefix) . '="'
+                    . htmlspecialchars($uri, ENT_QUOTES | ENT_XML1, 'UTF-8') . '"';
+            }
+            $tmp = self::parseDecryptedXML('<xmlenc-ctx' . $decl . '>' . $xml . '</xmlenc-ctx>');
+        } catch (Exception $e) {
+            /* A DOCTYPE is not well-formed inside the wrapper; keep reporting it as before. */
+            if (preg_match('/<!DOCTYPE/i', $original)) {
+                throw new Exception('Decrypted XML must not contain a DOCTYPE');
+            }
+            throw $e;
+        }
+        return iterator_to_array($tmp->documentElement->childNodes, false);
     }
 
     /**

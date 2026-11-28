@@ -2,6 +2,23 @@ xmlseclibs.php
 |||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 XX, Nov 2026, 4.1.0
 Bug Fixes:
+- Decrypted Element and Content data is now parsed in the namespace context
+  of the EncryptedData's parent, so prefixes and default namespaces inherited
+  from ancestors resolve as they did before encryption. Existing ciphertext
+  recovers bindings that are still present on its original parent; data
+  produced by an older serializer that omitted an explicit xmlns="" cannot
+  indicate that the element had no namespace and takes the parent's default
+  namespace.
+- Encrypted Element data now carries its in-scope namespace declarations,
+  and xmlns="" is written where needed, so decryptors that do not parse in
+  context restore the same namespaces.
+- Encrypting a whole DOMDocument now writes xmlns="" on descendants that
+  have no namespace and sit under a default namespace (for example, nodes
+  created with createElement), so they come back with no namespace after
+  decryption. The caller's document is left unchanged.
+- Signatures over encrypted-then-decrypted content (inclusive and exclusive
+  c14n, enveloped and external references, Element and Content modes)
+  previously failed to verify in several cases and now verify.
 - A failed verifyDocument(), validateReference(), or verify() leaves
   getValidatedNodes() with no nodes, including when the failure is not
   an Exception. Nodes recorded for an earlier reference are cleared when
