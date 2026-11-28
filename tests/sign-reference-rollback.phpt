@@ -8,7 +8,8 @@ The Reference being built is removed. A previously completed Reference stays
 byte for byte. An ID that was absent stays absent. An ID that was overwritten
 keeps its text, qualified name, namespace and prefix, including text
 that contains "&", "<" and a quote. A prefix binding added for a
-generated ID is removed with it. A binding already on the element or
+generated ID is removed with it, including when that prefix was already
+bound to a different namespace. A binding already on the element or
 an ancestor stays. An ID only read (overwrite false) is left untouched.
 The signature still verifies. No PHP warning is emitted.
 --FILE--
@@ -134,6 +135,10 @@ $boundElement = '<?xml version="1.0"?><root><good>stable</good><target xmlns:p="
 $boundAncestor = '<?xml version="1.0"?><root xmlns:p="urn:p"><good>stable</good><target>x</target></root>';
 $pOptions = array('prefix' => 'p', 'prefix_ns' => 'urn:p', 'id_name' => 'Id');
 $wsuEntityOptions = array('prefix' => 'wsu', 'prefix_ns' => WSU, 'id_name' => 'Id');
+$inheritedConflict = '<?xml version="1.0"?><r xmlns:p="urn:other"><good>stable</good><target>x</target></r>';
+$localConflict = '<?xml version="1.0"?><r><good>stable</good><target xmlns:p="urn:other">x</target></r>';
+$inheritedOverwrite = '<?xml version="1.0"?><r xmlns:p="urn:other" xmlns:q="urn:p"><good>stable</good><target q:Id="keep-q">x</target></r>';
+$localOverwrite = '<?xml version="1.0"?><r><good>stable</good><target xmlns:p="urn:other" xmlns:q="urn:p" q:Id="keep-q">x</target></r>';
 
 $textCases = array(
 	array('entity-plain', $entityPlain, null),
@@ -141,6 +146,10 @@ $textCases = array(
 	array('prefix-unbound', $unbound, $pOptions),
 	array('prefix-on-element', $boundElement, $pOptions),
 	array('prefix-on-ancestor', $boundAncestor, $pOptions),
+	array('prefix-inherited-conflict', $inheritedConflict, $pOptions),
+	array('prefix-local-conflict', $localConflict, $pOptions),
+	array('prefix-inherited-overwrite', $inheritedOverwrite, $pOptions),
+	array('prefix-local-overwrite', $localOverwrite, $pOptions),
 );
 
 foreach ($textCases as $case) {
@@ -201,3 +210,7 @@ entity-wsu: exception=ok refs=1 signedinfo=same c14n=same warnings=0 verify=ok
 prefix-unbound: exception=ok refs=1 signedinfo=same c14n=same warnings=0 verify=ok
 prefix-on-element: exception=ok refs=1 signedinfo=same c14n=same warnings=0 verify=ok
 prefix-on-ancestor: exception=ok refs=1 signedinfo=same c14n=same warnings=0 verify=ok
+prefix-inherited-conflict: exception=ok refs=1 signedinfo=same c14n=same warnings=0 verify=ok
+prefix-local-conflict: exception=ok refs=1 signedinfo=same c14n=same warnings=0 verify=ok
+prefix-inherited-overwrite: exception=ok refs=1 signedinfo=same c14n=same warnings=0 verify=ok
+prefix-local-overwrite: exception=ok refs=1 signedinfo=same c14n=same warnings=0 verify=ok

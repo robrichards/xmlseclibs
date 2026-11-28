@@ -1122,7 +1122,7 @@ class XMLSecurityDSig
          * put back. An ID that was only read is left as it was.
          */
         $idSnapshot = null;
-        $prefixBinding = null;
+        $nsSnapshot = null;
         $idWritten = false;
         try {
             if (! $omit_uri) {
@@ -1134,7 +1134,7 @@ class XMLSecurityDSig
                     if (empty($uri)) {
                         $uri = self::generateGUID();
                         $idSnapshot = $this->captureIdAttribute($node, $prefix_ns, $id_name, $attname);
-                        $prefixBinding = $this->capturePrefixBinding($node, $prefix);
+                        $nsSnapshot = $this->captureNamespaceSnapshot($node);
                         $node->setAttributeNS($prefix_ns, $attname, $uri);
                         $idWritten = true;
                     }
@@ -1187,7 +1187,7 @@ class XMLSecurityDSig
                 $refNode->parentNode->removeChild($refNode);
             }
             if ($idWritten && $node instanceof DOMElement) {
-                $this->revertWrittenIdAttribute($node, $prefix_ns, $id_name, $attname, $idSnapshot, $prefixBinding);
+                $this->revertWrittenIdAttribute($node, $prefix_ns, $id_name, $attname, $idSnapshot, $nsSnapshot);
             }
             throw $e;
         }
@@ -1246,23 +1246,101 @@ class XMLSecurityDSig
     }
 
     /**
-     * Record whether a prefix is already bound before an ID is written.
+     * In-scope prefix to namespace URI map, omitting the xml prefix.
      *
      * @param DOMElement $node
-     * @param string|null $prefix
-     * @return array{prefix: string, inScope: bool, onElement: bool}|null
+     * @return array<string, string>
      */
-    private function capturePrefixBinding(DOMElement $node, $prefix)
+    private function inScopeNamespaceMap(DOMElement $node)
     {
-        if (! is_string($prefix) || $prefix === '') {
-            return null;
+        $map = array();
+        $owner = $node->ownerDocument;
+        if (! $owner instanceof DOMDocument) {
+            return $map;
         }
-        $inScope = $node->lookupNamespaceURI($prefix);
+        $xpath = new DOMXPath($owner);
+        $nodes = $xpath->query('namespace::*', $node);
+        if ($nodes === false) {
+            return $map;
+        }
+        foreach ($nodes as $ns) {
+            /*
+             * namespace::* yields DOMNameSpaceNode, which is not a DOMNode
+             * on this PHP. Read the prefix and URI from the node directly.
+             */
+            if (! is_object($ns) || ! isset($ns->localName) || $ns->localName === 'xml') {
+                continue;
+            }
+            $map[$ns->localName] = $ns->nodeValue;
+        }
+        return $map;
+    }
+
+    /**
+     * Namespace bindings on the target before an ID is written.
+     *
+     * inScope is every prefix visible on the target. local is the subset
+     * declared on the target rather than inherited: a prefix is local when
+     * the parent does not bind it, or binds it to a different URI.
+     *
+     * @param DOMElement $node
+     * @return array{inScope: array<string, string>, local: array<string, string>}
+     */
+    private function captureNamespaceSnapshot(DOMElement $node)
+    {
+        $inScope = $this->inScopeNamespaceMap($node);
+        $inherited = array();
+        $parent = $node->parentNode;
+        if ($parent instanceof DOMElement) {
+            $inherited = $this->inScopeNamespaceMap($parent);
+        }
+        $local = array();
+        foreach ($inScope as $prefix => $uri) {
+            if (! array_key_exists($prefix, $inherited) || $inherited[$prefix] !== $uri) {
+                $local[$prefix] = $uri;
+            }
+        }
         return array(
-            'prefix' => $prefix,
-            'inScope' => is_string($inScope) && $inScope !== '',
-            'onElement' => $node->hasAttributeNS('http://www.w3.org/2000/xmlns/', $prefix),
+            'inScope' => $inScope,
+            'local' => $local,
         );
+    }
+
+    /**
+     * Drop local namespace declarations this call added.
+     *
+     * A declaration that was already on the target is kept. An inherited
+     * binding is kept. A new prefix, or a local redeclaration of a prefix
+     * to a different URI, is removed.
+     *
+     * @param DOMElement $node
+     * @param array<string, string> $originalLocal
+     */
+    private function removeAddedNamespaceDeclarations(DOMElement $node, array $originalLocal)
+    {
+        for ($i = 0; $i < 8; $i++) {
+            $removed = false;
+            $parent = $node->parentNode;
+            $inherited = ($parent instanceof DOMElement) ? $this->inScopeNamespaceMap($parent) : array();
+            foreach ($this->inScopeNamespaceMap($node) as $prefix => $uri) {
+                if ($prefix === '' || $prefix === 'xml') {
+                    continue;
+                }
+                $isLocal = ! array_key_exists($prefix, $inherited) || $inherited[$prefix] !== $uri;
+                if (! $isLocal) {
+                    continue;
+                }
+                if (array_key_exists($prefix, $originalLocal) && $originalLocal[$prefix] === $uri) {
+                    continue;
+                }
+                $node->removeAttributeNS($uri, $prefix);
+                $removed = true;
+                break;
+            }
+            if (! $removed) {
+                return;
+            }
+        }
     }
 
     /**
@@ -1270,17 +1348,18 @@ class XMLSecurityDSig
      *
      * An attribute that was not present is removed. An attribute that was
      * overwritten is restored with its text, qualified name, namespace and
-     * prefix. A prefix binding this call added is removed. A binding that
-     * was already on the element or an ancestor is left in place.
+     * prefix. Namespace declarations added for that ID are removed. A
+     * binding that was already on the element or an ancestor is left in
+     * place.
      *
      * @param DOMElement $node
      * @param string|null $prefixNs
      * @param string $idName
      * @param string $attName
      * @param array{name: string, namespaceURI: ?string, prefix: ?string, value: string}|null $snapshot
-     * @param array{prefix: string, inScope: bool, onElement: bool}|null $prefixBinding
+     * @param array{inScope: array<string, string>, local: array<string, string>}|null $nsSnapshot
      */
-    private function revertWrittenIdAttribute(DOMElement $node, $prefixNs, $idName, $attName, $snapshot, $prefixBinding)
+    private function revertWrittenIdAttribute(DOMElement $node, $prefixNs, $idName, $attName, $snapshot, $nsSnapshot)
     {
         $current = $this->findIdAttribute($node, $prefixNs, $idName, $attName);
         if ($current instanceof DOMAttr) {
@@ -1294,13 +1373,9 @@ class XMLSecurityDSig
                 $node->setAttribute($snapshot['name'], $snapshot['value']);
             }
         }
-        if (! is_array($prefixBinding) || $prefixBinding['inScope'] || $prefixBinding['onElement']) {
-            return;
+        if (is_array($nsSnapshot)) {
+            $this->removeAddedNamespaceDeclarations($node, $nsSnapshot['local']);
         }
-        if (! is_string($prefixNs) || $prefixNs === '') {
-            return;
-        }
-        $node->removeAttributeNS($prefixNs, $prefixBinding['prefix']);
     }
 
     /**
