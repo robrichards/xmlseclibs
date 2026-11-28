@@ -1329,7 +1329,19 @@ class XMLSecEnc
 
                     $query = '//xmlsecenc:EncryptedKey[@Id="'.XPath::filterAttrValue($id, XPath::DOUBLE_QUOTE).'"]';
                     $keyNodes = $xpath->query($query, null, false);
-                    if ($keyNodes === false || ! (($keyElement = $keyNodes->item(0)) instanceof DOMElement)) {
+                    if ($keyNodes === false || $keyNodes->length === 0) {
+                        throw new Exception("Unable to locate EncryptedKey with @Id='$id'.");
+                    }
+                    /*
+                     * Exactly one XML Encryption EncryptedKey may carry the Id.
+                     * Count before touching any candidate, so the result does
+                     * not depend on document order and no candidate is
+                     * processed when the reference is ambiguous.
+                     */
+                    if ($keyNodes->length > 1) {
+                        throw new Exception("Multiple EncryptedKey elements with @Id='$id'.");
+                    }
+                    if (! (($keyElement = $keyNodes->item(0)) instanceof DOMElement)) {
                         throw new Exception("Unable to locate EncryptedKey with @Id='$id'.");
                     }
 
