@@ -39,6 +39,10 @@ Bug Fixes:
 - Signatures over encrypted-then-decrypted content (inclusive and exclusive
   c14n, enveloped and external references, Element and Content modes)
   previously failed to verify in several cases and now verify.
+- Reference URI fragments are compared exactly to ID attribute values
+  (Id and the idKeys names), so an Id that contains a quote character
+  can be referenced. Fragments for ordinary Ids behave as before, in
+  legacy mode as well.
 - A failed verifyDocument(), validateReference(), or verify() leaves
   getValidatedNodes() with no nodes, including when the failure is not
   an Exception. Nodes recorded for an earlier reference are cleared when

@@ -885,7 +885,9 @@ class XMLSecurityDSig
                  * binding. The lookup then ignores other in-scope declarations.
                  */
                 $registered = array();
-                $iDlist = '@Id="'.XPath::filterAttrValue($identifier, XPath::DOUBLE_QUOTE).'"';
+                /* The fragment is compared to the attribute value as is. */
+                $idLiteral = XPath::quoteValue($identifier);
+                $iDlist = '@Id='.$idLiteral;
                 foreach ($this->idKeys as $idKey) {
                     $attrName = XPath::filterAttrName($idKey);
                     if ($attrName === '' || $attrName !== $idKey) {
@@ -913,8 +915,7 @@ class XMLSecurityDSig
                             $registered[$prefix] = true;
                         }
                     }
-                    $iDlist .= " or @".$attrName.'="'.
-                        XPath::filterAttrValue($identifier, XPath::DOUBLE_QUOTE).'"';
+                    $iDlist .= ' or @'.$attrName.'='.$idLiteral;
                 }
                 $query = '//*['.$iDlist.']';
                 $nodeset = $xPath->query($query, null, false);
