@@ -7,7 +7,7 @@ use RobRichards\XMLSecLibs\XMLSecurityDSig;
 use RobRichards\XMLSecLibs\XMLSecEnc;
 
 $doc = new DOMDocument();
-$arTests = array('SIGN_TEST_RSA_SHA256'=>'sign-sha256-rsa-sha256-test.xml');
+$arTests = array('SIGN_TEST_RSA_SHA256'=>'sign-sha256-rsa-sha256-test.res');
 
 foreach ($arTests AS $testName=>$testFile) {
 	$doc->load(dirname(__FILE__) . "/$testFile");
