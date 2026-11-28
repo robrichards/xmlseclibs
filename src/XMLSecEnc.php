@@ -9,7 +9,6 @@ use DOMNode;
 use DOMXPath;
 use Exception;
 use RobRichards\XMLSecLibs\Internal\KeyTransportAlgorithms;
-use RobRichards\XMLSecLibs\Utils\XPath as XPath;
 
 /**
  * xmlseclibs.php
@@ -1327,26 +1326,29 @@ class XMLSecEnc
                     }
                     $id = substr($uri, 1);
 
-                    $query = '//xmlsecenc:EncryptedKey[@Id="'.XPath::filterAttrValue($id, XPath::DOUBLE_QUOTE).'"]';
-                    $keyNodes = $xpath->query($query, null, false);
-                    if ($keyNodes === false || $keyNodes->length === 0) {
-                        throw new Exception("Unable to locate EncryptedKey with @Id='$id'.");
-                    }
                     /*
-                     * Exactly one XML Encryption EncryptedKey may carry the Id.
-                     * Count before touching any candidate, so the result does
-                     * not depend on document order and no candidate is
-                     * processed when the reference is ambiguous.
+                     * Compare the URI fragment to each xenc:EncryptedKey Id
+                     * in PHP so the match is exact and does not depend on
+                     * how the value would be written into an XPath literal.
+                     * Count before touching any candidate, so the result
+                     * does not depend on document order and no candidate
+                     * is processed when the reference is ambiguous.
                      */
-                    if ($keyNodes->length > 1) {
-                        throw new Exception("Multiple EncryptedKey elements with @Id='$id'.");
+                    $matches = array();
+                    foreach ($doc->getElementsByTagNameNS(self::XMLENCNS, 'EncryptedKey') as $keyNode) {
+                        if ($keyNode->hasAttribute('Id') && $keyNode->getAttribute('Id') === $id) {
+                            $matches[] = $keyNode;
+                        }
                     }
-                    if (! (($keyElement = $keyNodes->item(0)) instanceof DOMElement)) {
+                    if (count($matches) === 0) {
                         throw new Exception("Unable to locate EncryptedKey with @Id='$id'.");
+                    }
+                    if (count($matches) > 1) {
+                        throw new Exception("Multiple EncryptedKey elements with @Id='$id'.");
                     }
 
                     return XMLSecurityKey::fromEncryptedKeyElement(
-                        $keyElement, $depth + 1, $allowRSA15, $allowedKeyAlgorithms, $allowedDataAlgorithms
+                        $matches[0], $depth + 1, $allowRSA15, $allowedKeyAlgorithms, $allowedDataAlgorithms
                     );
                 case 'EncryptedKey':
                     if ($child->namespaceURI !== self::XMLENCNS) {

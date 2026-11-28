@@ -67,14 +67,17 @@ Bug Fixes:
   locateKey(). XMLSecurityKey::verifySignature() returns 0 for those key types.
 - staticLocateKeyInfo() resolves a RetrievalMethod of type EncryptedKey with
   a same-document URI (#id) only when exactly one XML Encryption EncryptedKey
-  element carries that Id. When more than one does, it throws "Multiple
-  EncryptedKey elements with @Id='<id>'." before any candidate is processed,
-  so the result no longer depends on document order. Elements in other
-  namespaces, and other element types that use the same Id value, are not
-  counted. A reference that matches no EncryptedKey, and the unsupported
-  forms (empty or external URI, other Type), behave as before, as does an
-  EncryptedKey embedded directly in KeyInfo. Documents that repeat an
-  EncryptedKey Id and relied on the first element being used now throw.
+  element carries that Id. The URI fragment is compared to the Id attribute
+  exactly. When more than one does, it throws "Multiple EncryptedKey elements
+  with @Id='<id>'." before any candidate is processed, so the result no
+  longer depends on document order. Elements in other namespaces, and other
+  element types that use the same Id value, are not counted. A reference
+  that matches no EncryptedKey, and the unsupported forms (empty or external
+  URI, other Type), behave as before, as does an EncryptedKey embedded
+  directly in KeyInfo. Documents that repeat an EncryptedKey Id and relied
+  on the first element being used now throw. A fragment that is not
+  identical to the Id, including one that previously matched after quote
+  characters were removed from the fragment, does not resolve.
 - staticLocateKeyInfo() treats an EncryptedKey as key material only when its
   namespace is the XML Encryption namespace. fromEncryptedKeyElement() always
   requires a key-transport algorithm.

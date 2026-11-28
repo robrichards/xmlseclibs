@@ -59,7 +59,7 @@ function withAttrs($xml, $attrs) {
 
 function retrieval($uri, $type = null) {
     $type = $type === null ? T_XENC . 'EncryptedKey' : $type;
-    return '<ds:RetrievalMethod URI="' . $uri . '" Type="' . $type . '"/>';
+    return '<ds:RetrievalMethod URI="' . htmlspecialchars($uri, ENT_QUOTES | ENT_XML1, 'UTF-8') . '" Type="' . $type . '"/>';
 }
 
 function document($keyInfo, $siblings) {
@@ -150,6 +150,15 @@ attempt('no Type', document('<ds:RetrievalMethod URI="#k"/>', withAttrs($GOOD, $
 attempt('no EncryptedKey at all with the Id', document(retrieval('#k'), ''));
 attempt('self-referencing key', document(retrieval('#k'), withAttrs(str_replace('<xenc:CipherData>', '<ds:KeyInfo>' . retrieval('#k') . '</ds:KeyInfo><xenc:CipherData>', $GOOD), $k)));
 
+echo "-- the URI fragment is compared to the Id attribute exactly --\n";
+attempt('URI #"k" does not resolve to Id k', document(retrieval('#"k"'), withAttrs($GOOD, $k)));
+attempt('URI #k" does not resolve to Id k', document(retrieval('#k"'), withAttrs($GOOD, $k)));
+attempt('URI #a"b does not resolve to Id ab', document(retrieval('#a"b'), withAttrs($GOOD, 'Id="ab"')));
+attempt('URI # k does not resolve to Id k', document(retrieval('# k'), withAttrs($GOOD, $k)));
+attempt('URI #"k" resolves when the Id is exactly "k"', document(retrieval('#"k"'), withAttrs($GOOD, 'Id="&quot;k&quot;"')));
+attempt('empty fragment, no empty Id', document(retrieval('#'), withAttrs($GOOD, $k)));
+attempt('empty fragment matches Id=""', document(retrieval('#'), withAttrs($GOOD, 'Id=""')));
+
 echo "-- embedded EncryptedKey --\n";
 attempt('embedded', document($GOOD, ''));
 attempt('embedded, duplicate Id elsewhere is not consulted', document($GOOD, withAttrs($OTHER, $k) . withAttrs($OTHER, $k)));
@@ -194,6 +203,14 @@ other Type: base key returned (nothing resolved)
 no Type: base key returned (nothing resolved)
 no EncryptedKey at all with the Id: Exception: Unable to locate EncryptedKey with @Id='k'.
 self-referencing key: Exception: EncryptedKey reference chain is too deep
+-- the URI fragment is compared to the Id attribute exactly --
+URI #"k" does not resolve to Id k: Exception: Unable to locate EncryptedKey with @Id='"k"'.
+URI #k" does not resolve to Id k: Exception: Unable to locate EncryptedKey with @Id='k"'.
+URI #a"b does not resolve to Id ab: Exception: Unable to locate EncryptedKey with @Id='a"b'.
+URI # k does not resolve to Id k: Exception: Unable to locate EncryptedKey with @Id=' k'.
+URI #"k" resolves when the Id is exactly "k": decrypted
+empty fragment, no empty Id: Exception: Unable to locate EncryptedKey with @Id=''.
+empty fragment matches Id="": decrypted
 -- embedded EncryptedKey --
 embedded: decrypted
 embedded, duplicate Id elsewhere is not consulted: decrypted
